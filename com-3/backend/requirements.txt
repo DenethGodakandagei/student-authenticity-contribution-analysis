@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+motor
+python-docx
+diff-match-patch
+pydantic
+python-multipart
+cors
