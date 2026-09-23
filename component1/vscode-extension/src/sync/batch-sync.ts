@@ -3,6 +3,8 @@ import { postJson } from '../utils/http-client';
 import { getConfig } from '../config/settings';
 import { defaultRetryEngine, RetryEngine } from './retry';
 import { updateTelemetryStatusBar } from '../ui/status-bar';
+import { sanitizePayload } from '../security/privacy';
+import * as vscode from 'vscode';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  BATCH SYNC ENGINE (Plan 4)
@@ -105,11 +107,13 @@ export async function triggerBatchSync(
     // Process batches in a loop until all pending events are synced or an error occurs
     while (pendingEvents.length > 0) {
       const uuids = pendingEvents.map(e => e.event_uuid);
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+      const sanitizedEvents = sanitizePayload(pendingEvents, workspaceRoot);
 
       const result = await postJson(
         url,
         cfg.authToken,
-        { events: pendingEvents },
+        { events: sanitizedEvents },
         15000 // 15s timeout
       );
 

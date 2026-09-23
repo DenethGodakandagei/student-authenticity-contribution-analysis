@@ -40,6 +40,22 @@ import { triggerBatchSync } from './sync/batch-sync';
 // ─── ML Features & Sliding Window (Plan 5) ───────────────────────────────────
 import { defaultSlidingWindowManager } from './features/sliding-window';
 
+// ─── UI Polish, Audit Viewer, Performance & Privacy (Plan 6) ─────────────────
+import { registerAuditViewerCommand, openAuditWebview } from './ui/audit-viewer';
+import {
+  startPerformanceProfiler,
+  stopPerformanceProfiler,
+  profileHook,
+  profileAsyncHook,
+  getPerformanceStats
+} from './utils/performance';
+import {
+  checkAndWarnInsecureServerUrl,
+  sanitizePayload,
+  sanitizeFilePath,
+  verifyStudentIdAnonymization
+} from './security/privacy';
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  SESSION & EXTENSION GLOBAL STATE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -158,7 +174,11 @@ function getTelemetrySnapshot() {
     // ── Plan 3 queue data ──
     queueStatus: dbInitialized ? getQueueStatus(globalStoragePath) : null,
     pendingEventCount: dbInitialized ? getPendingCount() : 0,
-    sessionId: currentSessionId
+    sessionId: currentSessionId,
+    // ── Plan 5 & 6 Sliding Window & Performance ──
+    latestWindow: defaultSlidingWindowManager.getLatestWindow(),
+    recentWindows: defaultSlidingWindowManager.getRecentWindows(),
+    performance: getPerformanceStats()
   };
 }
 
@@ -405,24 +425,31 @@ function storeEvent(
   payload: Record<string, any>
 ): void {
   if (!dbInitialized) return;
-  try {
-    const cfg = getConfig();
-    insertEvent({
-      session_id: currentSessionId,
-      student_id: cfg.assignmentId || 'unknown',
-      task_id: cfg.assignmentId || '',
-      repo_id: currentRepoId,
-      branch: currentBranch,
-      commit_sha: currentCommitSha,
-      event_type: eventType,
-      category,
-      file_path: filePath,
-      timestamp: Date.now(),
-      payload_json: JSON.stringify(payload)
-    });
-  } catch (err) {
-    console.error('[CollabIntel] Error storing event:', err);
-  }
+  profileHook(`storeEvent:${eventType}`, () => {
+    try {
+      const cfg = getConfig();
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+      const sanitizedPath = sanitizeFilePath(filePath, workspaceRoot);
+      const sanitizedPayload = sanitizePayload(payload, workspaceRoot);
+      const studentCheck = verifyStudentIdAnonymization(cfg.assignmentId || 'unknown');
+
+      insertEvent({
+        session_id: currentSessionId,
+        student_id: studentCheck.sanitizedId,
+        task_id: cfg.assignmentId || '',
+        repo_id: currentRepoId,
+        branch: currentBranch,
+        commit_sha: currentCommitSha,
+        event_type: eventType,
+        category,
+        file_path: sanitizedPath,
+        timestamp: Date.now(),
+        payload_json: JSON.stringify(sanitizedPayload)
+      });
+    } catch (err) {
+      console.error('[CollabIntel] Error storing event:', err);
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -431,6 +458,9 @@ function storeEvent(
 export function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   console.log('[CollabIntel] Extension activating with SQLite storage, sensors & filtering...');
+
+  // ── Plan 6: Start Micro-Performance Profiler ───────────────────────────
+  startPerformanceProfiler(context, 30000);
 
   // ── Initialize SQLite Database (Plan 3) ────────────────────────────────
   try {
@@ -446,20 +476,38 @@ export function activate(context: vscode.ExtensionContext) {
   // ── Status Bar ─────────────────────────────────────────────────────────
   createStatusBar(context);
 
-  // ── Sidebar Provider ───────────────────────────────────────────────────
+  // ── Sidebar Provider (Plan 6: External HTML & Audit callback) ──────────
   const sidebarProvider = new CollabIntelSidebarProvider(context.extensionUri, {
     getTelemetrySnapshot: () => getTelemetrySnapshot(),
     saveAndSyncSession: () => saveAndSyncSession(context),
     openInteractiveDashboard: (tab?: string) => openDashboard(tab),
-    testBackendConnection: () => testBackendConnection(getConfig())
+    testBackendConnection: () => testBackendConnection(getConfig()),
+    viewQueueAudit: () => openAuditWebview(context, globalStoragePath, async () => {
+      if (dbInitialized) {
+        await triggerBatchSync({ onStatusUpdate: broadcastStateToWebviews });
+      }
+    })
   });
   sidebarProviderInstance = sidebarProvider;
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('collabintel.sidebarView', sidebarProvider)
   );
 
-  // ── Initial Setup Check ────────────────────────────────────────────────
+  // ── Plan 6: Check Server URL Security (HTTPS enforcement) ──────────────
   const cfg = getConfig();
+  if (cfg.serverUrl) {
+    checkAndWarnInsecureServerUrl(cfg.serverUrl);
+  }
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration('collabintel.serverUrl')) {
+        const currentCfg = getConfig();
+        if (currentCfg.serverUrl) checkAndWarnInsecureServerUrl(currentCfg.serverUrl);
+      }
+    })
+  );
+
+  // ── Initial Setup Check ────────────────────────────────────────────────
   if (!cfg.authToken || !cfg.assignmentId) {
     updateStatusBar('unconfigured', broadcastStateToWebviews);
     vscode.window.showInformationMessage(
@@ -497,8 +545,13 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push({
     dispose: () => defaultSlidingWindowManager.stop()
   });
+  context.subscriptions.push(
+    defaultSlidingWindowManager.onWindowComputed(() => {
+      broadcastStateToWebviews();
+    })
+  );
 
-  // ── Dashboard Helper ───────────────────────────────────────────────────
+  // ── Dashboard Helper (Plan 6: ML tab & sliding window compute) ─────────
   function openDashboard(tab?: string) {
     openInteractiveDashboard(context, {
       getTelemetrySnapshot: () => getTelemetrySnapshot(),
@@ -506,7 +559,17 @@ export function activate(context: vscode.ExtensionContext) {
       testBackendConnection: (cfg) => testBackendConnection(cfg),
       updateStatusBar: (state: StatusState) => updateStatusBar(state, broadcastStateToWebviews),
       startSession: (root: string) => startSession(root),
-      getConfig: () => getConfig()
+      getConfig: () => getConfig(),
+      computeSlidingWindow: () => {
+        const win = defaultSlidingWindowManager.computeCurrentWindow();
+        broadcastStateToWebviews();
+        return win;
+      },
+      viewQueueAudit: () => openAuditWebview(context, globalStoragePath, async () => {
+        if (dbInitialized) {
+          await triggerBatchSync({ onStatusUpdate: broadcastStateToWebviews });
+        }
+      })
     }, tab || 'overview');
   }
 
@@ -515,17 +578,23 @@ export function activate(context: vscode.ExtensionContext) {
   // ══════════════════════════════════════════════════════════════════════
 
   // ── Diagnostic Sensor ──────────────────────────────────────────────────
-  diagnosticSensor.register(context, () => broadcastStateToWebviews());
+  diagnosticSensor.register(context, () => {
+    profileHook('sensor:diagnostic', () => broadcastStateToWebviews());
+  });
 
   // ── Focus Sensor (replaces old onDidChangeActiveTextEditor handler) ────
   focusSensor.register(
     context,
     () => {
-      lastActivityTime = Date.now();
-      idleSensor.reportActivity();
-      if (!sessionStart && workspaceRoot) startSession(workspaceRoot);
+      profileHook('sensor:focusActivity', () => {
+        lastActivityTime = Date.now();
+        idleSensor.reportActivity();
+        if (!sessionStart && workspaceRoot) startSession(workspaceRoot);
+      });
     },
-    () => broadcastStateToWebviews()
+    () => {
+      profileHook('sensor:focusUpdate', () => broadcastStateToWebviews());
+    }
   );
 
   // ── Idle Sensor ────────────────────────────────────────────────────────
@@ -542,11 +611,15 @@ export function activate(context: vscode.ExtensionContext) {
   documentSensor.register(
     context,
     () => {
-      lastActivityTime = Date.now();
-      idleSensor.reportActivity();
-      if (!sessionStart && workspaceRoot) startSession(workspaceRoot);
+      profileHook('sensor:documentActivity', () => {
+        lastActivityTime = Date.now();
+        idleSensor.reportActivity();
+        if (!sessionStart && workspaceRoot) startSession(workspaceRoot);
+      });
     },
-    () => broadcastStateToWebviews()
+    () => {
+      profileHook('sensor:documentUpdate', () => broadcastStateToWebviews());
+    }
   );
 
   // ══════════════════════════════════════════════════════════════════════

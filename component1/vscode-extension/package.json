@@ -45,6 +45,11 @@
         "command": "collabintel.status",
         "title": "CollabIntel: Show Status",
         "icon": "$(info)"
+      },
+      {
+        "command": "collabintel.viewQueueStatus",
+        "title": "Telemetry: View Local Queue Status",
+        "icon": "$(database)"
       }
     ],
     "viewsContainers": {
@@ -97,7 +102,7 @@
     }
   },
   "scripts": {
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && node copy-assets.js",
     "watch": "tsc -watch -p ./"
   },
   "dependencies": {

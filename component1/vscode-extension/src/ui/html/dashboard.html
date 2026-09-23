@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CollabIntel Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: var(--vscode-editor-background, #0b0f19);
+      --fg: var(--vscode-editor-foreground, #f1f5f9);
+      --card-bg: var(--vscode-sideBar-background, #111827);
+      --border: var(--vscode-widget-border, rgba(255, 255, 255, 0.08));
+      --accent: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      --input-bg: var(--vscode-input-background, #1e293b);
+      --input-border: var(--vscode-input-border, rgba(255, 255, 255, 0.12));
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 32px 24px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-title h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-title p {
+      font-size: 13px;
+      color: var(--vscode-descriptionForeground, #64748b);
+      margin-top: 2px;
+    }
+
+    /* TABS */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 11px 18px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--vscode-descriptionForeground, #94a3b8);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+    .tab-btn svg { width: 15px; height: 15px; opacity: 0.7; }
+    .tab-btn:hover { color: var(--fg); }
+    .tab-btn.active {
+      color: #818cf8;
+      border-bottom-color: #6366f1;
+      font-weight: 700;
+    }
+    .tab-btn.active svg { opacity: 1; stroke: #818cf8; }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* METRIC CARDS */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-2px);
+    }
+    .card-title {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--vscode-descriptionForeground, #94a3b8);
+      margin-bottom: 6px;
+    }
+    .card-value {
+      font-size: 24px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .val-green { color: #10b981; }
+    .val-red { color: #f43f5e; }
+    .val-amber { color: #f59e0b; }
+    .val-blue { color: #38bdf8; }
+
+    /* STATUS BANNER */
+    .status-banner {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-left: 4px solid #6366f1;
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    /* 18 ML FEATURES GRID */
+    .ml-features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .ml-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .ml-card:hover {
+      border-color: rgba(129, 140, 248, 0.4);
+    }
+    .ml-num {
+      font-size: 10px;
+      color: #818cf8;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+    .ml-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+    .ml-desc {
+      font-size: 10px;
+      color: #64748b;
+      margin: 3px 0 6px 0;
+    }
+    .ml-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: #38bdf8;
+      font-family: monospace;
+    }
+
+    /* FORM ELEMENTS */
+    .form-group { margin-bottom: 18px; }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+      color: var(--vscode-descriptionForeground, #cbd5e1);
+    }
+    .hint {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground, #64748b);
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="password"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      color: var(--fg);
+      font-family: monospace;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+    }
+
+    .btn {
+      padding: 9px 18px;
+      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 7px;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--fg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    /* TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--vscode-descriptionForeground, #64748b);
+    }
+
+    .test-box {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+      font-weight: 600;
+    }
+    .test-box.success { display: block; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; }
+    .test-box.error { display: block; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="dashboard-header">
+      <div class="brand-title">
+        <h1>CollabIntel Dashboard</h1>
+        <p>Student Repository Telemetry &amp; Contribution Analytics (Plan 6 Polish)</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" onclick="postCmd('viewQueueAudit')">
+          🛡️ Audit Queue
+        </button>
+        <button class="btn" onclick="postCmd('syncNow')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Sync Telemetry
+        </button>
+      </div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tab-overview" onclick="switchTab('overview')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Overview &amp; Analytics
+      </button>
+      <button class="tab-btn" id="tab-ml" onclick="switchTab('ml')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        ML Features (Sliding Window)
+      </button>
+      <button class="tab-btn" id="tab-commits" onclick="switchTab('commits')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Commits Log
+      </button>
+      <button class="tab-btn" id="tab-setup" onclick="switchTab('setup')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Setup &amp; Credentials
+      </button>
+      <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Settings
+      </button>
+    </div>
+
+    <!-- TAB 1: OVERVIEW -->
+    <div id="content-overview" class="tab-content active">
+      <div class="status-banner">
+        <div>
+          <div style="font-weight:700; font-size:14px; margin-bottom:2px;" id="bannerTitle">Session Active</div>
+          <div style="font-size:12px; color:var(--vscode-descriptionForeground, #94a3b8);" id="bannerSub">Tracking local workspace edits and keystrokes</div>
+        </div>
+        <div id="bannerPill" style="padding:4px 12px; border-radius:16px; font-weight:700; font-size:11px; text-transform:uppercase; background:rgba(16,185,129,0.15); color:#10b981;">Online</div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="card">
+          <div class="card-title">Session Time</div>
+          <div class="card-value" id="cardTime">0m</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Keystrokes</div>
+          <div class="card-value" id="cardKeys">0</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Lines Added</div>
+          <div class="card-value val-green" id="cardAdded">+0</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Lines Removed</div>
+          <div class="card-value val-red" id="cardRemoved">-0</div>
+        </div>
+      </div>
+
+      <!-- Plan 6 Overview 18-Feature Summary Card -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div>
+            <div class="card-title" style="margin-bottom:2px;">Live 18 ML Feature Pipeline Overview</div>
+            <div style="font-size:11px; color:#64748b;">Sliding 5-minute analysis window (recomputed every 2.5 minutes)</div>
+          </div>
+          <button class="btn btn-secondary" onclick="switchTab('ml')" style="padding:6px 12px; font-size:11px;">
+            Open ML Inspector →
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+          <div style="background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Active Typing</div>
+            <div style="font-size:15px; font-weight:800; color:#38bdf8;" id="ovActiveTyping">0s</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Typing Velocity</div>
+            <div style="font-size:15px; font-weight:800; color:#38bdf8;" id="ovTypingVelocity">0 c/s</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Paste/Key Ratio</div>
+            <div style="font-size:15px; font-weight:800; color:#818cf8;" id="ovPasteRatio">0.00</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Code Churn</div>
+            <div style="font-size:15px; font-weight:800; color:#f59e0b;" id="ovChurn">0.00</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Syntax Errors</div>
+            <div style="font-size:15px; font-weight:800; color:#f43f5e;" id="ovErrors">0</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Focus Switches</div>
+            <div style="font-size:15px; font-weight:800; color:#10b981;" id="ovFocus">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provenance Card -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-title">Coding Style &amp; Provenance Classification</div>
+        <div style="font-size:18px; font-weight:800; color:#818cf8; margin: 4px 0 10px 0;" id="cardStyle">Manual Typing</div>
+        <div style="height: 10px; border-radius: 5px; background: rgba(255,255,255,0.05); display: flex; overflow: hidden; margin-bottom: 8px;">
+          <div id="barManual" style="width:100%; background:#38bdf8;"></div>
+          <div id="barAi" style="width:0%; background:#818cf8;"></div>
+          <div id="barPaste" style="width:0%; background:#f43f5e;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8;">
+          <span>✍️ Manual: <strong id="lblManual" style="color:#e2e8f0;">100%</strong></span>
+          <span>🤖 AI: <strong id="lblAi" style="color:#e2e8f0;">0%</strong></span>
+          <span>📋 Paste: <strong id="lblPaste" style="color:#e2e8f0;">0%</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ML FEATURES (NEW PLAN 6 TAB) -->
+    <div id="content-ml" class="tab-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div>
+          <h2 style="font-size:18px; font-weight:800;">🧠 Live Sliding Window ML Features</h2>
+          <p style="font-size:12px; color:#94a3b8; margin-top:2px;">
+            Features dynamically engineered over the current 5-minute rolling window [window: 5 min, step: 2.5 min].
+          </p>
+        </div>
+        <button class="btn" onclick="postCmd('computeSlidingWindow')">
+          🔄 Recalculate Window Now
+        </button>
+      </div>
+
+      <div class="status-banner" style="padding:12px 16px; margin-bottom:16px;">
+        <span style="font-size:12px; color:#cbd5e1;">Window Interval: <strong id="mlWindowInterval" style="color:#38bdf8;">Evaluating...</strong></span>
+        <span style="font-size:11px; color:#94a3b8;" id="mlEventsInWindow">0 events in slice</span>
+      </div>
+
+      <div class="ml-features-grid">
+        <!-- 1. Active Coding Time -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#1 TEMPORAL</div>
+            <div class="ml-title">Active Coding Time</div>
+            <div class="ml-desc">Seconds with keystrokes/edits (<60s gap)</div>
+          </div>
+          <div class="ml-val" id="feat_activeCodingTimeSec">0s</div>
+        </div>
+
+        <!-- 2. Idle Time -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#2 TEMPORAL</div>
+            <div class="ml-title">Idle Time</div>
+            <div class="ml-desc">Seconds in inactive gaps (≥60s)</div>
+          </div>
+          <div class="ml-val" id="feat_idleTimeSec">0s</div>
+        </div>
+
+        <!-- 3. Session Duration -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#3 TEMPORAL</div>
+            <div class="ml-title">Session Duration</div>
+            <div class="ml-desc">Total window timespan in seconds</div>
+          </div>
+          <div class="ml-val" id="feat_sessionDurationSec">300s</div>
+        </div>
+
+        <!-- 4. Active Typing Duration -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#4 TEMPORAL</div>
+            <div class="ml-title">Active Typing Duration</div>
+            <div class="ml-desc">Continuous keystroke clusters (<5s gap)</div>
+          </div>
+          <div class="ml-val" id="feat_activeTypingDurationSec">0s</div>
+        </div>
+
+        <!-- 5. Keystroke Count -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#5 KEYSTROKE</div>
+            <div class="ml-title">Keystroke Count</div>
+            <div class="ml-desc">Total raw keystroke events</div>
+          </div>
+          <div class="ml-val" id="feat_keystrokeCount">0</div>
+        </div>
+
+        <!-- 6. Paste Count -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#6 PASTE</div>
+            <div class="ml-title">Paste Burst Count</div>
+            <div class="ml-desc">Total copy-paste insertion events</div>
+          </div>
+          <div class="ml-val" id="feat_pasteCount">0</div>
+        </div>
+
+        <!-- 7. Pasted Chars -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#7 PASTE</div>
+            <div class="ml-title">Pasted Characters</div>
+            <div class="ml-desc">Sum of characters pasted in window</div>
+          </div>
+          <div class="ml-val" id="feat_pastedCharCount">0</div>
+        </div>
+
+        <!-- 8. Paste/Key Ratio -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#8 PASTE</div>
+            <div class="ml-title">Paste-to-Keystroke Ratio</div>
+            <div class="ml-desc">Pasted chars / (manual keys + 1)</div>
+          </div>
+          <div class="ml-val" id="feat_pasteToKeystrokeRatio">0.00</div>
+        </div>
+
+        <!-- 9. Typing Velocity -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#9 VELOCITY</div>
+            <div class="ml-title">Typing Velocity</div>
+            <div class="ml-desc">Characters inserted per active second</div>
+          </div>
+          <div class="ml-val" id="feat_typingVelocity">0.00 c/s</div>
+        </div>
+
+        <!-- 10. Net Inserted Chars -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#10 CHURN</div>
+            <div class="ml-title">Net Inserted Characters</div>
+            <div class="ml-desc">Total characters added in editor</div>
+          </div>
+          <div class="ml-val" id="feat_netInsertedChars">0</div>
+        </div>
+
+        <!-- 11. Net Deleted Chars -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#11 CHURN</div>
+            <div class="ml-title">Net Deleted Characters</div>
+            <div class="ml-desc">Total characters removed/replaced</div>
+          </div>
+          <div class="ml-val" id="feat_netDeletedChars">0</div>
+        </div>
+
+        <!-- 12. Code Churn Ratio -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#12 CHURN</div>
+            <div class="ml-title">Code Churn Ratio</div>
+            <div class="ml-desc">Deleted chars / (inserted chars + 1)</div>
+          </div>
+          <div class="ml-val" id="feat_codeChurnRatio">0.00</div>
+        </div>
+
+        <!-- 13. File Mod Freq -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#13 FILE DYNAMICS</div>
+            <div class="ml-title">File Mod Frequency</div>
+            <div class="ml-desc">Total file switch/edit transitions</div>
+          </div>
+          <div class="ml-val" id="feat_fileModificationFreq">0</div>
+        </div>
+
+        <!-- 14. File Create/Delete -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#14 FILE DYNAMICS</div>
+            <div class="ml-title">File Create/Delete Count</div>
+            <div class="ml-desc">Total files created or deleted</div>
+          </div>
+          <div class="ml-val" id="feat_fileCreateDeleteCount">0</div>
+        </div>
+
+        <!-- 15. Explicit Save Count -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#15 FILE DYNAMICS</div>
+            <div class="ml-title">Explicit Save Count</div>
+            <div class="ml-desc">Ctrl+S / Save commands triggered</div>
+          </div>
+          <div class="ml-val" id="feat_explicitSaveCount">0</div>
+        </div>
+
+        <!-- 16. Syntax Error Count -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#16 ERROR PATTERNS</div>
+            <div class="ml-title">Syntax Error Count</div>
+            <div class="ml-desc">Compiler / linter diagnostics raised</div>
+          </div>
+          <div class="ml-val" id="feat_syntaxErrorCount">0</div>
+        </div>
+
+        <!-- 17. Error Resolution Duration -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#17 ERROR PATTERNS</div>
+            <div class="ml-title">Error Resolution Duration</div>
+            <div class="ml-desc">Average seconds to fix syntax errors</div>
+          </div>
+          <div class="ml-val" id="feat_errorResolutionDurationSec">0s</div>
+        </div>
+
+        <!-- 18. Window Focus Transitions -->
+        <div class="ml-card">
+          <div>
+            <div class="ml-num">#18 ATTENTION</div>
+            <div class="ml-title">Focus Transitions</div>
+            <div class="ml-desc">Window blur/focus attention shifts</div>
+          </div>
+          <div class="ml-val" id="feat_windowFocusTransitions">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: COMMITS LOG -->
+    <div id="content-commits" class="tab-content">
+      <h2 style="font-size:18px; font-weight:800; margin-bottom:12px;">Session Git Commits</h2>
+      <div id="commitsContainer">
+        <p style="color:#64748b; font-style:italic;">No commits captured in current session.</p>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETUP & CREDENTIALS -->
+    <div id="content-setup" class="tab-content">
+      <h2 style="font-size:18px; font-weight:800; margin-bottom:14px;">Credentials &amp; Assignment Linking</h2>
+      <div class="form-group">
+        <label>CollabIntel Server URL</label>
+        <div class="hint">Use HTTPS for remote servers (e.g., https://collabintel.edu) or http://localhost:5000 for local dev.</div>
+        <input type="text" id="cfgServerUrl" value="http://localhost:5000">
+      </div>
+      <div class="form-group">
+        <label>Assignment ID</label>
+        <div class="hint">Assignment ID supplied by your course instructor.</div>
+        <input type="text" id="cfgAssignmentId" placeholder="e.g. comp3100-assignment-1">
+      </div>
+      <div class="form-group">
+        <label>Student Auth Token (JWT)</label>
+        <div class="hint">Secret token copied from the CollabIntel student portal.</div>
+        <input type="password" id="cfgAuthToken" placeholder="eyJhbGciOi...">
+      </div>
+      <div class="form-group">
+        <label>Auto-Sync Interval (Minutes)</label>
+        <input type="number" id="cfgInterval" min="1" max="60" value="5">
+      </div>
+      <button class="btn" onclick="saveConfiguration()">Save Configuration</button>
+      <button class="btn btn-secondary" onclick="postCmd('testConnection')" style="margin-left:8px;">Test Connection</button>
+      <div id="testResultBox" class="test-box"></div>
+    </div>
+
+    <!-- TAB 5: SETTINGS -->
+    <div id="content-settings" class="tab-content">
+      <h2 style="font-size:18px; font-weight:800; margin-bottom:14px;">Extension Settings &amp; Cache</h2>
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:16px;">
+        Manage offline buffered events and diagnostics.
+      </p>
+      <button class="btn btn-secondary" onclick="postCmd('clearOfflineCache')">Clear In-Memory Offline Cache</button>
+    </div>
+  </div>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+
+    function postCmd(command) {
+      vscode.postMessage({ command });
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      const btn = document.getElementById('tab-' + tabId);
+      const content = document.getElementById('content-' + tabId);
+      if (btn) btn.classList.add('active');
+      if (content) content.classList.add('active');
+    }
+
+    function saveConfiguration() {
+      const serverUrl = document.getElementById('cfgServerUrl').value.trim();
+      const assignmentId = document.getElementById('cfgAssignmentId').value.trim();
+      const authToken = document.getElementById('cfgAuthToken').value.trim();
+      const syncIntervalMinutes = document.getElementById('cfgInterval').value.trim();
+
+      vscode.postMessage({
+        command: 'saveConfig',
+        serverUrl,
+        assignmentId,
+        authToken,
+        syncIntervalMinutes
+      });
+    }
+
+    window.addEventListener('message', event => {
+      const msg = event.data;
+      if (msg.type === 'updateState') {
+        renderState(msg.state);
+      } else if (msg.type === 'switchTab') {
+        switchTab(msg.tab);
+      } else if (msg.type === 'testResult') {
+        renderTestResult(msg.result);
+      }
+    });
+
+    vscode.postMessage({ command: 'requestState' });
+
+    function renderTestResult(res) {
+      const box = document.getElementById('testResultBox');
+      if (!box) return;
+      box.className = 'test-box ' + (res.success ? 'success' : 'error');
+      box.innerText = res.message;
+    }
+
+    function renderState(s) {
+      if (!s) return;
+
+      document.getElementById('cardTime').innerText = (s.durationMinutes || 0) + 'm';
+      document.getElementById('cardKeys').innerText = s.keystrokes || 0;
+      document.getElementById('cardAdded').innerText = '+' + (s.linesAdded || 0);
+      document.getElementById('cardRemoved').innerText = '-' + (s.linesRemoved || 0);
+
+      // Provenance
+      if (s.provenance) {
+        document.getElementById('cardStyle').innerText = s.provenance.style || 'Manual Typing';
+        document.getElementById('barManual').style.width = (s.provenance.manualPercent || 0) + '%';
+        document.getElementById('barAi').style.width = (s.provenance.aiPercent || 0) + '%';
+        document.getElementById('barPaste').style.width = (s.provenance.pastePercent || 0) + '%';
+        document.getElementById('lblManual').innerText = (s.provenance.manualPercent || 0) + '%';
+        document.getElementById('lblAi').innerText = (s.provenance.aiPercent || 0) + '%';
+        document.getElementById('lblPaste').innerText = (s.provenance.pastePercent || 0) + '%';
+      }
+
+      // Settings Prefill
+      if (s.config) {
+        if (s.config.serverUrl) document.getElementById('cfgServerUrl').value = s.config.serverUrl;
+        if (s.config.assignmentId) document.getElementById('cfgAssignmentId').value = s.config.assignmentId;
+        if (s.config.authToken) document.getElementById('cfgAuthToken').value = s.config.authToken;
+        if (s.config.syncIntervalMinutes) document.getElementById('cfgInterval').value = s.config.syncIntervalMinutes;
+      }
+
+      // 18 ML Features Rendering (from s.latestWindow.features if available or s)
+      const feats = s.latestWindow && s.latestWindow.features ? s.latestWindow.features : null;
+      if (feats) {
+        if (s.latestWindow.windowStart && s.latestWindow.windowEnd) {
+          const startStr = new Date(s.latestWindow.windowStart).toLocaleTimeString();
+          const endStr = new Date(s.latestWindow.windowEnd).toLocaleTimeString();
+          document.getElementById('mlWindowInterval').innerText = '[' + startStr + ' – ' + endStr + ']';
+        }
+
+        // Overview Highlights
+        document.getElementById('ovActiveTyping').innerText = feats.activeTypingDurationSec + 's';
+        document.getElementById('ovTypingVelocity').innerText = feats.typingVelocity.toFixed(2) + ' c/s';
+        document.getElementById('ovPasteRatio').innerText = feats.pasteToKeystrokeRatio.toFixed(2);
+        document.getElementById('ovChurn').innerText = feats.codeChurnRatio.toFixed(2);
+        document.getElementById('ovErrors').innerText = feats.syntaxErrorCount;
+        document.getElementById('ovFocus').innerText = feats.windowFocusTransitions;
+
+        // Populate all 18 ML Feature cards
+        setVal('feat_activeCodingTimeSec', feats.activeCodingTimeSec + 's');
+        setVal('feat_idleTimeSec', feats.idleTimeSec + 's');
+        setVal('feat_sessionDurationSec', feats.sessionDurationSec + 's');
+        setVal('feat_activeTypingDurationSec', feats.activeTypingDurationSec + 's');
+        setVal('feat_keystrokeCount', feats.keystrokeCount);
+        setVal('feat_pasteCount', feats.pasteCount);
+        setVal('feat_pastedCharCount', feats.pastedCharCount);
+        setVal('feat_pasteToKeystrokeRatio', feats.pasteToKeystrokeRatio.toFixed(2));
+        setVal('feat_typingVelocity', feats.typingVelocity.toFixed(2) + ' c/s');
+        setVal('feat_netInsertedChars', feats.netInsertedChars);
+        setVal('feat_netDeletedChars', feats.netDeletedChars);
+        setVal('feat_codeChurnRatio', feats.codeChurnRatio.toFixed(2));
+        setVal('feat_fileModificationFreq', feats.fileModificationFreq);
+        setVal('feat_fileCreateDeleteCount', feats.fileCreateDeleteCount);
+        setVal('feat_explicitSaveCount', feats.explicitSaveCount);
+        setVal('feat_syntaxErrorCount', feats.syntaxErrorCount);
+        setVal('feat_errorResolutionDurationSec', feats.errorResolutionDurationSec + 's');
+        setVal('feat_windowFocusTransitions', feats.windowFocusTransitions);
+      } else {
+        // Fallback to live session stats
+        document.getElementById('ovActiveTyping').innerText = (s.idleSummary ? s.idleSummary.activeTypingSeconds : 0) + 's';
+        document.getElementById('ovErrors').innerText = s.diagnosticSummary ? s.diagnosticSummary.currentErrorCount : 0;
+        document.getElementById('ovFocus').innerText = s.focusSummary ? s.focusSummary.focusTransitions : 0;
+      }
+    }
+
+    function setVal(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    }
+  </script>
+</body>
+</html>
