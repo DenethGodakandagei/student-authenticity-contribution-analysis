@@ -998,6 +998,14 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('collabintel.status', () => openDashboard('overview'))
   );
 
+  context.subscriptions.push(
+    registerAuditViewerCommand(context, globalStoragePath, async () => {
+      if (dbInitialized) {
+        await triggerBatchSync({ onStatusUpdate: broadcastStateToWebviews });
+      }
+    })
+  );
+
   // ── Flush Offline Cache on Startup ─────────────────────────────────────
   flushOfflineCache(context);
 
@@ -1016,6 +1024,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   if (syncTimer) clearInterval(syncTimer);
+  stopPerformanceProfiler();
   defaultHealthCheckMonitor.stop();
   defaultSlidingWindowManager.stop();
   idleSensor.dispose();
