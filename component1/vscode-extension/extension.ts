@@ -861,10 +861,19 @@ class CollabIntelSidebarProvider implements vscode.WebviewViewProvider {
       <div id="provBarAi" class="prov-seg-ai" style="width: 0%;"></div>
       <div id="provBarPaste" class="prov-seg-paste" style="width: 0%;"></div>
     </div>
-    <div class="prov-legend">
-      <span>✍️ <span id="provManPct">100%</span> Manual</span>
-      <span>🤖 <span id="provAiPct">0%</span> AI</span>
-      <span>📋 <span id="provPastePct">0%</span> Paste</span>
+    <div class="prov-legend" style="display:flex; justify-content:space-between; margin-top:6px; font-size:10px; color:#94a3b8;">
+      <span style="display:inline-flex; align-items:center; gap:4px;">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span><span id="provManPct" style="font-weight:700; color:#f1f5f9; font-family:monospace;">100%</span> Manual</span>
+      </span>
+      <span style="display:inline-flex; align-items:center; gap:4px;">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#818cf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+        <span><span id="provAiPct" style="font-weight:700; color:#f1f5f9; font-family:monospace;">0%</span> AI</span>
+      </span>
+      <span style="display:inline-flex; align-items:center; gap:4px;">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        <span><span id="provPastePct" style="font-weight:700; color:#f1f5f9; font-family:monospace;">0%</span> Paste</span>
+      </span>
     </div>
   </div>
 
@@ -958,7 +967,13 @@ class CollabIntelSidebarProvider implements vscode.WebviewViewProvider {
           <div class="file-item">
             <div class="file-path" title="\${escapeHtml(fa.filePath)}">\${escapeHtml(fa.filePath)}</div>
             <span class="prov-badge prov-badge-\${fa.typingProvenance || 'manual'}">
-              \${fa.typingProvenance === 'ai_assisted' ? '🤖 AI' : (fa.typingProvenance === 'copy_paste' ? '📋 Pasted' : (fa.typingProvenance === 'mixed' ? '⚡ Mixed' : '✍️ Manual'))}
+              \${fa.typingProvenance === 'ai_assisted' 
+                ? '<svg viewBox=\"0 0 24 24\" width=\"10\" height=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\"><path d=\"M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg> AI' 
+                : (fa.typingProvenance === 'copy_paste' 
+                  ? '<svg viewBox=\"0 0 24 24\" width=\"10\" height=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\"><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"/><rect x=\"8\" y=\"2\" width=\"8\" height=\"4\" rx=\"1\" ry=\"1\"/></svg> Paste' 
+                  : (fa.typingProvenance === 'mixed' 
+                    ? '<svg viewBox=\"0 0 24 24\" width=\"10\" height=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\"><polyline points=\"22 12 18 12 15 21 9 3 6 12 2 12\"/></svg> Mixed' 
+                    : '<svg viewBox=\"0 0 24 24\" width=\"10\" height=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z\"/></svg> Manual'))}
             </span>
           </div>
         \`).join('');

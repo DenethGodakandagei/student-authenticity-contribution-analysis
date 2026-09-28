@@ -90,7 +90,7 @@ export function openInteractiveDashboard(
           callbacks.computeSlidingWindow();
         }
         panel.webview.postMessage({ type: 'updateState', state: callbacks.getTelemetrySnapshot() });
-        vscode.window.showInformationMessage('🧠 CollabIntel: 5-minute ML sliding window recomputed.');
+        vscode.window.showInformationMessage('CollabIntel: 5-minute ML sliding window recomputed.');
         break;
 
       case 'viewQueueAudit':
