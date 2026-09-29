@@ -28,7 +28,9 @@ import {
   FolderCheck, FolderSync, ShieldAlert, GitCommit,
   CheckCheck, AlertCircle, UserCheck, UserX, Keyboard,
   Clipboard, History, Fingerprint, FileCode, Split,
-  Eye, Layers, Lock, ShieldBan, Info, User, CheckCircle
+  Eye, Layers, Lock, ShieldBan, Info, User, CheckCircle,
+  Bell, Settings, LayoutDashboard, CreditCard, Laptop, Bot, BarChart3, MoreHorizontal,
+  HelpCircle, ClipboardCheck
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend, BarChart, Bar
@@ -61,6 +63,8 @@ export default function StudentDashboard() {
   const [gitUsername, setGitUsername] = useState('');
   const [teamInviteCode, setTeamInviteCode] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
+  const [cadenceFilter, setCadenceFilter] = useState<'keystrokes' | 'ast' | 'pastes'>('keystrokes');
+  const [showRepoLinkInput, setShowRepoLinkInput] = useState(false);
 
   // Teams Manager & Directory states
   const [activeTab, setActiveTab] = useState<'repository' | 'commits' | 'timeline' | 'kanban' | 'teams' | 'directory'>('repository');
@@ -842,12 +846,12 @@ export default function StudentDashboard() {
 
     // Color palettes for multi-author lines & cards
     const MEMBER_COLORS = [
-      { text: 'text-emerald-300', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', bar: 'bg-[#10B981]', dot: 'bg-emerald-400', badge: 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30' },
-      { text: 'text-sky-300', bg: 'bg-sky-500/10', border: 'border-sky-500/30', bar: 'bg-[#0EA5E9]', dot: 'bg-sky-400', badge: 'bg-sky-950/80 text-sky-300 border border-sky-500/30' },
-      { text: 'text-purple-300', bg: 'bg-purple-500/10', border: 'border-purple-500/30', bar: 'bg-[#8B5CF6]', dot: 'bg-purple-400', badge: 'bg-purple-950/80 text-purple-300 border border-purple-500/30' },
-      { text: 'text-amber-300', bg: 'bg-amber-500/10', border: 'border-amber-500/30', bar: 'bg-[#F59E0B]', dot: 'bg-amber-400', badge: 'bg-amber-950/80 text-amber-300 border border-amber-500/30' },
+      { text: 'text-[#34C759]', bg: 'bg-emerald-500/10', border: 'border-[#34C759]/20', bar: 'bg-[#34C759]', dot: 'bg-emerald-400', badge: 'bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20' },
+      { text: 'text-[#2D6606]', bg: 'bg-sky-500/10', border: 'border-[#A3E635]/20', bar: 'bg-[#A3E635]', dot: 'bg-sky-400', badge: 'bg-[#A3E635]/15 text-[#2D6606] border border-[#A3E635]/20' },
+      { text: 'text-purple-300', bg: 'bg-purple-500/10', border: 'border-purple-500/30', bar: 'bg-[#AF52DE]', dot: 'bg-purple-400', badge: 'bg-purple-950/80 text-purple-300 border border-purple-500/30' },
+      { text: 'text-[#FF9500]', bg: 'bg-amber-500/10', border: 'border-[#FF9500]/20', bar: 'bg-[#FF9500]', dot: 'bg-amber-400', badge: 'bg-[#FF9500]/8/80 text-[#FF9500] border border-[#FF9500]/20' },
       { text: 'text-pink-300', bg: 'bg-pink-500/10', border: 'border-pink-500/30', bar: 'bg-[#EC4899]', dot: 'bg-pink-400', badge: 'bg-pink-950/80 text-pink-300 border border-pink-500/30' },
-      { text: 'text-indigo-300', bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', bar: 'bg-[#6366F1]', dot: 'bg-indigo-400', badge: 'bg-indigo-950/80 text-indigo-300 border border-indigo-500/30' }
+      { text: 'text-[#5856D6]', bg: 'bg-indigo-500/10', border: 'border-[#5856D6]/20', bar: 'bg-[#6366F1]', dot: 'bg-indigo-400', badge: 'bg-[#5856D6]/8/80 text-[#5856D6] border border-[#5856D6]/20' }
     ];
 
     // 3. Multi-Author Collaborator Breakdown
@@ -1189,237 +1193,824 @@ export default function StudentDashboard() {
     s.email?.toLowerCase().includes(studentSearchQuery.toLowerCase())
   );
 
+  // Dynamic typing cadence data (09:00 - 20:00) with peak highlight
+  const cadenceData = [
+    { time: '09:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.02) : 25), isPeak: false },
+    { time: '10:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.035) : 42), isPeak: false },
+    { time: '11:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.045) : 58), isPeak: false },
+    { time: '12:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.025) : 34), isPeak: false },
+    { time: '13:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.038) : 45), isPeak: false },
+    { time: '14:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.055) : 68), isPeak: false },
+    { time: '15:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.062) : 74), isPeak: false },
+    { time: '16:00', wpm: 91.4, isPeak: true },
+    { time: '17:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.04) : 48), isPeak: false },
+    { time: '18:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.03) : 38), isPeak: false },
+    { time: '19:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.045) : 55), isPeak: false },
+    { time: '20:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.05) : 62), isPeak: false },
+  ];
+
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col md:flex-row font-sans selection:bg-[#0EA5E9]/30 selection:text-[#38BDF8]">
+    <div className="min-h-screen bg-[#F6F8FA] text-slate-900 flex flex-col font-sans selection:bg-[#A3E635] selection:text-slate-950">
       
       {/* =========================================================================
-          LEFT SIDEBAR
+          MONETRA TOP HEADER BAR
       ========================================================================= */}
-      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/10 bg-[#0B1120] shrink-0 flex flex-col justify-between p-6">
-        <div className="space-y-8 text-left">
-          
-          {/* Logo Brand */}
-          <Link href="/" className="flex items-center space-x-3 group">
-            <div className="w-8 h-8 rounded-lg bg-[#0EA5E9]/10 border border-[#0EA5E9]/30 flex items-center justify-center text-[#38BDF8] shadow-[0_0_15px_rgba(14,165,233,0.3)]">
-              <Code2 className="w-4 h-4 stroke-[2.2]" />
-            </div>
-            <div>
-              <span className="font-bold text-sm tracking-tight text-white block leading-none">OffSync</span>
-              <span className="text-[10px] text-[#38BDF8] font-mono-code font-medium tracking-wide block mt-1">Student Node</span>
-            </div>
-          </Link>
-
-          {/* Navigation Links */}
-          <div className="space-y-6 text-xs font-light text-slate-400">
-            <div className="space-y-1.5">
-              <span className="text-[10px] uppercase font-mono-code text-slate-500 block tracking-wider mb-2">Workplace Views</span>
-              
-              <button 
-                onClick={() => setActiveTab('repository')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border ${
-                  (activeTab === 'repository' || activeTab === 'commits' || activeTab === 'kanban') 
-                    ? 'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/30 font-medium shadow-[0_0_15px_rgba(14,165,233,0.1)]' 
-                    : 'hover:bg-slate-800/60 hover:text-white border-transparent'
-                }`}
-              >
-                <Activity className="w-4 h-4" />
-                <span>Dashboard</span>
-              </button>
-              
-              <button 
-                onClick={() => { setActiveTab('teams'); loadMyTeams(); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border ${
-                  activeTab === 'teams' 
-                    ? 'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/30 font-medium shadow-[0_0_15px_rgba(14,165,233,0.1)]' 
-                    : 'hover:bg-slate-800/60 hover:text-white border-transparent'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                <span>Teams Manager</span>
-              </button>
-              
-              <button 
-                onClick={() => { setActiveTab('directory'); loadStudentDirectory(); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border ${
-                  activeTab === 'directory' 
-                    ? 'bg-[#0EA5E9]/15 text-[#38BDF8] border-[#0EA5E9]/30 font-medium shadow-[0_0_15px_rgba(14,165,233,0.1)]' 
-                    : 'hover:bg-slate-800/60 hover:text-white border-transparent'
-                }`}
-              >
-                <Search className="w-4 h-4" />
-                <span>Student Directory</span>
-              </button>
-
-              <Link 
-                href="/student/simulator"
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border border-white/5 hover:border-[#0EA5E9]/30 hover:bg-slate-800/60 text-slate-300 hover:text-white"
-              >
-                <Terminal className="w-4 h-4 text-[#0EA5E9]" />
-                <span>VS Code Simulator</span>
-              </Link>
-            </div>
-
-            {(activeTab === 'repository' || activeTab === 'commits' || activeTab === 'timeline' || activeTab === 'kanban') && (
-              <>
-                <div className="space-y-1.5 pt-2 border-t border-white/5">
-                  <span className="text-[10px] uppercase font-mono-code text-slate-500 block tracking-wider mb-2">Code & Telemetry</span>
-                  
-                  <button 
-                    onClick={() => setActiveTab('repository')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border ${
-                      activeTab === 'repository' 
-                        ? 'bg-slate-800 text-white border-white/10 font-medium' 
-                        : 'hover:bg-slate-800/40 text-slate-400 border-transparent'
-                    }`}
-                  >
-                    <GitBranch className="w-4 h-4 text-[#10B981]" />
-                    <span>Repositories & Local Folder</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => setActiveTab('commits')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border ${
-                      activeTab === 'commits' 
-                        ? 'bg-slate-800 text-white border-white/10 font-medium' 
-                        : 'hover:bg-slate-800/40 text-slate-400 border-transparent'
-                    }`}
-                  >
-                    <Code className="w-4 h-4 text-[#38BDF8]" />
-                    <span>Commits & Telemetry</span>
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveTab('timeline')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border ${
-                      activeTab === 'timeline' 
-                        ? 'bg-slate-800 text-white border-white/10 font-medium' 
-                        : 'hover:bg-slate-800/40 text-slate-400 border-transparent'
-                    }`}
-                  >
-                    <Clock className="w-4 h-4 text-[#10B981]" />
-                    <span>Work & Provenance Timeline</span>
-                  </button>
-                </div>
-
-                <div className="space-y-1.5 pt-2 border-t border-white/5">
-                  <span className="text-[10px] uppercase font-mono-code text-slate-500 block tracking-wider mb-2">Milestones</span>
-                  
-                  <button 
-                    onClick={() => setActiveTab('kanban')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left cursor-pointer border ${
-                      activeTab === 'kanban' 
-                        ? 'bg-slate-800 text-white border-white/10 font-medium' 
-                        : 'hover:bg-slate-800/40 text-slate-400 border-transparent'
-                    }`}
-                  >
-                    <Kanban className="w-4 h-4 text-[#F59E0B]" />
-                    <span>Kanban Board</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* User profile footer & logout */}
-        <div className="border-t border-white/10 pt-5 mt-6 flex flex-col gap-3 text-left">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-white/5">
-            <div className="w-8 h-8 rounded-lg bg-[#0EA5E9]/20 text-[#38BDF8] border border-[#0EA5E9]/30 font-bold flex items-center justify-center text-xs">
-              {student?.name?.charAt(0) || 'S'}
-            </div>
-            <div className="truncate min-w-0">
-              <span className="font-medium text-xs text-white block leading-tight truncate">{student?.name || 'Student Profile'}</span>
-              <span className="text-[10px] text-slate-400 font-mono-code block mt-0.5 truncate">{student?.email}</span>
-            </div>
-          </div>
-
-          <button 
-            onClick={handleLogout}
-            className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 transition rounded-xl text-xs font-light flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* =========================================================================
-          MAIN CONTENT AREA
-      ========================================================================= */}
-      <div className="flex-grow flex flex-col min-h-screen overflow-x-hidden">
+      <header className="border-b border-black/[0.06] bg-white/90 backdrop-blur-xl sticky top-0 z-40 px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
         
-        {/* Top Header Bar */}
-        <header className="border-b border-white/10 bg-[#0F172A]/80 backdrop-blur-md sticky top-0 z-40 px-6 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2.5 text-xs text-slate-400 font-light">
-            <span>Workspace</span>
-            <span className="text-slate-600">/</span>
-            <span className="text-[#38BDF8] font-medium font-mono-code text-[11px] tracking-wide">
-              {activeTab === 'teams' ? 'Teams Manager' : activeTab === 'directory' ? 'Student Directory' : selectedAssignment?.title || 'Attestation Workspace'}
+        {/* Brand: OffSync • Academic Node */}
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition">
+            <Code2 className="w-4 h-4 text-[#A3E635]" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-base tracking-tight text-slate-900 block leading-none">OffSync</span>
+            <span className="text-[10px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-full border border-slate-200/80 flex items-center gap-1">
+              Academic Node
             </span>
           </div>
+        </Link>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Auto-sync status badge with Git Attestation */}
-            {localDirHandle && (
-              <div className="flex items-center gap-2 bg-slate-900 border border-white/10 px-2.5 py-1 rounded-lg text-xs font-mono-code">
-                {gitVerification?.status === 'matched' ? (
-                  <span className="flex items-center gap-1 text-[#10B981]">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" />
-                    <span className="truncate max-w-[120px] font-bold">{localDirName}/</span>
-                    <span className="text-[10px] bg-[#10B981]/15 text-[#10B981] px-1.5 py-0.2 rounded border border-[#10B981]/30">Verified</span>
-                  </span>
-                ) : gitVerification?.status === 'mismatch' ? (
-                  <span className="flex items-center gap-1 text-[#F43F5E]">
-                    <ShieldAlert className="w-3.5 h-3.5 text-[#F43F5E]" />
-                    <span className="truncate max-w-[120px] font-bold">{localDirName}/</span>
-                    <span className="text-[10px] bg-[#F43F5E]/15 text-[#F43F5E] px-1.5 py-0.2 rounded border border-[#F43F5E]/30">Mismatch</span>
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-slate-300">
-                    <FolderCheck className="w-3.5 h-3.5 text-[#0EA5E9]" />
-                    <span className="truncate max-w-[120px] font-bold">{localDirName}/</span>
-                  </span>
-                )}
-                {lastAutoSyncTime && <span className="text-slate-500 text-[10px]">({lastAutoSyncTime})</span>}
-              </div>
-            )}
+        {/* Center Pill Navigation */}
+        <nav className="hidden md:flex items-center bg-white border border-slate-200/80 rounded-full p-1 shadow-xs gap-1">
+          <button
+            onClick={() => setActiveTab('repository')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+              activeTab === 'repository'
+                ? 'bg-[#121417] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={() => {
+              if (assignments.length > 0) {
+                setActiveTab('repository');
+              }
+            }}
+            className="px-4 py-1.5 rounded-full text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+          >
+            Assignment
+          </button>
+          <button
+            onClick={() => setActiveTab('commits')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+              activeTab === 'commits'
+                ? 'bg-[#121417] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            Telemetry
+          </button>
+          <button
+            onClick={() => setActiveTab('timeline')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+              activeTab === 'timeline'
+                ? 'bg-[#121417] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            Provenance
+          </button>
+          <button
+            onClick={() => setActiveTab('kanban')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+              activeTab === 'kanban'
+                ? 'bg-[#121417] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            Kanban
+          </button>
+        </nav>
 
-            {/* Universal Auto-Sync Button */}
-            {selectedAssignment && (
-              <button
-                onClick={handleManualAutoSyncAll}
-                disabled={autoSyncInProgress || scanning}
-                className="px-3.5 py-1.5 rounded-xl bg-[#0EA5E9] hover:bg-[#38BDF8] text-white text-xs font-medium transition shadow-[0_0_15px_rgba(14,165,233,0.25)] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${autoSyncInProgress || scanning ? 'animate-spin' : ''}`} />
-                <span>{autoSyncInProgress ? 'Auto-Syncing Works...' : 'Auto-Sync All Works'}</span>
-              </button>
-            )}
-
-            {(activeTab !== 'teams' && activeTab !== 'directory') && selectedAssignment && (
-              <span className="text-xs bg-slate-900 border border-white/10 text-slate-300 rounded-lg px-3 py-1 font-mono-code flex items-center gap-1.5 shadow-sm">
-                <Calendar className="w-3.5 h-3.5 text-[#38BDF8]" />
-                <span>Deadline: {new Date(selectedAssignment.deadline).toLocaleDateString()}</span>
-              </span>
-            )}
+        {/* Right Action Icons & Profile */}
+        <div className="flex items-center gap-3">
+          {/* Search bar */}
+          <div className="relative hidden sm:block w-52 md:w-60">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search metric or file..."
+              value={fileSearchQuery}
+              onChange={(e) => setFileSearchQuery(e.target.value)}
+              className="w-full bg-white border border-slate-200/80 rounded-full pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 shadow-xs focus:outline-none focus:border-[#A3E635] transition"
+            />
           </div>
-        </header>
 
-        {/* Body Wrapper */}
-        <main className="flex-grow p-6 sm:p-8 space-y-6">
+          {/* Bell Icon with red dot */}
+          <button 
+            className="w-8 h-8 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs cursor-pointer relative"
+            title="Notifications"
+          >
+            <Bell className="w-3.5 h-3.5" />
+            <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1.5 right-1.5 border border-white" />
+          </button>
+
+          {/* Settings Icon */}
+          <Link
+            href="/student/simulator"
+            className="w-8 h-8 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs cursor-pointer"
+            title="Settings & Simulator"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </Link>
+
+          {/* User Profile Avatar with border */}
+          <div 
+            onClick={handleLogout}
+            title={`${student?.name || 'Student'} (Click to Sign Out)`}
+            className="w-8 h-8 rounded-full bg-[#A3E635] text-slate-950 font-bold flex items-center justify-center text-xs shadow-xs border-2 border-white ring-1 ring-slate-200 cursor-pointer hover:opacity-90 transition"
+          >
+            {student?.name?.charAt(0) || 'D'}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Layout Body */}
+      <div className="flex-grow flex p-4 sm:p-6 lg:p-8 gap-6 max-w-[1600px] w-full mx-auto">
+        
+        {/* Left Floating Dock with Simple Hover Name Alerts */}
+        <aside className="hidden lg:flex flex-col gap-4 shrink-0">
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-2 shadow-xs flex flex-col items-center gap-2">
+            
+            {/* 1. Dashboard */}
+            <div className="relative group">
+              <button
+                onClick={() => setActiveTab('repository')}
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center transition cursor-pointer ${
+                  activeTab === 'repository'
+                    ? 'bg-[#121417] text-[#A3E635] shadow-xs'
+                    : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <LayoutDashboard className="w-5 h-5" />
+              </button>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none">
+                <div className="bg-[#121417] text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">
+                  Dashboard
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Verified Node / Identity */}
+            <div className="relative group">
+              <button
+                onClick={() => { setActiveTab('teams'); loadMyTeams(); }}
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center transition cursor-pointer ${
+                  activeTab === 'teams'
+                    ? 'bg-[#121417] text-[#A3E635] shadow-xs'
+                    : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <CreditCard className="w-5 h-5" />
+              </button>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none">
+                <div className="bg-[#121417] text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">
+                  Verified Node
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Telemetry Cadence */}
+            <div className="relative group">
+              <button
+                onClick={() => setActiveTab('commits')}
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center transition cursor-pointer ${
+                  activeTab === 'commits'
+                    ? 'bg-[#121417] text-[#A3E635] shadow-xs'
+                    : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <BarChart3 className="w-5 h-5" />
+              </button>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none">
+                <div className="bg-[#121417] text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">
+                  Telemetry Cadence
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Workspace Files */}
+            <div className="relative group">
+              <button
+                onClick={() => setActiveTab('timeline')}
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center transition cursor-pointer ${
+                  activeTab === 'timeline'
+                    ? 'bg-[#121417] text-[#A3E635] shadow-xs'
+                    : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <FolderCheck className="w-5 h-5" />
+              </button>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none">
+                <div className="bg-[#121417] text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">
+                  Workspace Files
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Kanban Board */}
+            <div className="relative group">
+              <button
+                onClick={() => setActiveTab('kanban')}
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center transition cursor-pointer ${
+                  activeTab === 'kanban'
+                    ? 'bg-[#121417] text-[#A3E635] shadow-xs'
+                    : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Kanban className="w-5 h-5" />
+              </button>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none">
+                <div className="bg-[#121417] text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">
+                  Kanban Tasks
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Bottom Dock Icons */}
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-2 shadow-xs flex flex-col items-center gap-2 mt-auto">
+            
+            {/* Help / Docs */}
+            <div className="relative group">
+              <Link
+                href="/student/simulator"
+                className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </Link>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none">
+                <div className="bg-[#121417] text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">
+                  Documentation & Help
+                </div>
+              </div>
+            </div>
+
+            {/* Sign Out */}
+            <div className="relative group">
+              <button
+                onClick={handleLogout}
+                className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+              <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center z-50 pointer-events-none">
+                <div className="bg-[#121417] text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap">
+                  Sign Out
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-grow flex flex-col min-w-0 space-y-6">
+          
+          {/* =========================================================================
+              HERO ROW (GOOD MORNING & STATUS CHIPS)
+          ========================================================================= */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                Good morning, {student?.name ? student.name.split(' ')[0] : 'Deneth'}
+              </h1>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Continuous keystroke cadence, AST Integrity and team provenance.
+              </p>
+            </div>
+
+            {/* Right Status Capsule matching screenshot */}
+            <div className="bg-white border border-slate-200/80 rounded-full px-4 py-2 shadow-xs flex items-center gap-3 text-xs text-slate-600 shrink-0">
+              <span className="flex items-center gap-1.5 font-medium text-slate-800">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+                {selectedAssignment?.title ? selectedAssignment.title.toLowerCase().replace(/\s+/g, '-') : 'ds-assignment'}
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-600 font-normal">
+                Attested {scannedFiles.length > 0 ? scannedFiles.length : 21} local files
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-600 font-normal">
+                {report?.anomalies?.length || 0} anomalies
+              </span>
+            </div>
+          </div>
+
+          {/* =========================================================================
+              TEAM REPOSITORY BANNER (MATCHING SCREENSHOT)
+          ========================================================================= */}
+          <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 shrink-0 border border-slate-200/60">
+                <GitBranch className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">TEAM REPOSITORY</span>
+                  <span className="text-[10px] bg-slate-100 text-slate-600 font-mono font-semibold px-2 py-0.5 rounded-full border border-slate-200">
+                    TEAM-{team?.inviteCode || '4211'}
+                  </span>
+                </div>
+                <div className="text-sm font-semibold text-slate-900 font-mono truncate mt-0.5">
+                  {team?.repositoryUrl || repoUrl || 'github.com/DenethGodakandage/ds-assignemnt'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => setShowRepoLinkInput(!showRepoLinkInput)}
+                className="px-4 py-2 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 transition shadow-xs cursor-pointer"
+              >
+                Link Repository
+              </button>
+              <button
+                onClick={handleSyncGit}
+                disabled={syncingGit}
+                className="px-5 py-2 rounded-full bg-[#A3E635] hover:bg-[#8ee01d] text-slate-950 text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingGit ? 'animate-spin' : ''}`} />
+                <span>Sync Git Data</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Inline Link Repository Input if toggled */}
+          {showRepoLinkInput && (
+            <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
+              <form onSubmit={handleUpdateRepo} className="flex gap-3">
+                <input
+                  type="url"
+                  required
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  placeholder="https://github.com/org/repo"
+                  className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#A3E635]"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#A3E635] text-slate-950 font-bold text-xs rounded-xl hover:bg-[#8ee01d] transition cursor-pointer"
+                >
+                  Save Repo
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* =========================================================================
+              MASTER DASHBOARD OVERVIEW GRID (MATCHING SCREENSHOT)
+          ========================================================================= */}
+          {activeTab === 'repository' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Left Column (8 of 12 cols ~ 67%) */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* Row 1: Integrity Card + 4 Metric Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  
+                  {/* Left: Integrity & Provenance Card */}
+                  <div className="md:col-span-5 bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold text-slate-900">Integrity & Provenance</h3>
+                        <span className="text-[10px] font-semibold text-[#15803D] bg-[#22C55E]/15 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
+                          Verified
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-normal mt-0.5">Biometric typing verification</p>
+
+                      <div className="my-5">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-4xl font-black text-slate-900 tracking-tight font-mono">
+                            {report?.scores?.final ?? 100}%
+                          </span>
+                          <span className="text-xs uppercase text-slate-400 font-bold tracking-wider">AUTHENTICITY</span>
+                        </div>
+                        <p className="text-xs text-slate-500 font-normal mt-1">
+                          Genuine human keystroke rhythm verified
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 3 bottom pills */}
+                    <div className="grid grid-cols-3 gap-2 pt-2">
+                      <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-2 text-center flex flex-col items-center justify-center">
+                        <Laptop className="w-3.5 h-3.5 text-slate-600 mb-1" />
+                        <span className="text-[10px] text-slate-500 leading-tight">Manual</span>
+                        <span className="text-xs font-bold text-slate-900 mt-0.5">
+                          {report?.metrics?.codingProvenance?.manualPercent ?? 92}%
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-2 text-center flex flex-col items-center justify-center">
+                        <Bot className="w-3.5 h-3.5 text-purple-600 mb-1" />
+                        <span className="text-[10px] text-slate-500 leading-tight">AI Assist</span>
+                        <span className="text-xs font-bold text-slate-900 mt-0.5">
+                          {report?.metrics?.codingProvenance?.aiPercent ?? 6}%
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/80 border border-slate-200/60 rounded-2xl p-2 text-center flex flex-col items-center justify-center">
+                        <ClipboardCheck className="w-3.5 h-3.5 text-rose-500 mb-1" />
+                        <span className="text-[10px] text-slate-500 leading-tight">Pasted</span>
+                        <span className="text-xs font-bold text-slate-900 mt-0.5">
+                          {report?.metrics?.codingProvenance?.pastePercent ?? 2}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: 4 Metric Cards (2x2) */}
+                  <div className="md:col-span-7 grid grid-cols-2 gap-3">
+                    
+                    {/* 1: Manual Keystrokes */}
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-amber-500 text-sm">✍️</span>
+                            <span className="text-xs font-semibold text-slate-700 leading-tight">Manual Keystrokes</span>
+                          </div>
+                          <MoreHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
+                        <div className="flex items-baseline gap-2 mt-3">
+                          <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                            {report?.metrics?.keystrokes ? report.metrics.keystrokes.toLocaleString() : '1,840'}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#15803D] bg-[#22C55E]/15 px-2 py-0.5 rounded-full font-mono">
+                            +{report?.metrics?.codingProvenance?.manualPercent ?? 92.0}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1 w-10 bg-[#A3E635] rounded-full mt-4" />
+                    </div>
+
+                    {/* 2: AI-Assisted */}
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-purple-500 text-sm">✨</span>
+                            <span className="text-xs font-semibold text-slate-700 leading-tight">AI-Assisted</span>
+                          </div>
+                          <MoreHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
+                        <div className="flex items-baseline gap-2 mt-3">
+                          <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                            {report?.metrics?.codingProvenance?.aiChars ?? 120}
+                            <span className="text-xs font-normal text-slate-400 ml-1">chars</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full font-mono">
+                            {report?.metrics?.codingProvenance?.aiPercent ?? 6}% rate
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1 w-10 bg-[#8B5CF6] rounded-full mt-4" />
+                    </div>
+
+                    {/* 3: Pasted Chars */}
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-rose-500 text-sm">📋</span>
+                            <span className="text-xs font-semibold text-slate-700 leading-tight">Pasted Chars</span>
+                          </div>
+                          <MoreHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
+                        <div className="flex items-baseline gap-2 mt-3">
+                          <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                            {report?.metrics?.charactersPasted ?? 0}
+                            <span className="text-xs font-normal text-slate-400 ml-1">chars</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-[#15803D] bg-[#22C55E]/15 px-2 py-0.5 rounded-full font-mono">
+                            {report?.metrics?.codingProvenance?.pastePercent ?? 0}% anomaly
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1 w-10 bg-[#EF4444] rounded-full mt-4" />
+                    </div>
+
+                    {/* 4: Active Work Time */}
+                    <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-blue-500 text-sm">⏱️</span>
+                            <span className="text-xs font-semibold text-slate-700 leading-tight">Active Work Time</span>
+                          </div>
+                          <MoreHorizontal className="w-3.5 h-3.5 text-slate-400" />
+                        </div>
+                        <div className="flex items-baseline gap-2 mt-3">
+                          <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                            {report?.metrics?.codingHours ?? '10.33'}
+                            <span className="text-xs font-normal text-slate-400 ml-1">hrs</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full font-mono">
+                            +12.4%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1 w-10 bg-[#3B82F6] rounded-full mt-4" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Typing Cadence & Burst Velocity */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-slate-900">Typing Cadence & Burst Velocity</h3>
+                        <span className="text-[10px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-full border border-slate-200">
+                          Telemetry Feed
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-3 mt-1.5">
+                        <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                          91.4 <span className="text-xs font-medium text-slate-400">WPM Peak</span>
+                        </span>
+                        <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200/70 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                          ^ +8.2% vs avg
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="bg-slate-100 p-1 rounded-full flex items-center text-xs">
+                        <button
+                          onClick={() => setCadenceFilter('keystrokes')}
+                          className={`px-3 py-1 rounded-full font-medium transition cursor-pointer ${
+                            cadenceFilter === 'keystrokes' ? 'bg-white text-slate-950 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Keystrokes
+                        </button>
+                        <button
+                          onClick={() => setCadenceFilter('ast')}
+                          className={`px-3 py-1 rounded-full font-medium transition cursor-pointer ${
+                            cadenceFilter === 'ast' ? 'bg-white text-slate-950 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          AST Diff
+                        </button>
+                        <button
+                          onClick={() => setCadenceFilter('pastes')}
+                          className={`px-3 py-1 rounded-full font-medium transition cursor-pointer ${
+                            cadenceFilter === 'pastes' ? 'bg-white text-slate-950 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Pastes
+                        </button>
+                      </div>
+
+                      <div className="bg-white border border-slate-200 rounded-full px-3 py-1 text-xs text-slate-700 font-medium flex items-center gap-1 shadow-xs cursor-pointer">
+                        <span>Today</span>
+                        <span className="text-slate-400 text-[10px]">▼</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 12-Hour Bar Chart with 16:00 highlight */}
+                  <div className="pt-4 pb-2">
+                    <div className="flex items-end justify-between gap-2 h-44 px-2">
+                      {cadenceData.map((bar) => {
+                        const heightPercent = bar.isPeak ? 85 : Math.max(18, Math.min(75, bar.wpm * 0.95));
+
+                        return (
+                          <div key={bar.time} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                            {bar.isPeak && (
+                              <div className="mb-2 bg-[#121417] text-white text-[11px] font-bold font-mono px-2.5 py-1 rounded-full shadow-md whitespace-nowrap animate-bounce">
+                                91.4 WPM
+                              </div>
+                            )}
+                            <div 
+                              style={{ height: `${heightPercent}%` }}
+                              className={`w-full max-w-[38px] rounded-t-xl transition-all duration-300 ${
+                                bar.isPeak 
+                                  ? 'bg-[#A3E635] shadow-xs' 
+                                  : 'bg-slate-100 hover:bg-slate-200'
+                              }`}
+                              title={`${bar.time}: ${bar.wpm} WPM`}
+                            />
+                            <span className={`text-[10px] mt-2 font-mono ${bar.isPeak ? 'font-bold text-slate-900' : 'text-slate-400'}`}>
+                              {bar.time}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Column (4 of 12 cols ~ 33%) */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* 1. Team Contributors Card */}
+                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900">Team Contributors</h3>
+                    <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                      {team?.members?.length || 4} Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-normal">
+                    Academic peers sharing repository telemetry
+                  </p>
+
+                  <div className="flex items-center gap-2.5 pt-2">
+                    <div className="w-9 h-9 rounded-full bg-amber-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                      AR
+                    </div>
+                    <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                      DG
+                    </div>
+                    <div className="w-9 h-9 rounded-full bg-teal-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                      LC
+                    </div>
+                    <div className="w-9 h-9 rounded-full bg-rose-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                      SV
+                    </div>
+                    <button
+                      onClick={() => { setActiveTab('teams'); loadMyTeams(); }}
+                      title="Add Contributor"
+                      className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm flex items-center justify-center transition cursor-pointer border border-slate-200/80"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Verified Node (Black Card) */}
+                <div className="space-y-3">
+                  <div className="bg-[#121417] text-white rounded-3xl p-6 border border-slate-800 shadow-md relative overflow-hidden">
+                    <div className="flex items-center justify-between">
+                      {/* Gold SIM chip icon */}
+                      <div className="w-8 h-6 rounded-md bg-amber-400/90 border border-amber-300 flex items-center justify-center p-1">
+                        <div className="w-full h-full border border-amber-600/40 rounded-xs grid grid-cols-2 gap-0.5" />
+                      </div>
+                      <span className="text-[10px] font-mono font-bold tracking-widest text-[#A3E635] uppercase">
+                        VERIFIED NODE
+                      </span>
+                    </div>
+
+                    <div className="my-6">
+                      <div className="text-sm font-mono tracking-widest text-slate-300">
+                        •••• •••• 3892 7835
+                      </div>
+                    </div>
+
+                    <div className="flex items-end justify-between pt-2 border-t border-white/10 text-xs">
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wider text-slate-400 font-mono">STUDENT LEAD</div>
+                        <div className="font-semibold text-white mt-0.5 text-xs">
+                          {student?.name || 'Deneth Godakandage'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[9px] uppercase tracking-wider text-slate-400 font-mono">DEADLINE</div>
+                        <div className="font-semibold text-white mt-0.5 text-xs font-mono">
+                          {selectedAssignment?.deadline 
+                            ? new Date(selectedAssignment.deadline).toLocaleDateString(undefined, {month: '2-digit', year: 'numeric'}) 
+                            : '09 / 2026'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Two Action Buttons underneath Card 2 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handleManualAutoSyncAll}
+                      disabled={autoSyncInProgress || scanning}
+                      className="w-full py-2.5 rounded-full bg-[#A3E635] hover:bg-[#8ee01d] text-slate-950 font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${autoSyncInProgress || scanning ? 'animate-spin' : ''}`} />
+                      <span>Sync Telemetry</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        alert(`OffSync Student Audit Report\nStudent: ${student?.name || 'Deneth'}\nAuthenticity: ${report?.scores?.final ?? 100}%\nAttested files: ${scannedFiles.length}\nRemote: ${team?.repositoryUrl || repoUrl || 'Active'}`);
+                      }}
+                      className="w-full py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs border border-slate-200/80 shadow-xs transition flex items-center justify-center cursor-pointer"
+                    >
+                      Audit Report
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Workspace Evaluation Card */}
+                <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900">Workspace Evaluation</h3>
+                    <span className="text-xs font-semibold text-slate-500 font-mono">
+                      Total {report?.metrics?.codingHours ?? '10.33'}h
+                    </span>
+                  </div>
+
+                  {/* Blue Weighted Score Box */}
+                  <div className="bg-[#EFF6FF] border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 font-mono">
+                        WEIGHTED SCORE
+                      </div>
+                      <div className="text-xs text-blue-900 font-medium mt-0.5">Calculated Standing</div>
+                    </div>
+                    <div className="text-3xl font-black text-blue-600 font-mono">
+                      {report?.scores?.final ?? 50}%
+                    </div>
+                  </div>
+
+                  {/* 4 Evaluation Progress Bars */}
+                  <div className="space-y-3 text-xs">
+                    <div>
+                      <div className="flex justify-between items-center text-slate-600 mb-1">
+                        <span className="font-medium">Git Mining (40%)</span>
+                        <span className="font-mono font-bold text-slate-900">{report?.scores?.git ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.git ?? 0))}%` }} 
+                          className="h-full bg-[#A3E635] transition-all duration-500" 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center text-slate-600 mb-1">
+                        <span className="font-medium">VS Code Telemetry (30%)</span>
+                        <span className="font-mono font-bold text-slate-900">{report?.scores?.vscode ?? 100}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.vscode ?? 100))}%` }} 
+                          className="h-full bg-[#A3E635] transition-all duration-500" 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center text-slate-600 mb-1">
+                        <span className="font-medium">Kanban Velocity (20%)</span>
+                        <span className="font-mono font-bold text-slate-900">{report?.scores?.task ?? 100}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.task ?? 100))}%` }} 
+                          className="h-full bg-[#A3E635] transition-all duration-500" 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center text-slate-600 mb-1">
+                        <span className="font-medium">Team Balance (10%)</span>
+                        <span className="font-mono font-bold text-slate-900">{report?.scores?.collab ?? 0}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.collab ?? 0))}%` }} 
+                          className="h-full bg-[#A3E635] transition-all duration-500" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Status */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
+                    <span>Continuous sync active</span>
+                    <span className="flex items-center gap-1.5 text-slate-800 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
+                      Live Node
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
           
           {/* Dynamic alerts */}
           {error && (
-            <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-950/40 text-rose-200 text-xs font-light flex items-start gap-2.5 text-left animate-fade-in">
-              <AlertTriangle className="w-4 h-4 text-[#F43F5E] shrink-0 mt-0.5" />
+            <div className="p-4 rounded-2xl border border-red-200 bg-red-50 text-red-700 text-xs font-light flex items-start gap-2.5 text-left animate-fade-in">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
           {success && (
-            <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs font-light flex items-start gap-2.5 text-left animate-fade-in">
-              <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
+            <div className="p-4 rounded-2xl bg-green-50 border border-green-200 text-green-700 text-xs font-light flex items-start gap-2.5 text-left animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
               <span>{success}</span>
             </div>
           )}
@@ -1428,27 +2019,27 @@ export default function StudentDashboard() {
               SAVED WORKSPACE RE-CONNECT BANNER (PERSISTENCE PROMPT)
           ========================================================================= */}
           {savedFolderPrompt && !localDirHandle && (
-            <div className="glass-card rounded-2xl border border-[#0EA5E9]/40 bg-[#0EA5E9]/5 p-5 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
+            <div className="glass-card rounded-3xl border border-[#A3E635]/40 bg-[#A3E635]/10 p-5 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-xs font-mono-code text-[#38BDF8]">
-                  <HardDrive className="w-4 h-4 text-[#38BDF8]" />
+                <div className="flex items-center gap-2 text-xs font-mono-code text-[#2D6606]">
+                  <HardDrive className="w-4 h-4 text-[#2D6606]" />
                   <span>Saved Physical Workspace Detected</span>
                 </div>
-                <p className="text-xs text-slate-300 font-light">
-                  You previously connected folder <strong className="text-white font-mono-code">{savedFolderPrompt.folderName}/</strong> for this assignment. Click below to re-authenticate and automatically verify your Git remote and reconcile changes.
+                <p className="text-xs text-[#48484a] font-light">
+                  You previously connected folder <strong className="text-[#1d1d1f] font-mono-code">{savedFolderPrompt.folderName}/</strong> for this assignment. Click below to re-authenticate and automatically verify your Git remote and reconcile changes.
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <button
                   onClick={handleResumeSavedWorkspace}
-                  className="px-4 py-2 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition shadow-[0_0_15px_rgba(14,165,233,0.3)] flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                   <Zap className="w-3.5 h-3.5" />
                   Resume & Auto-Sync
                 </button>
                 <button
                   onClick={handleSelectFolder}
-                  className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-light border border-white/10 transition cursor-pointer"
+                  className="px-3.5 py-2 bg-black/[0.03] hover:bg-black/[0.04] text-[#48484a] hover:text-[#1d1d1f] rounded-xl text-xs font-light border border-black/[0.06] transition cursor-pointer"
                 >
                   Choose Different Folder
                 </button>
@@ -1458,28 +2049,28 @@ export default function StudentDashboard() {
 
           {/* VS Code Extension Setup Banner */}
           {activeTab === 'commits' && (
-            <div className="glass-card rounded-2xl border border-[#0EA5E9]/30 p-6 text-left relative overflow-hidden">
+            <div className="glass-card rounded-3xl border border-[#A3E635]/30 p-6 text-left relative overflow-hidden">
               <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
                 <div>
-                  <div className="inline-flex items-center gap-1.5 text-xs text-[#38BDF8] font-mono-code mb-1">
+                  <div className="inline-flex items-center gap-1.5 text-xs text-[#2D6606] font-mono-code mb-1">
                     <Terminal className="w-3.5 h-3.5" />
                     <span>VS Code Telemetry Daemon Setup</span>
                   </div>
-                  <p className="text-xs text-slate-300 font-light leading-relaxed max-w-xl">
-                    Install <strong>OffSync Telemetry Sensor</strong> in VS Code, then open the Command Palette (<code className="bg-slate-800 text-white rounded px-1.5 py-0.5 font-mono-code text-[11px]">Ctrl+Shift+P</code>) and run <code className="bg-slate-800 text-[#38BDF8] rounded px-1.5 py-0.5 font-mono-code text-[11px]">OffSync: Setup</code> with your token.
+                  <p className="text-xs text-[#48484a] font-light leading-relaxed max-w-xl">
+                    Install <strong>OffSync Telemetry Sensor</strong> in VS Code, then open the Command Palette (<code className="bg-black/[0.04] text-[#1d1d1f] rounded px-1.5 py-0.5 font-mono-code text-[11px]">Ctrl+Shift+P</code>) and run <code className="bg-black/[0.04] text-[#2D6606] rounded px-1.5 py-0.5 font-mono-code text-[11px]">OffSync: Setup</code> with your token.
                   </p>
                 </div>
-                <span className="text-[10px] bg-[#0EA5E9]/10 text-[#38BDF8] border border-[#0EA5E9]/30 rounded-md px-2.5 py-1 font-mono-code font-medium uppercase tracking-wider">
+                <span className="text-[10px] bg-[#A3E635]/15 text-[#2D6606] border border-[#A3E635]/30 rounded-md px-2.5 py-1 font-mono-code font-medium uppercase tracking-wider">
                   v2.0 Client
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Auth Token */}
-                <div className="bg-slate-900/80 border border-white/10 rounded-xl p-3.5 flex flex-col gap-2">
-                  <span className="text-[10px] uppercase font-mono-code text-slate-400 tracking-wider">Student Auth Token (JWT)</span>
+                <div className="bg-white/80 border border-black/[0.06] rounded-xl p-3.5 flex flex-col gap-2">
+                  <span className="text-[10px] uppercase font-mono-code text-[#86868b] tracking-wider">Student Auth Token (JWT)</span>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-[11px] font-mono-code bg-slate-950 border border-white/5 rounded-lg px-2.5 py-1.5 truncate text-slate-300">
+                    <code className="flex-1 text-[11px] font-mono-code bg-white border border-black/[0.04] rounded-lg px-2.5 py-1.5 truncate text-[#48484a]">
                       {typeof window !== 'undefined' ? (localStorage.getItem('token') || '— not found —') : '—'}
                     </code>
                     <button
@@ -1489,7 +2080,7 @@ export default function StudentDashboard() {
                         setCopiedToken(true);
                         setTimeout(() => setCopiedToken(false), 2000);
                       }}
-                      className="flex-shrink-0 px-3 py-1.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white text-xs font-medium rounded-lg transition cursor-pointer shadow-xs"
+                      className="flex-shrink-0 px-3 py-1.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs font-medium rounded-lg transition cursor-pointer shadow-xs"
                     >
                       {copiedToken ? '✓ Copied' : 'Copy'}
                     </button>
@@ -1497,10 +2088,10 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Assignment ID */}
-                <div className="bg-slate-900/80 border border-white/10 rounded-xl p-3.5 flex flex-col gap-2">
-                  <span className="text-[10px] uppercase font-mono-code text-slate-400 tracking-wider">Active Assignment ID</span>
+                <div className="bg-white/80 border border-black/[0.06] rounded-xl p-3.5 flex flex-col gap-2">
+                  <span className="text-[10px] uppercase font-mono-code text-[#86868b] tracking-wider">Active Assignment ID</span>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-[11px] font-mono-code bg-slate-950 border border-white/5 rounded-lg px-2.5 py-1.5 truncate text-slate-300">
+                    <code className="flex-1 text-[11px] font-mono-code bg-white border border-black/[0.04] rounded-lg px-2.5 py-1.5 truncate text-[#48484a]">
                       {selectedAssignment?._id || '— select an assignment first —'}
                     </code>
                     <button
@@ -1512,7 +2103,7 @@ export default function StudentDashboard() {
                         setTimeout(() => setCopiedAssignId(false), 2000);
                       }}
                       disabled={!selectedAssignment}
-                      className="flex-shrink-0 px-3 py-1.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white text-xs font-medium rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                      className="flex-shrink-0 px-3 py-1.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs font-medium rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                     >
                       {copiedAssignId ? '✓ Copied' : 'Copy'}
                     </button>
@@ -1520,8 +2111,8 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              <div className="mt-3 text-[11px] text-slate-400 font-mono-code flex items-center gap-2">
-                <span className="text-[#10B981]">●</span> Server endpoint: <code className="text-slate-300">http://localhost:5000</code> (Auto-syncs offline batches on reconnect).
+              <div className="mt-3 text-[11px] text-[#86868b] font-mono-code flex items-center gap-2">
+                <span className="text-[#34C759]">●</span> Server endpoint: <code className="text-[#48484a]">http://localhost:5000</code> (Auto-syncs offline batches on reconnect).
               </div>
             </div>
           )}
@@ -1531,14 +2122,14 @@ export default function StudentDashboard() {
           ========================================================================= */}
           {activeTab === 'teams' ? (
             <div className="space-y-6 text-left">
-              <div className="flex justify-between items-center pb-4 border-b border-white/10">
+              <div className="flex justify-between items-center pb-4 border-b border-black/[0.06]">
                 <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">Teams Manager</h1>
-                  <p className="text-xs text-slate-400 font-light mt-0.5">Form general teams, select members directly, and link cohort assignments.</p>
+                  <h1 className="text-xl font-bold text-[#1d1d1f] tracking-tight">Teams Manager</h1>
+                  <p className="text-xs text-[#86868b] font-light mt-0.5">Form general teams, select members directly, and link cohort assignments.</p>
                 </div>
                 <button
                   onClick={() => { setShowGeneralTeamModal(true); setSelectedMembers([]); }}
-                  className="px-4 py-2 rounded-xl bg-[#0EA5E9] hover:bg-[#38BDF8] text-white text-xs font-medium transition shadow-[0_0_15px_rgba(14,165,233,0.3)] flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs font-medium transition shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Form General Team
@@ -1550,51 +2141,51 @@ export default function StudentDashboard() {
                   {myTeams.map((t: any) => {
                     const isLeader = t.leader === student?.id || (student && t.leader?.toString() === student.id);
                     return (
-                      <div key={t._id} className="glass-card rounded-2xl p-6 border border-white/10 space-y-5">
+                      <div key={t._id} className="glass-card rounded-3xl p-6 border border-black/[0.06] space-y-5">
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[10px] uppercase font-mono-code font-medium border border-white/10 px-2 py-0.5 rounded-md bg-slate-900 text-[#38BDF8] block w-max mb-2">
+                            <span className="text-[10px] uppercase font-mono-code font-medium border border-black/[0.06] px-2 py-0.5 rounded-md bg-black/[0.03] text-[#2D6606] block w-max mb-2">
                               {isLeader ? 'Leader' : 'Member'}
                             </span>
-                            <h3 className="text-base font-semibold text-white">{t.name}</h3>
+                            <h3 className="text-base font-semibold text-[#1d1d1f]">{t.name}</h3>
                           </div>
-                          <span className="text-xs font-mono-code bg-slate-900 border border-white/10 text-slate-300 px-2.5 py-1 rounded-lg">
-                            Invite Code: <strong className="text-white">{t.inviteCode}</strong>
+                          <span className="text-xs font-mono-code bg-black/[0.03] border border-black/[0.06] text-[#48484a] px-2.5 py-1 rounded-lg">
+                            Invite Code: <strong className="text-[#1d1d1f]">{t.inviteCode}</strong>
                           </span>
                         </div>
 
-                        <div className="space-y-2 border-t border-white/5 pt-4">
-                          <span className="text-[10px] uppercase font-mono-code text-slate-400 tracking-wider">Team Roster</span>
+                        <div className="space-y-2 border-t border-black/[0.04] pt-4">
+                          <span className="text-[10px] uppercase font-mono-code text-[#86868b] tracking-wider">Team Roster</span>
                           <div className="space-y-1.5">
                             {t.members.map((m: any) => (
-                              <div key={m.student?._id || m.student} className="text-xs text-slate-300 flex justify-between">
+                              <div key={m.student?._id || m.student} className="text-xs text-[#48484a] flex justify-between">
                                 <span>{m.student?.name || 'Joining Student'}</span>
-                                <span className="text-slate-400 font-mono-code text-[11px]">@{m.gitUsername}</span>
+                                <span className="text-[#86868b] font-mono-code text-[11px]">@{m.gitUsername}</span>
                               </div>
                             ))}
                           </div>
                         </div>
 
-                        <div className="space-y-1 border-t border-white/5 pt-4">
-                          <span className="text-[10px] uppercase font-mono-code text-slate-400 tracking-wider">Repository</span>
-                          <span className="text-xs font-mono-code block text-slate-300 truncate">
+                        <div className="space-y-1 border-t border-black/[0.04] pt-4">
+                          <span className="text-[10px] uppercase font-mono-code text-[#86868b] tracking-wider">Repository</span>
+                          <span className="text-xs font-mono-code block text-[#48484a] truncate">
                             {t.repositoryUrl || 'No repository linked yet.'}
                           </span>
                         </div>
 
                         {t.assignment && (
-                          <div className="border-t border-white/5 pt-4 bg-slate-900/60 p-3 rounded-xl border border-white/5">
-                            <span className="text-[10px] uppercase font-mono-code text-[#38BDF8] tracking-wider block">Linked Assignment</span>
-                            <span className="text-xs font-medium text-white block mt-0.5">{t.assignment.title || 'Linked Assignment'}</span>
+                          <div className="border-t border-black/[0.04] pt-4 bg-black/[0.02] p-3 rounded-xl border border-black/[0.04]">
+                            <span className="text-[10px] uppercase font-mono-code text-[#2D6606] tracking-wider block">Linked Assignment</span>
+                            <span className="text-xs font-medium text-[#1d1d1f] block mt-0.5">{t.assignment.title || 'Linked Assignment'}</span>
                             {t.assignment.invitationCode && (
-                              <span className="text-[10px] text-slate-400 font-mono-code block mt-0.5">Invite Code: {t.assignment.invitationCode}</span>
+                              <span className="text-[10px] text-[#86868b] font-mono-code block mt-0.5">Invite Code: {t.assignment.invitationCode}</span>
                             )}
                           </div>
                         )}
 
                         {isLeader && (
-                          <div className="border-t border-white/5 pt-4 space-y-3">
-                            <span className="text-[10px] uppercase font-mono-code text-slate-400 tracking-wider block">Link Assignment to Team</span>
+                          <div className="border-t border-black/[0.04] pt-4 space-y-3">
+                            <span className="text-[10px] uppercase font-mono-code text-[#86868b] tracking-wider block">Link Assignment to Team</span>
                             <form 
                               onSubmit={(e) => handleLinkAssignment(e, t._id)} 
                               className="flex gap-2.5"
@@ -1605,11 +2196,11 @@ export default function StudentDashboard() {
                                 value={linkInviteCodes[t._id] || ''}
                                 onChange={(e) => setLinkInviteCodes(prev => ({ ...prev, [t._id]: e.target.value }))}
                                 placeholder="Assignment Invite Code (e.g. INV-123)"
-                                className="flex-grow bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0EA5E9]"
+                                className="flex-grow bg-black/[0.03] border border-black/[0.06] rounded-xl px-3 py-1.5 text-xs text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#A3E635]"
                               />
                               <button 
                                 type="submit"
-                                className="px-3.5 py-1.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition cursor-pointer shadow-xs"
+                                className="px-3.5 py-1.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition cursor-pointer shadow-xs"
                               >
                                 Link
                               </button>
@@ -1621,7 +2212,7 @@ export default function StudentDashboard() {
                   })}
                 </div>
               ) : (
-                <div className="glass-card border border-white/10 p-12 rounded-2xl text-center text-xs text-slate-400">
+                <div className="glass-card border border-black/[0.06] p-12 rounded-3xl text-center text-xs text-[#86868b]">
                   You are not a member of any teams yet. Click "Form General Team" to create one.
                 </div>
               )}
@@ -1631,49 +2222,49 @@ export default function StudentDashboard() {
                 VIEW 2: STUDENT DIRECTORY
             ========================================================================= */
             <div className="space-y-6 text-left">
-              <div className="pb-4 border-b border-white/10">
-                <h1 className="text-xl font-bold text-white tracking-tight">Student Directory</h1>
-                <p className="text-xs text-slate-400 font-light mt-0.5">Search classmates registered in the contribution tracking platform.</p>
+              <div className="pb-4 border-b border-black/[0.06]">
+                <h1 className="text-xl font-bold text-[#1d1d1f] tracking-tight">Student Directory</h1>
+                <p className="text-xs text-[#86868b] font-light mt-0.5">Search classmates registered in the contribution tracking platform.</p>
               </div>
 
-              <div className="glass-card rounded-2xl p-6 border border-white/10 space-y-4">
+              <div className="glass-card rounded-3xl p-6 border border-black/[0.06] space-y-4">
                 <div className="relative">
-                  <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3.5 top-3 w-4 h-4 text-[#86868b]" />
                   <input
                     type="text"
                     value={studentSearchQuery}
                     onChange={(e) => setStudentSearchQuery(e.target.value)}
                     placeholder="Search by student name or academic email address..."
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0EA5E9] transition"
+                    className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#A3E635] transition"
                   />
                 </div>
 
                 <div className="overflow-x-auto w-full pt-2">
                   <table className="w-full text-left text-xs font-mono-code border-collapse">
                     <thead>
-                      <tr className="border-b border-white/10 text-slate-400 text-[10px] uppercase tracking-wider bg-slate-950/40">
+                      <tr className="border-b border-black/[0.06] text-[#86868b] text-[10px] uppercase tracking-wider bg-black/[0.01]">
                         <th className="py-3 px-4">Student Name</th>
                         <th className="py-3 px-4">Academic Email</th>
                         <th className="py-3 px-4 text-right">Role</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 font-sans">
+                    <tbody className="divide-y divide-black/[0.04] font-sans">
                       {filteredStudents.length > 0 ? (
                         filteredStudents.map((s) => (
-                          <tr key={s.id || s.email} className="hover:bg-white/5 transition">
-                            <td className="py-3.5 px-4 font-medium text-white flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-lg bg-[#0EA5E9]/20 text-[#38BDF8] border border-[#0EA5E9]/30 text-xs font-bold flex items-center justify-center">
+                          <tr key={s.id || s.email} className="hover:bg-black/[0.02] transition">
+                            <td className="py-3.5 px-4 font-medium text-[#1d1d1f] flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-lg bg-[#A3E635]/25 text-[#2D6606] border border-[#A3E635]/30 text-xs font-bold flex items-center justify-center">
                                 {s.name?.charAt(0) || 'S'}
                               </div>
                               <span>{s.name}</span>
                             </td>
-                            <td className="py-3.5 px-4 text-slate-300 font-mono-code">{s.email}</td>
-                            <td className="py-3.5 px-4 text-right font-mono-code text-[10px] uppercase text-[#10B981]">Active Student</td>
+                            <td className="py-3.5 px-4 text-[#48484a] font-mono-code">{s.email}</td>
+                            <td className="py-3.5 px-4 text-right font-mono-code text-[10px] uppercase text-[#34C759]">Active Student</td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={3} className="py-12 text-center text-slate-400 text-xs">
+                          <td colSpan={3} className="py-12 text-center text-[#86868b] text-xs">
                             No student profiles match your query.
                           </td>
                         </tr>
@@ -1689,48 +2280,46 @@ export default function StudentDashboard() {
             ========================================================================= */
             <>
               {assignments.length > 0 ? (
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-2 text-left">
-                  <div className="space-y-1">
-                    <h1 className="text-xl font-bold text-white tracking-tight">Active Academic Assignment Workspace</h1>
-                    <div className="flex items-center gap-3">
-                      <select
-                        onChange={handleAssignmentChange}
-                        value={selectedAssignment?._id || ''}
-                        className="bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-[#0EA5E9] cursor-pointer"
-                      >
-                        {assignments.map(a => (
-                          <option key={a._id} value={a._id}>{a.title}</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => { setShowJoinModal(true); setSearchedAssignment(null); setInviteCode(''); setTeamFlow('none'); setSelectedMembers([]); }}
-                        className="px-3.5 py-2 rounded-xl bg-[#0EA5E9] hover:bg-[#38BDF8] text-white text-xs font-medium transition shadow-xs flex items-center gap-1 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Join Assignment
-                      </button>
-                    </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-1 text-left">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-mono-code">Cohort:</span>
+                    <select
+                      onChange={handleAssignmentChange}
+                      value={selectedAssignment?._id || ''}
+                      className="bg-white border border-slate-200/80 rounded-full px-4 py-1.5 text-xs text-slate-900 font-medium outline-none focus:border-[#A3E635] shadow-xs cursor-pointer"
+                    >
+                      {assignments.map(a => (
+                        <option key={a._id} value={a._id}>{a.title}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => { setShowJoinModal(true); setSearchedAssignment(null); setInviteCode(''); setTeamFlow('none'); setSelectedMembers([]); }}
+                      className="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-medium transition shadow-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-[#A3E635]" />
+                      Join Cohort
+                    </button>
                   </div>
 
                   {team && (
-                    <div className="flex gap-3">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={handleSyncGit}
                         disabled={syncingGit}
-                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition border border-white/10 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        className="px-3.5 py-1.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium transition border border-slate-200/80 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                       >
-                        <RefreshCw className={`w-3.5 h-3.5 text-[#38BDF8] ${syncingGit ? 'animate-spin' : ''}`} />
-                        Sync Git Data
+                        <RefreshCw className={`w-3.5 h-3.5 text-slate-900 ${syncingGit ? 'animate-spin' : ''}`} />
+                        Sync Git
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
                 /* NO ASSIGNMENTS JOINED YET */
-                <div className="glass-card border border-white/10 p-8 rounded-2xl max-w-2xl mx-auto space-y-6 mt-10 text-center shadow-2xl">
+                <div className="glass-card border border-black/[0.06] p-8 rounded-3xl max-w-2xl mx-auto space-y-6 mt-10 text-center shadow-lg">
                   <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-white tracking-tight">Join An Assignment Cohort</h2>
-                    <p className="text-xs text-slate-300 font-light">Enter the invitation code provided by your lecturer to join and register your team.</p>
+                    <h2 className="text-2xl font-bold text-[#1d1d1f] tracking-tight">Join An Assignment Cohort</h2>
+                    <p className="text-xs text-[#48484a] font-light">Enter the invitation code provided by your lecturer to join and register your team.</p>
                   </div>
 
                   <form onSubmit={handleSearchInvite} className="flex gap-3 max-w-lg mx-auto">
@@ -1740,11 +2329,11 @@ export default function StudentDashboard() {
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value)}
                       placeholder="Enter invite code (e.g. INV-123)"
-                      className="flex-grow bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0EA5E9]"
+                      className="flex-grow bg-black/[0.03] border border-black/[0.06] rounded-xl px-3.5 py-2 text-xs text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#A3E635]"
                     />
                     <button 
                       type="submit" 
-                      className="px-5 py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition cursor-pointer shadow-xs"
+                      className="px-5 py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition cursor-pointer shadow-xs"
                     >
                       Search Code
                     </button>
@@ -1756,13 +2345,13 @@ export default function StudentDashboard() {
                 <div className="space-y-6 text-left">
                   
                   {/* Repository Linker Card */}
-                  <div className="glass-card rounded-2xl p-5 border border-white/10">
+                  <div className="glass-card rounded-3xl p-5 border border-black/[0.06]">
                     <form onSubmit={handleUpdateRepo} className="flex flex-col md:flex-row gap-4 items-end">
                       <div className="flex-grow space-y-1 w-full text-left">
                         <div className="flex justify-between items-center text-xs">
-                          <label className="text-[10px] uppercase text-slate-400 font-mono-code">Team Repository URL</label>
-                          <span className="text-[#38BDF8] font-mono-code text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-white/10">
-                            Team Invite: <strong className="text-white">{team.inviteCode}</strong>
+                          <label className="text-[10px] uppercase text-[#86868b] font-mono-code">Team Repository URL</label>
+                          <span className="text-[#2D6606] font-mono-code text-[11px] bg-black/[0.03] px-2 py-0.5 rounded border border-black/[0.06]">
+                            Team Invite: <strong className="text-[#1d1d1f]">{team.inviteCode}</strong>
                           </span>
                         </div>
                         <input
@@ -1771,12 +2360,12 @@ export default function StudentDashboard() {
                           value={repoUrl}
                           onChange={(e) => setRepoUrl(e.target.value)}
                           placeholder="https://github.com/your-org/your-repo"
-                          className="w-full bg-slate-900/90 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0EA5E9]"
+                          className="w-full bg-white/90 border border-black/[0.06] rounded-xl px-3.5 py-2 text-xs text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#A3E635]"
                         />
                       </div>
                       <button
                         type="submit"
-                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition border border-white/10 shrink-0 cursor-pointer shadow-xs"
+                        className="px-4 py-2 rounded-xl bg-black/[0.04] hover:bg-black/[0.06] text-[#1d1d1f] text-xs font-medium transition border border-black/[0.06] shrink-0 cursor-pointer shadow-xs"
                       >
                         Link Repository
                       </button>
@@ -1789,39 +2378,47 @@ export default function StudentDashboard() {
                     {/* Left/Center Column (2/3 width) */}
                     <div className="lg:col-span-2 space-y-6">
                       
-                      {/* Tab Navigation header */}
-                      <div className="glass-card rounded-2xl p-1.5 flex flex-wrap gap-2 text-xs font-mono-code border border-white/10">
+                      {/* Tab Navigation header (Monetra Pill Bar) */}
+                      <div className="bg-white rounded-full p-1.5 flex flex-wrap gap-1.5 text-xs border border-slate-200/80 shadow-xs">
                         <button
                           onClick={() => setActiveTab('repository')}
-                          className={`flex-1 min-w-[130px] py-2 rounded-xl transition cursor-pointer border ${
-                            activeTab === 'repository' ? 'bg-[#0EA5E9] text-white border-[#0EA5E9] font-medium shadow-xs' : 'text-slate-400 border-transparent hover:text-white'
+                          className={`flex-1 min-w-[100px] py-2 rounded-full transition cursor-pointer font-medium ${
+                            activeTab === 'repository' 
+                              ? 'bg-[#A3E635] text-slate-950 font-bold shadow-xs' 
+                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                           }`}
                         >
-                          Workspace Files
+                          Files
                         </button>
                         <button
                           onClick={() => setActiveTab('commits')}
-                          className={`flex-1 min-w-[130px] py-2 rounded-xl transition cursor-pointer border ${
-                            activeTab === 'commits' ? 'bg-[#0EA5E9] text-white border-[#0EA5E9] font-medium shadow-xs' : 'text-slate-400 border-transparent hover:text-white'
+                          className={`flex-1 min-w-[100px] py-2 rounded-full transition cursor-pointer font-medium ${
+                            activeTab === 'commits' 
+                              ? 'bg-[#A3E635] text-slate-950 font-bold shadow-xs' 
+                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                           }`}
                         >
-                          Commits & Telemetry
+                          Commits
                         </button>
                         <button
                           onClick={() => setActiveTab('timeline')}
-                          className={`flex-1 min-w-[150px] py-2 rounded-xl transition cursor-pointer border ${
-                            activeTab === 'timeline' ? 'bg-[#0EA5E9] text-white border-[#0EA5E9] font-medium shadow-xs' : 'text-slate-400 border-transparent hover:text-white'
+                          className={`flex-1 min-w-[110px] py-2 rounded-full transition cursor-pointer font-medium ${
+                            activeTab === 'timeline' 
+                              ? 'bg-[#A3E635] text-slate-950 font-bold shadow-xs' 
+                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                           }`}
                         >
-                          ⏱️ Provenance Timeline
+                          Provenance
                         </button>
                         <button
                           onClick={() => setActiveTab('kanban')}
-                          className={`flex-1 min-w-[110px] py-2 rounded-xl transition cursor-pointer border ${
-                            activeTab === 'kanban' ? 'bg-[#0EA5E9] text-white border-[#0EA5E9] font-medium shadow-xs' : 'text-slate-400 border-transparent hover:text-white'
+                          className={`flex-1 min-w-[90px] py-2 rounded-full transition cursor-pointer font-medium ${
+                            activeTab === 'kanban' 
+                              ? 'bg-[#A3E635] text-slate-950 font-bold shadow-xs' 
+                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                           }`}
                         >
-                          Tasks Kanban
+                          Tasks
                         </button>
                       </div>
 
@@ -1830,15 +2427,15 @@ export default function StudentDashboard() {
                         <div className="space-y-6 text-left">
                           
                           {/* Repo Meta subheader */}
-                          <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-3">
-                              <span className="font-mono-code text-xs text-white truncate">{repoUrl || 'No Repository Linked'}</span>
+                          <div className="glass-card rounded-3xl p-5 border border-black/[0.06] space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/[0.04] pb-3">
+                              <span className="font-mono-code text-xs text-[#1d1d1f] truncate">{repoUrl || 'No Repository Linked'}</span>
                               {repoUrl && (
                                 <a
                                   href={repoUrl}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-xs text-[#38BDF8] hover:underline flex items-center gap-1 font-mono-code border border-[#0EA5E9]/30 bg-[#0EA5E9]/10 px-2.5 py-1 rounded-lg"
+                                  className="text-xs text-[#2D6606] hover:underline flex items-center gap-1 font-mono-code border border-[#A3E635]/40 bg-[#A3E635]/15 text-slate-900 px-2.5 py-1 rounded-lg"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                   View on GitHub
@@ -1848,16 +2445,16 @@ export default function StudentDashboard() {
 
                             {/* Members Roster */}
                             <div className="flex flex-wrap items-center gap-2.5">
-                              <span className="text-[10px] uppercase font-mono-code text-slate-400 pr-2">Team Members:</span>
+                              <span className="text-[10px] uppercase font-mono-code text-[#86868b] pr-2">Team Members:</span>
                               {studentBreakdown.length > 0 ? (
                                 studentBreakdown.map((member) => (
-                                  <div key={member.studentId} className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-900 border border-white/5 rounded-lg px-2.5 py-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                                  <div key={member.studentId} className="flex items-center gap-1.5 text-xs text-[#48484a] bg-black/[0.03] border border-black/[0.04] rounded-lg px-2.5 py-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#34C759]" />
                                     <span>{member.name}</span>
                                   </div>
                                 ))
                               ) : (
-                                <span className="text-xs text-slate-400">Sync repo to load breakdown.</span>
+                                <span className="text-xs text-[#86868b]">Sync repo to load breakdown.</span>
                               )}
                             </div>
                           </div>
@@ -1865,17 +2462,17 @@ export default function StudentDashboard() {
                           {/* =========================================================================
                               PHYSICAL WORKSPACE SCANNER (WITH PERSISTENCE & GIT REMOTE VALIDATION)
                           ========================================================================= */}
-                          <div className="glass-card rounded-2xl border border-white/10 overflow-hidden text-left">
-                            <div className="p-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="glass-card rounded-3xl border border-black/[0.06] overflow-hidden text-left">
+                            <div className="p-5 border-b border-black/[0.04] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <HardDrive className="w-4 h-4 text-[#0EA5E9]" />
-                                  <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">
+                                  <HardDrive className="w-4 h-4 text-[#2D6606]" />
+                                  <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#2D6606]">
                                     Physical Project Workspace (Auto-Saved & Git Attested)
                                   </h3>
                                 </div>
-                                <p className="text-xs text-slate-300 font-light mt-1">
-                                  Connect your local cloned repository once. OffSync inspects the hidden <code className="text-[#38BDF8] bg-slate-950 px-1 py-0.5 rounded text-[11px]">.git/config</code> to attest that your local directory matches the assigned repository.
+                                <p className="text-xs text-[#48484a] font-light mt-1">
+                                  Connect your local cloned repository once. OffSync inspects the hidden <code className="text-[#2D6606] bg-white px-1 py-0.5 rounded text-[11px]">.git/config</code> to attest that your local directory matches the assigned repository.
                                 </p>
                               </div>
 
@@ -1884,14 +2481,14 @@ export default function StudentDashboard() {
                                   <button
                                     onClick={handleManualAutoSyncAll}
                                     disabled={scanning || autoSyncInProgress}
-                                    className="px-3 py-1.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white text-xs font-medium rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                                    className="px-3 py-1.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs font-medium rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
                                   >
                                     <RefreshCw className={`w-3.5 h-3.5 ${scanning || autoSyncInProgress ? 'animate-spin' : ''}`} />
                                     <span>{scanning ? 'Scanning...' : 'Rescan & Sync'}</span>
                                   </button>
                                   <button
                                     onClick={handleDisconnectWorkspace}
-                                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs rounded-xl border border-white/10 transition cursor-pointer"
+                                    className="px-3 py-1.5 bg-black/[0.03] hover:bg-black/[0.04] text-[#86868b] hover:text-[#1d1d1f] text-xs rounded-xl border border-black/[0.06] transition cursor-pointer"
                                   >
                                     Disconnect
                                   </button>
@@ -1901,55 +2498,55 @@ export default function StudentDashboard() {
 
                             {/* Git Attestation Banner if verified */}
                             {localDirHandle && gitVerification && (
-                              <div className={`px-5 py-3 border-b border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-code ${
-                                gitVerification.status === 'matched' ? 'bg-[#10B981]/10 text-emerald-300' :
-                                gitVerification.status === 'mismatch' ? 'bg-[#F43F5E]/10 text-rose-300' :
-                                'bg-slate-900/60 text-slate-300'
+                              <div className={`px-5 py-3 border-b border-black/[0.04] flex flex-wrap items-center justify-between gap-3 text-xs font-mono-code ${
+                                gitVerification.status === 'matched' ? 'bg-[#34C759]/10 text-[#34C759]' :
+                                gitVerification.status === 'mismatch' ? 'bg-[#FF3B30]/10 text-[#FF3B30]' :
+                                'bg-black/[0.02] text-[#48484a]'
                               }`}>
                                 <div className="flex items-center gap-2">
                                   {gitVerification.status === 'matched' ? (
                                     <>
-                                      <ShieldCheck className="w-4 h-4 text-[#10B981]" />
+                                      <ShieldCheck className="w-4 h-4 text-[#34C759]" />
                                       <span><strong>Git Remote Verified:</strong> {gitVerification.matchedSlug}</span>
                                     </>
                                   ) : gitVerification.status === 'mismatch' ? (
                                     <>
-                                      <ShieldAlert className="w-4 h-4 text-[#F43F5E]" />
+                                      <ShieldAlert className="w-4 h-4 text-[#FF3B30]" />
                                       <span><strong>Remote Mismatch:</strong> Expected "{gitVerification.expectedRepoUrl}" but local .git is "{gitVerification.localRemoteUrl}"</span>
                                     </>
                                   ) : (
                                     <>
-                                      <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
+                                      <AlertTriangle className="w-4 h-4 text-[#FF9500]" />
                                       <span>{gitVerification.message}</span>
                                     </>
                                   )}
                                 </div>
 
                                 {gitVerification.localBranch && (
-                                  <div className="flex items-center gap-1.5 text-[11px] bg-slate-950/80 px-2.5 py-0.5 rounded-md border border-white/10">
-                                    <GitCommit className="w-3.5 h-3.5 text-[#38BDF8]" />
-                                    <span>Branch: <strong className="text-white">{gitVerification.localBranch}</strong></span>
+                                  <div className="flex items-center gap-1.5 text-[11px] bg-black/[0.02] px-2.5 py-0.5 rounded-md border border-black/[0.06]">
+                                    <GitCommit className="w-3.5 h-3.5 text-[#2D6606]" />
+                                    <span>Branch: <strong className="text-[#1d1d1f]">{gitVerification.localBranch}</strong></span>
                                   </div>
                                 )}
                               </div>
                             )}
 
                             {!localDirHandle ? (
-                              <div className="border-2 border-dashed border-white/10 rounded-xl m-5 p-8 text-center space-y-4">
-                                <div className="w-12 h-12 rounded-2xl bg-[#0EA5E9]/10 border border-[#0EA5E9]/30 flex items-center justify-center mx-auto text-[#38BDF8]">
+                              <div className="border-2 border-dashed border-black/[0.06] rounded-xl m-5 p-8 text-center space-y-4">
+                                <div className="w-12 h-12 rounded-3xl bg-[#A3E635]/15 border border-[#A3E635]/30 flex items-center justify-center mx-auto text-[#2D6606]">
                                   <Folder className="w-6 h-6" />
                                 </div>
                                 <div>
-                                  <h4 className="text-sm font-semibold text-white">No Physical Workspace Directory Connected</h4>
-                                  <p className="text-xs text-slate-400 font-light max-w-md mx-auto mt-1">
-                                    Select your local development folder for <strong>{selectedAssignment.title}</strong> once. OffSync will verify its hidden <code className="text-slate-200">.git/config</code> remote path to ensure it is the exact cloned repository.
+                                  <h4 className="text-sm font-semibold text-[#1d1d1f]">No Physical Workspace Directory Connected</h4>
+                                  <p className="text-xs text-[#86868b] font-light max-w-md mx-auto mt-1">
+                                    Select your local development folder for <strong>{selectedAssignment.title}</strong> once. OffSync will verify its hidden <code className="text-[#3a3a3c]">.git/config</code> remote path to ensure it is the exact cloned repository.
                                   </p>
                                 </div>
                                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                                   {savedFolderPrompt ? (
                                     <button
                                       onClick={handleResumeSavedWorkspace}
-                                      className="px-5 py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium flex items-center gap-2 transition cursor-pointer shadow-[0_0_15px_rgba(14,165,233,0.3)]"
+                                      className="px-5 py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium flex items-center gap-2 transition cursor-pointer shadow-sm"
                                     >
                                       <Zap className="w-4 h-4" />
                                       Resume Saved Workspace ({savedFolderPrompt.folderName}/)
@@ -1957,7 +2554,7 @@ export default function StudentDashboard() {
                                   ) : (
                                     <button
                                       onClick={handleSelectFolder}
-                                      className="px-5 py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium flex items-center gap-2 transition cursor-pointer shadow-[0_0_15px_rgba(14,165,233,0.3)]"
+                                      className="px-5 py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium flex items-center gap-2 transition cursor-pointer shadow-sm"
                                     >
                                       <Folder className="w-4 h-4" />
                                       Connect Cloned Project Folder
@@ -1966,32 +2563,32 @@ export default function StudentDashboard() {
                                 </div>
                               </div>
                             ) : (
-                              <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/5">
+                              <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-black/[0.04]">
                                 
                                 {/* Left files */}
                                 <div className="w-full md:w-72 shrink-0 flex flex-col">
-                                  <div className="p-4 bg-slate-950/40 border-b border-white/5">
+                                  <div className="p-4 bg-black/[0.01] border-b border-black/[0.04]">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-[10px] uppercase font-mono-code text-[#10B981] flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+                                      <span className="text-[10px] uppercase font-mono-code text-[#34C759] flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse"></span>
                                         Connected & Attested
                                       </span>
                                       {lastAutoSyncTime && (
-                                        <span className="text-[10px] text-slate-500 font-mono-code">{lastAutoSyncTime}</span>
+                                        <span className="text-[10px] text-[#aeaeb2] font-mono-code">{lastAutoSyncTime}</span>
                                       )}
                                     </div>
-                                    <span className="text-xs font-bold text-white font-mono-code block mt-1 truncate">{localDirName}/</span>
-                                    <span className="text-[10px] text-slate-400 block mt-1">
+                                    <span className="text-xs font-bold text-[#1d1d1f] font-mono-code block mt-1 truncate">{localDirName}/</span>
+                                    <span className="text-[10px] text-[#86868b] block mt-1">
                                       {scannedFiles.length} files across {scannedFolders.length} folders · {offlineEdits.length} modified recently
                                     </span>
                                   </div>
 
                                   {/* Filter Tabs */}
-                                  <div className="flex border-b border-white/5 bg-slate-950/40">
+                                  <div className="flex border-b border-black/[0.04] bg-black/[0.01]">
                                     <button
                                       onClick={() => { setOfflineFilter('edited'); setSelectedFolderFilter(null); }}
                                       className={`flex-1 py-2 text-[10px] font-mono-code uppercase tracking-wider text-center border-b transition cursor-pointer ${
-                                        offlineFilter === 'edited' ? 'text-[#38BDF8] border-[#38BDF8] bg-slate-900/60 font-medium' : 'text-slate-400 border-transparent hover:text-white'
+                                        offlineFilter === 'edited' ? 'text-[#2D6606] border-[#A3E635] bg-black/[0.02] font-medium' : 'text-[#86868b] border-transparent hover:text-[#1d1d1f]'
                                       }`}
                                     >
                                       Modified ({offlineEdits.length})
@@ -1999,7 +2596,7 @@ export default function StudentDashboard() {
                                     <button
                                       onClick={() => setOfflineFilter('all')}
                                       className={`flex-1 py-2 text-[10px] font-mono-code uppercase tracking-wider text-center border-b transition cursor-pointer ${
-                                        offlineFilter === 'all' ? 'text-[#38BDF8] border-[#38BDF8] bg-slate-900/60 font-medium' : 'text-slate-400 border-transparent hover:text-white'
+                                        offlineFilter === 'all' ? 'text-[#2D6606] border-[#A3E635] bg-black/[0.02] font-medium' : 'text-[#86868b] border-transparent hover:text-[#1d1d1f]'
                                       }`}
                                     >
                                       Files ({scannedFiles.length})
@@ -2007,7 +2604,7 @@ export default function StudentDashboard() {
                                     <button
                                       onClick={() => setOfflineFilter('folders')}
                                       className={`flex-1 py-2 text-[10px] font-mono-code uppercase tracking-wider text-center border-b transition cursor-pointer ${
-                                        offlineFilter === 'folders' ? 'text-[#38BDF8] border-[#38BDF8] bg-slate-900/60 font-medium' : 'text-slate-400 border-transparent hover:text-white'
+                                        offlineFilter === 'folders' ? 'text-[#2D6606] border-[#A3E635] bg-black/[0.02] font-medium' : 'text-[#86868b] border-transparent hover:text-[#1d1d1f]'
                                       }`}
                                     >
                                       Folders ({scannedFolders.length})
@@ -2015,20 +2612,20 @@ export default function StudentDashboard() {
                                   </div>
 
                                   {/* Search Filter Bar */}
-                                  <div className="p-2 border-b border-white/5 bg-slate-950/60">
+                                  <div className="p-2 border-b border-black/[0.04] bg-black/[0.015]">
                                     <div className="relative flex items-center">
-                                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
+                                      <Search className="w-3.5 h-3.5 text-[#aeaeb2] absolute left-2.5 pointer-events-none" />
                                       <input
                                         type="text"
                                         placeholder="Search files by path / name..."
                                         value={fileSearchQuery}
                                         onChange={(e) => setFileSearchQuery(e.target.value)}
-                                        className="w-full bg-slate-900/80 text-white pl-8 pr-7 py-1 rounded-lg text-[11px] font-mono-code border border-white/5 focus:border-[#38BDF8] focus:outline-none placeholder:text-slate-600"
+                                        className="w-full bg-white/80 text-[#1d1d1f] pl-8 pr-7 py-1 rounded-lg text-[11px] font-mono-code border border-black/[0.04] focus:border-[#A3E635] focus:outline-none placeholder:text-[#c7c7cc]"
                                       />
                                       {fileSearchQuery && (
                                         <button
                                           onClick={() => setFileSearchQuery('')}
-                                          className="absolute right-2 text-slate-500 hover:text-white text-xs cursor-pointer"
+                                          className="absolute right-2 text-[#aeaeb2] hover:text-[#1d1d1f] text-xs cursor-pointer"
                                         >
                                           ✕
                                         </button>
@@ -2038,11 +2635,11 @@ export default function StudentDashboard() {
 
                                   {/* Folder Filter Pill if Active */}
                                   {selectedFolderFilter && offlineFilter !== 'folders' && (
-                                    <div className="px-3.5 py-1.5 bg-[#0EA5E9]/15 border-b border-white/5 flex items-center justify-between text-[10px] font-mono-code text-[#38BDF8]">
+                                    <div className="px-3.5 py-1.5 bg-[#A3E635]/20 border-b border-black/[0.04] flex items-center justify-between text-[10px] font-mono-code text-[#2D6606]">
                                       <span className="truncate">In folder: <strong>{selectedFolderFilter}/</strong></span>
                                       <button 
                                         onClick={() => setSelectedFolderFilter(null)}
-                                        className="text-slate-400 hover:text-white ml-2 cursor-pointer font-bold"
+                                        className="text-[#86868b] hover:text-[#1d1d1f] ml-2 cursor-pointer font-bold"
                                       >
                                         ✕ Clear
                                       </button>
@@ -2060,27 +2657,27 @@ export default function StudentDashboard() {
                                               setSelectedFolderFilter(folder.path);
                                               setOfflineFilter('all');
                                             }}
-                                            className="w-full text-left px-4 py-3 border-b border-white/5 hover:bg-slate-800/40 transition cursor-pointer group"
+                                            className="w-full text-left px-4 py-3 border-b border-black/[0.04] hover:bg-black/[0.02] transition cursor-pointer group"
                                           >
                                             <div className="flex items-center justify-between gap-2 mb-1">
                                               <div className="flex items-center gap-2 min-w-0">
-                                                <Folder className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
-                                                <span className="text-xs text-white truncate font-mono-code group-hover:text-[#38BDF8] transition-colors">{folder.path}/</span>
+                                                <Folder className="w-3.5 h-3.5 text-[#FF9500] shrink-0" />
+                                                <span className="text-xs text-[#1d1d1f] truncate font-mono-code group-hover:text-[#2D6606] transition-colors">{folder.path}/</span>
                                               </div>
                                               {folder.modifiedCount > 0 ? (
-                                                <span className="text-[9px] bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 px-1.5 py-0.5 rounded font-mono-code uppercase shrink-0">
+                                                <span className="text-[9px] bg-[#34C759]/10 text-[#34C759] border border-[#34C759]/30 px-1.5 py-0.5 rounded font-mono-code uppercase shrink-0">
                                                   {folder.modifiedCount} Mod
                                                 </span>
                                               ) : null}
                                             </div>
-                                            <div className="text-[10px] text-slate-400 font-mono-code pl-5 flex items-center justify-between">
+                                            <div className="text-[10px] text-[#86868b] font-mono-code pl-5 flex items-center justify-between">
                                               <span>{folder.fileCount} file{folder.fileCount !== 1 ? 's' : ''} · {(folder.totalSize / 1024).toFixed(1)} KB</span>
-                                              <span className="text-slate-500 group-hover:text-[#38BDF8] text-[9px]">Filter →</span>
+                                              <span className="text-[#aeaeb2] group-hover:text-[#2D6606] text-[9px]">Filter →</span>
                                             </div>
                                           </button>
                                         ))
                                       ) : (
-                                        <div className="text-center text-xs text-slate-500 p-8 py-16">
+                                        <div className="text-center text-xs text-[#aeaeb2] p-8 py-16">
                                           No subfolders detected (all files at root level).
                                         </div>
                                       )
@@ -2123,43 +2720,43 @@ export default function StudentDashboard() {
                                               <button
                                                 key={idx}
                                                 onClick={() => handleSelectOfflineFile(f)}
-                                                className={`w-full text-left px-4 py-3 border-b border-white/5 hover:bg-slate-800/40 transition cursor-pointer ${isSelected ? 'bg-[#0EA5E9]/15 border-l-2 border-l-[#0EA5E9] pl-3.5' : ''}`}
+                                                className={`w-full text-left px-4 py-3 border-b border-black/[0.04] hover:bg-black/[0.02] transition cursor-pointer ${isSelected ? 'bg-[#A3E635]/20 border-l-2 border-l-[#007AFF] pl-3.5' : ''}`}
                                               >
                                                 <div className="flex items-center justify-between gap-2 mb-1">
                                                   <div className="flex items-center gap-2 min-w-0">
-                                                    <FileCode className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#38BDF8]' : 'text-slate-400'}`} />
-                                                    <span className="text-xs text-white truncate font-mono-code">{f.name}</span>
+                                                    <FileCode className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#2D6606]' : 'text-[#86868b]'}`} />
+                                                    <span className="text-xs text-[#1d1d1f] truncate font-mono-code">{f.name}</span>
                                                   </div>
                                                   
                                                   <div className="flex items-center gap-1 shrink-0">
                                                     {fileIntel?.hasUnauthorizedAuthor ? (
-                                                      <span className="text-[8px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-1 py-0.5 rounded font-mono-code font-bold flex items-center gap-0.5" title="Unauthorized author detected">
-                                                        <ShieldAlert className="w-2.5 h-2.5 text-rose-400" />
+                                                      <span className="text-[8px] bg-rose-500/20 text-[#FF3B30] border border-[#FF3B30]/20 px-1 py-0.5 rounded font-mono-code font-bold flex items-center gap-0.5" title="Unauthorized author detected">
+                                                        <ShieldAlert className="w-2.5 h-2.5 text-[#FF3B30]" />
                                                         Unauth
                                                       </span>
                                                     ) : null}
 
                                                     {isModified ? (
-                                                      <span className="text-[9px] bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 px-1.5 py-0.5 rounded font-mono-code uppercase">Modified</span>
+                                                      <span className="text-[9px] bg-[#34C759]/10 text-[#34C759] border border-[#34C759]/30 px-1.5 py-0.5 rounded font-mono-code uppercase">Modified</span>
                                                     ) : (
-                                                      <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono-code uppercase">Synced</span>
+                                                      <span className="text-[9px] bg-black/[0.04] text-[#86868b] px-1.5 py-0.5 rounded font-mono-code uppercase">Synced</span>
                                                     )}
                                                   </div>
                                                 </div>
 
-                                                <div className="text-[10px] text-slate-400 font-mono-code pl-5 flex items-center justify-between">
-                                                  <span className="truncate max-w-[130px] text-slate-500">{f.parentFolder !== '(root)' ? `📁 ${f.parentFolder}/` : 'root/'}</span>
+                                                <div className="text-[10px] text-[#86868b] font-mono-code pl-5 flex items-center justify-between">
+                                                  <span className="truncate max-w-[130px] text-[#aeaeb2]">{f.parentFolder !== '(root)' ? `📁 ${f.parentFolder}/` : 'root/'}</span>
                                                   <span>{(f.size / 1024).toFixed(1)} KB · {f.lineCount}L</span>
                                                 </div>
 
                                                 {/* Mini author & typing telemetry summary */}
                                                 {fileIntel && (
-                                                  <div className="mt-1.5 pl-5 flex items-center justify-between text-[9px] font-mono-code text-slate-500">
-                                                    <span className="truncate max-w-[130px] text-slate-400 flex items-center gap-1">
-                                                      <User className="w-2.5 h-2.5 text-slate-400" />
+                                                  <div className="mt-1.5 pl-5 flex items-center justify-between text-[9px] font-mono-code text-[#aeaeb2]">
+                                                    <span className="truncate max-w-[130px] text-[#86868b] flex items-center gap-1">
+                                                      <User className="w-2.5 h-2.5 text-[#86868b]" />
                                                       {fileIntel.creatorName}
                                                     </span>
-                                                    <span className={`font-medium ${fileIntel.typingPercent >= 80 ? 'text-emerald-400' : fileIntel.typingPercent >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                                    <span className={`font-medium ${fileIntel.typingPercent >= 80 ? 'text-[#30D158]' : fileIntel.typingPercent >= 50 ? 'text-[#FF9500]' : 'text-[#FF3B30]'}`}>
                                                       {fileIntel.typingPercent}% Typed
                                                     </span>
                                                   </div>
@@ -2168,7 +2765,7 @@ export default function StudentDashboard() {
                                             );
                                           })
                                         ) : (
-                                          <div className="text-center text-xs text-slate-500 p-8 py-16">
+                                          <div className="text-center text-xs text-[#aeaeb2] p-8 py-16">
                                             No files found matching filter or search.
                                           </div>
                                         );
@@ -2178,47 +2775,47 @@ export default function StudentDashboard() {
                                 </div>
 
                                 {/* Right file intelligence & multi-view pane */}
-                                <div className="flex-1 flex flex-col min-w-0 bg-slate-950/60">
+                                <div className="flex-1 flex flex-col min-w-0 bg-black/[0.015]">
                                   {selectedOfflineFile ? (() => {
                                     const intel = getFileIntelligence(selectedOfflineFile);
 
                                     return (
                                       <>
                                         {/* File Header with Metadata & Security Attestation */}
-                                        <div className="px-5 py-4 border-b border-white/5 bg-slate-950/80 space-y-3">
+                                        <div className="px-5 py-4 border-b border-black/[0.04] bg-black/[0.02] space-y-3">
                                           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                                             <div className="min-w-0">
                                               <div className="flex items-center gap-2">
-                                                <FileCode className="w-4 h-4 text-[#38BDF8] shrink-0" />
-                                                <span className="text-sm font-mono-code text-white font-semibold truncate">{selectedOfflineFile.path}</span>
+                                                <FileCode className="w-4 h-4 text-[#2D6606] shrink-0" />
+                                                <span className="text-sm font-mono-code text-[#1d1d1f] font-semibold truncate">{selectedOfflineFile.path}</span>
                                               </div>
                                               
                                               {/* Timestamps & Lineage */}
-                                              <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-400 font-mono-code mt-1.5">
+                                              <div className="flex flex-wrap items-center gap-3 text-[10px] text-[#86868b] font-mono-code mt-1.5">
                                                 <span className="flex items-center gap-1">
-                                                  <Clock className="w-3 h-3 text-slate-500" />
-                                                  Created: <strong className="text-slate-300">{intel?.createdAt ? new Date(intel.createdAt).toLocaleString() : 'Recent'}</strong>
+                                                  <Clock className="w-3 h-3 text-[#aeaeb2]" />
+                                                  Created: <strong className="text-[#48484a]">{intel?.createdAt ? new Date(intel.createdAt).toLocaleString() : 'Recent'}</strong>
                                                 </span>
-                                                <span className="text-slate-600">•</span>
+                                                <span className="text-[#c7c7cc]">•</span>
                                                 <span>
-                                                  Last Modified: <strong className="text-slate-300">{new Date(selectedOfflineFile.lastModified).toLocaleString()}</strong>
+                                                  Last Modified: <strong className="text-[#48484a]">{new Date(selectedOfflineFile.lastModified).toLocaleString()}</strong>
                                                 </span>
                                               </div>
                                             </div>
 
                                             {/* File Stats Badges */}
                                             <div className="flex gap-2 text-center shrink-0 font-mono-code text-xs">
-                                              <div className="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5">
-                                                <span className="text-[9px] text-slate-400 block uppercase">Lines</span>
-                                                <span className="text-white font-bold">{selectedOfflineFile.lineCount}</span>
+                                              <div className="bg-black/[0.03] border border-black/[0.06] rounded-xl px-3 py-1.5">
+                                                <span className="text-[9px] text-[#86868b] block uppercase">Lines</span>
+                                                <span className="text-[#1d1d1f] font-bold">{selectedOfflineFile.lineCount}</span>
                                               </div>
-                                              <div className="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5">
-                                                <span className="text-[9px] text-slate-400 block uppercase">Size</span>
-                                                <span className="text-white font-bold">{(selectedOfflineFile.size / 1024).toFixed(1)}KB</span>
+                                              <div className="bg-black/[0.03] border border-black/[0.06] rounded-xl px-3 py-1.5">
+                                                <span className="text-[9px] text-[#86868b] block uppercase">Size</span>
+                                                <span className="text-[#1d1d1f] font-bold">{(selectedOfflineFile.size / 1024).toFixed(1)}KB</span>
                                               </div>
-                                              <div className="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5">
-                                                <span className="text-[9px] text-slate-400 block uppercase">Typing</span>
-                                                <span className={`font-bold ${intel?.typingPercent && intel.typingPercent >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                              <div className="bg-black/[0.03] border border-black/[0.06] rounded-xl px-3 py-1.5">
+                                                <span className="text-[9px] text-[#86868b] block uppercase">Typing</span>
+                                                <span className={`font-bold ${intel?.typingPercent && intel.typingPercent >= 80 ? 'text-[#30D158]' : 'text-[#FF9500]'}`}>
                                                   {intel?.typingPercent || 95}%
                                                 </span>
                                               </div>
@@ -2226,44 +2823,44 @@ export default function StudentDashboard() {
                                           </div>
 
                                           {/* Author Attribution & Security Authorization Banner */}
-                                          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/5">
+                                          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-black/[0.04]">
                                             <div className="flex flex-wrap items-center gap-2 text-xs font-mono-code">
                                               {intel?.hasUnauthorizedAuthor ? (
-                                                <div className="bg-rose-950/60 border border-rose-500/40 text-rose-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[11px]">
-                                                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                                                <div className="bg-[#FF3B30]/6 border border-[#FF3B30]/25 text-[#FF3B30] px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[11px]">
+                                                  <ShieldAlert className="w-3.5 h-3.5 text-[#FF3B30]" />
                                                   <span><strong>Security Alert:</strong> Changes from unauthorized contributor ({intel.unauthorizedAuthors.join(', ')}) detected!</span>
                                                 </div>
                                               ) : (
-                                                <div className="bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[11px]">
-                                                  <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" />
-                                                  <span><strong>Creator:</strong> {intel?.creatorName} (@{intel?.creatorGit}) · <span className="text-emerald-400 font-medium">Authorized Contributor</span></span>
+                                                <div className="bg-[#34C759]/5 border border-[#34C759]/20 text-[#34C759] px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[11px]">
+                                                  <ShieldCheck className="w-3.5 h-3.5 text-[#34C759]" />
+                                                  <span><strong>Creator:</strong> {intel?.creatorName} (@{intel?.creatorGit}) · <span className="text-[#30D158] font-medium">Authorized Contributor</span></span>
                                                 </div>
                                               )}
 
                                               {intel && intel.collaborators.length > 1 && (
-                                                <div className="bg-slate-900 border border-white/10 text-slate-300 px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1.5">
-                                                  <Users className="w-3 h-3 text-[#38BDF8]" />
+                                                <div className="bg-black/[0.03] border border-black/[0.06] text-[#48484a] px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1.5">
+                                                  <Users className="w-3 h-3 text-[#2D6606]" />
                                                   <span><strong>{intel.collaborators.length}</strong> Co-authors on this file</span>
                                                 </div>
                                               )}
                                             </div>
 
                                             {intel?.lastModifierName && intel.lastModifierName !== intel.creatorName && (
-                                              <div className="text-[11px] font-mono-code text-slate-400">
-                                                Last edited by: <strong className="text-slate-200">{intel.lastModifierName}</strong>
+                                              <div className="text-[11px] font-mono-code text-[#86868b]">
+                                                Last edited by: <strong className="text-[#3a3a3c]">{intel.lastModifierName}</strong>
                                               </div>
                                             )}
                                           </div>
                                         </div>
 
                                         {/* View Mode Tab Switcher */}
-                                        <div className="flex border-b border-white/5 bg-slate-950/60 px-5">
+                                        <div className="flex border-b border-black/[0.04] bg-black/[0.015] px-5">
                                           <button
                                             onClick={() => setWorkspaceFileViewTab('forensics')}
                                             className={`py-2.5 px-4 text-xs font-mono-code uppercase tracking-wider border-b-2 transition cursor-pointer flex items-center gap-2 ${
                                               workspaceFileViewTab === 'forensics'
-                                                ? 'text-[#38BDF8] border-[#38BDF8] font-bold bg-slate-900/40'
-                                                : 'text-slate-400 border-transparent hover:text-slate-200'
+                                                ? 'text-[#2D6606] border-[#A3E635] font-bold bg-black/[0.015]'
+                                                : 'text-[#86868b] border-transparent hover:text-[#3a3a3c]'
                                             }`}
                                           >
                                             <Fingerprint className="w-3.5 h-3.5" />
@@ -2274,8 +2871,8 @@ export default function StudentDashboard() {
                                             onClick={() => setWorkspaceFileViewTab('blame')}
                                             className={`py-2.5 px-4 text-xs font-mono-code uppercase tracking-wider border-b-2 transition cursor-pointer flex items-center gap-2 ${
                                               workspaceFileViewTab === 'blame'
-                                                ? 'text-[#38BDF8] border-[#38BDF8] font-bold bg-slate-900/40'
-                                                : 'text-slate-400 border-transparent hover:text-slate-200'
+                                                ? 'text-[#2D6606] border-[#A3E635] font-bold bg-black/[0.015]'
+                                                : 'text-[#86868b] border-transparent hover:text-[#3a3a3c]'
                                             }`}
                                           >
                                             <Split className="w-3.5 h-3.5" />
@@ -2286,8 +2883,8 @@ export default function StudentDashboard() {
                                             onClick={() => setWorkspaceFileViewTab('diff')}
                                             className={`py-2.5 px-4 text-xs font-mono-code uppercase tracking-wider border-b-2 transition cursor-pointer flex items-center gap-2 ${
                                               workspaceFileViewTab === 'diff'
-                                                ? 'text-[#38BDF8] border-[#38BDF8] font-bold bg-slate-900/40'
-                                                : 'text-slate-400 border-transparent hover:text-slate-200'
+                                                ? 'text-[#2D6606] border-[#A3E635] font-bold bg-black/[0.015]'
+                                                : 'text-[#86868b] border-transparent hover:text-[#3a3a3c]'
                                             }`}
                                           >
                                             <GitBranch className="w-3.5 h-3.5" />
@@ -2298,8 +2895,8 @@ export default function StudentDashboard() {
                                             onClick={() => setWorkspaceFileViewTab('code')}
                                             className={`py-2.5 px-4 text-xs font-mono-code uppercase tracking-wider border-b-2 transition cursor-pointer flex items-center gap-2 ${
                                               workspaceFileViewTab === 'code'
-                                                ? 'text-[#38BDF8] border-[#38BDF8] font-bold bg-slate-900/40'
-                                                : 'text-slate-400 border-transparent hover:text-slate-200'
+                                                ? 'text-[#2D6606] border-[#A3E635] font-bold bg-black/[0.015]'
+                                                : 'text-[#86868b] border-transparent hover:text-[#3a3a3c]'
                                             }`}
                                           >
                                             <FileCode className="w-3.5 h-3.5" />
@@ -2308,7 +2905,7 @@ export default function StudentDashboard() {
                                         </div>
 
                                         {/* Main Tab Views Body */}
-                                        <div className="flex-1 overflow-auto max-h-[460px] bg-slate-950">
+                                        <div className="flex-1 overflow-auto max-h-[460px] bg-white">
                                           
                                           {/* =========================================================================
                                               TAB 1: FORENSICS & AUTHENTICITY INTELLIGENCE
@@ -2317,18 +2914,18 @@ export default function StudentDashboard() {
                                             <div className="p-6 space-y-6 text-left">
                                               
                                               {/* 1. Keystroke vs Copy-Paste Ratio Meter */}
-                                              <div className="glass-card rounded-xl p-5 border border-white/10 space-y-4">
+                                              <div className="glass-card rounded-xl p-5 border border-black/[0.06] space-y-4">
                                                 <div className="flex items-center justify-between">
                                                   <div className="flex items-center gap-2">
-                                                    <Keyboard className="w-4 h-4 text-[#38BDF8]" />
-                                                    <h4 className="text-xs font-mono-code uppercase tracking-wider text-white font-semibold">
+                                                    <Keyboard className="w-4 h-4 text-[#2D6606]" />
+                                                    <h4 className="text-xs font-mono-code uppercase tracking-wider text-[#1d1d1f] font-semibold">
                                                       Keystroke vs. Copy-Paste Telemetry Analysis
                                                     </h4>
                                                   </div>
                                                   <span className={`text-[10px] font-mono-code uppercase px-2.5 py-0.5 rounded-full border ${
-                                                    intel?.authenticityVerdict === 'authentic' ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30' :
-                                                    intel?.authenticityVerdict === 'mixed' ? 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30' :
-                                                    'bg-[#F43F5E]/10 text-[#F43F5E] border-[#F43F5E]/30'
+                                                    intel?.authenticityVerdict === 'authentic' ? 'bg-[#34C759]/10 text-[#34C759] border-[#34C759]/30' :
+                                                    intel?.authenticityVerdict === 'mixed' ? 'bg-[#FF9500]/10 text-[#FF9500] border-[#FF9500]/30' :
+                                                    'bg-[#FF3B30]/10 text-[#FF3B30] border-[#FF3B30]/30'
                                                   }`}>
                                                     {intel?.authenticityVerdict === 'authentic' ? 'Authentic Human Typing' :
                                                      intel?.authenticityVerdict === 'mixed' ? 'Reference Pastes Detected' :
@@ -2339,62 +2936,62 @@ export default function StudentDashboard() {
                                                 {/* Visual Ratio Bar */}
                                                 <div>
                                                   <div className="flex justify-between text-xs font-mono-code mb-1.5">
-                                                    <span className="text-emerald-300 font-medium">
+                                                    <span className="text-[#34C759] font-medium">
                                                       ⌨️ Human Keystrokes: {intel?.typingPercent}%
                                                     </span>
-                                                    <span className="text-rose-300 font-medium">
+                                                    <span className="text-[#FF3B30] font-medium">
                                                       📋 Pasted / Injected: {100 - (intel?.typingPercent || 95)}%
                                                     </span>
                                                   </div>
-                                                  <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden flex border border-white/5">
+                                                  <div className="w-full h-3 bg-black/[0.03] rounded-full overflow-hidden flex border border-black/[0.04]">
                                                     <div 
-                                                      className="bg-[#10B981] h-full transition-all duration-500" 
+                                                      className="bg-[#34C759] h-full transition-all duration-500" 
                                                       style={{ width: `${intel?.typingPercent || 95}%` }}
                                                       title={`Organic Typing: ${intel?.typingPercent}%`}
                                                     />
                                                     <div 
-                                                      className="bg-[#F43F5E] h-full transition-all duration-500" 
+                                                      className="bg-[#FF3B30] h-full transition-all duration-500" 
                                                       style={{ width: `${100 - (intel?.typingPercent || 95)}%` }}
                                                       title={`Pasted Code: ${100 - (intel?.typingPercent || 95)}%`}
                                                     />
                                                   </div>
                                                 </div>
 
-                                                <p className="text-xs text-slate-300 font-light">
+                                                <p className="text-xs text-[#48484a] font-light">
                                                   {intel?.authenticityMessage}
                                                 </p>
 
                                                 {/* Forensic Metrics Grid */}
                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                                                  <div className="bg-slate-900/80 border border-white/5 rounded-lg p-3 text-center">
-                                                    <span className="text-[10px] text-slate-400 block font-mono-code">Keystrokes</span>
-                                                    <span className="text-sm font-bold text-white font-mono-code">{intel?.totalKeystrokes || 0}</span>
+                                                  <div className="bg-white/80 border border-black/[0.04] rounded-lg p-3 text-center">
+                                                    <span className="text-[10px] text-[#86868b] block font-mono-code">Keystrokes</span>
+                                                    <span className="text-sm font-bold text-[#1d1d1f] font-mono-code">{intel?.totalKeystrokes || 0}</span>
                                                   </div>
-                                                  <div className="bg-slate-900/80 border border-white/5 rounded-lg p-3 text-center">
-                                                    <span className="text-[10px] text-slate-400 block font-mono-code">Chars Pasted</span>
-                                                    <span className="text-sm font-bold text-white font-mono-code">{intel?.totalCharsPasted || 0}</span>
+                                                  <div className="bg-white/80 border border-black/[0.04] rounded-lg p-3 text-center">
+                                                    <span className="text-[10px] text-[#86868b] block font-mono-code">Chars Pasted</span>
+                                                    <span className="text-sm font-bold text-[#1d1d1f] font-mono-code">{intel?.totalCharsPasted || 0}</span>
                                                   </div>
-                                                  <div className="bg-slate-900/80 border border-white/5 rounded-lg p-3 text-center">
-                                                    <span className="text-[10px] text-slate-400 block font-mono-code">Paste Events</span>
-                                                    <span className="text-sm font-bold text-white font-mono-code">{intel?.totalPasteCount || 0}</span>
+                                                  <div className="bg-white/80 border border-black/[0.04] rounded-lg p-3 text-center">
+                                                    <span className="text-[10px] text-[#86868b] block font-mono-code">Paste Events</span>
+                                                    <span className="text-sm font-bold text-[#1d1d1f] font-mono-code">{intel?.totalPasteCount || 0}</span>
                                                   </div>
-                                                  <div className="bg-slate-900/80 border border-white/5 rounded-lg p-3 text-center">
-                                                    <span className="text-[10px] text-slate-400 block font-mono-code">K_eff Efficiency</span>
-                                                    <span className="text-sm font-bold text-[#38BDF8] font-mono-code">{intel?.keff || 100}</span>
+                                                  <div className="bg-white/80 border border-black/[0.04] rounded-lg p-3 text-center">
+                                                    <span className="text-[10px] text-[#86868b] block font-mono-code">K_eff Efficiency</span>
+                                                    <span className="text-sm font-bold text-[#2D6606] font-mono-code">{intel?.keff || 100}</span>
                                                   </div>
                                                 </div>
                                               </div>
 
                                               {/* 2. Collaborators Who Modified This File */}
-                                              <div className="glass-card rounded-xl p-5 border border-white/10 space-y-4">
+                                              <div className="glass-card rounded-xl p-5 border border-black/[0.06] space-y-4">
                                                 <div className="flex items-center justify-between">
                                                   <div className="flex items-center gap-2">
-                                                    <Users className="w-4 h-4 text-[#8B5CF6]" />
-                                                    <h4 className="text-xs font-mono-code uppercase tracking-wider text-white font-semibold">
+                                                    <Users className="w-4 h-4 text-[#AF52DE]" />
+                                                    <h4 className="text-xs font-mono-code uppercase tracking-wider text-[#1d1d1f] font-semibold">
                                                       Collaborators & Text Line Contributors
                                                     </h4>
                                                   </div>
-                                                  <span className="text-[10px] font-mono-code text-slate-400">
+                                                  <span className="text-[10px] font-mono-code text-[#86868b]">
                                                     {intel?.collaborators.length} contributor{intel?.collaborators.length !== 1 ? 's' : ''}
                                                   </span>
                                                 </div>
@@ -2412,21 +3009,21 @@ export default function StudentDashboard() {
                                                           <div className={`w-3 h-3 rounded-full ${colorScheme.bar}`} />
                                                           <div>
                                                             <div className="flex items-center gap-2">
-                                                              <span className="text-xs font-bold text-white font-mono-code">{c.name}</span>
-                                                              <span className="text-[10px] text-slate-400 font-mono-code">(@{c.gitUsername})</span>
+                                                              <span className="text-xs font-bold text-[#1d1d1f] font-mono-code">{c.name}</span>
+                                                              <span className="text-[10px] text-[#86868b] font-mono-code">(@{c.gitUsername})</span>
                                                               {c.isAuthorized ? (
-                                                                <span className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono-code flex items-center gap-1">
-                                                                  <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                                                                <span className="text-[9px] bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 px-1.5 py-0.5 rounded font-mono-code flex items-center gap-1">
+                                                                  <ShieldCheck className="w-2.5 h-2.5 text-[#30D158]" />
                                                                   Authorized
                                                                 </span>
                                                               ) : (
-                                                                <span className="text-[9px] bg-rose-950/80 text-rose-300 border border-rose-500/40 px-1.5 py-0.5 rounded font-mono-code font-bold flex items-center gap-1">
-                                                                  <ShieldAlert className="w-2.5 h-2.5 text-rose-400" />
+                                                                <span className="text-[9px] bg-[#FF3B30]/8 text-[#FF3B30] border border-[#FF3B30]/25 px-1.5 py-0.5 rounded font-mono-code font-bold flex items-center gap-1">
+                                                                  <ShieldAlert className="w-2.5 h-2.5 text-[#FF3B30]" />
                                                                   Unauthorized Contributor
                                                                 </span>
                                                               )}
                                                             </div>
-                                                            <div className="text-[10px] text-slate-400 font-mono-code mt-0.5">
+                                                            <div className="text-[10px] text-[#86868b] font-mono-code mt-0.5">
                                                               Last Active on file: {new Date(c.lastActive).toLocaleString()}
                                                             </div>
                                                           </div>
@@ -2434,16 +3031,16 @@ export default function StudentDashboard() {
 
                                                         <div className="flex items-center gap-4 text-xs font-mono-code shrink-0">
                                                           <div>
-                                                            <span className="text-[9px] text-slate-400 block">Keystrokes</span>
-                                                            <span className="text-white font-bold">{c.keystrokes}</span>
+                                                            <span className="text-[9px] text-[#86868b] block">Keystrokes</span>
+                                                            <span className="text-[#1d1d1f] font-bold">{c.keystrokes}</span>
                                                           </div>
                                                           <div>
-                                                            <span className="text-[9px] text-slate-400 block">Pastes</span>
-                                                            <span className="text-white font-bold">{c.pasteCount}</span>
+                                                            <span className="text-[9px] text-[#86868b] block">Pastes</span>
+                                                            <span className="text-[#1d1d1f] font-bold">{c.pasteCount}</span>
                                                           </div>
                                                           <div>
-                                                            <span className="text-[9px] text-slate-400 block">Lines Added</span>
-                                                            <span className="text-emerald-400 font-bold">+{c.linesAdded}</span>
+                                                            <span className="text-[9px] text-[#86868b] block">Lines Added</span>
+                                                            <span className="text-[#30D158] font-bold">+{c.linesAdded}</span>
                                                           </div>
                                                         </div>
                                                       </div>
@@ -2453,10 +3050,10 @@ export default function StudentDashboard() {
                                               </div>
 
                                               {/* 3. Commit & Telemetry Timeline for this File */}
-                                              <div className="glass-card rounded-xl p-5 border border-white/10 space-y-3">
+                                              <div className="glass-card rounded-xl p-5 border border-black/[0.06] space-y-3">
                                                 <div className="flex items-center gap-2">
-                                                  <History className="w-4 h-4 text-[#0EA5E9]" />
-                                                  <h4 className="text-xs font-mono-code uppercase tracking-wider text-white font-semibold">
+                                                  <History className="w-4 h-4 text-[#2D6606]" />
+                                                  <h4 className="text-xs font-mono-code uppercase tracking-wider text-[#1d1d1f] font-semibold">
                                                     File Modification History & Commits
                                                   </h4>
                                                 </div>
@@ -2464,26 +3061,26 @@ export default function StudentDashboard() {
                                                 {intel?.commits && intel.commits.length > 0 ? (
                                                   <div className="space-y-2">
                                                     {intel.commits.map((commit, idx) => (
-                                                      <div key={idx} className="p-3 bg-slate-900/60 border border-white/5 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono-code">
+                                                      <div key={idx} className="p-3 bg-black/[0.02] border border-black/[0.04] rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono-code">
                                                         <div>
                                                           <div className="flex items-center gap-2">
-                                                            <GitCommit className="w-3.5 h-3.5 text-[#38BDF8]" />
-                                                            <span className="text-slate-200 font-medium">{commit.commitMessage}</span>
+                                                            <GitCommit className="w-3.5 h-3.5 text-[#2D6606]" />
+                                                            <span className="text-[#3a3a3c] font-medium">{commit.commitMessage}</span>
                                                           </div>
-                                                          <div className="text-[10px] text-slate-400 mt-1 pl-5">
-                                                            by <strong className="text-slate-300">{commit.studentName}</strong> (@{commit.gitUsername}) · {new Date(commit.commitDate).toLocaleString()}
+                                                          <div className="text-[10px] text-[#86868b] mt-1 pl-5">
+                                                            by <strong className="text-[#48484a]">{commit.studentName}</strong> (@{commit.gitUsername}) · {new Date(commit.commitDate).toLocaleString()}
                                                           </div>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-[10px] shrink-0 pl-5 sm:pl-0">
-                                                          <span className="text-emerald-400">+{commit.linesAdded || 0}</span>
-                                                          <span className="text-rose-400">-{commit.linesRemoved || 0}</span>
-                                                          <code className="bg-slate-950 px-1.5 py-0.5 rounded text-slate-400">{commit.commitHash ? commit.commitHash.slice(0, 7) : 'local'}</code>
+                                                          <span className="text-[#30D158]">+{commit.linesAdded || 0}</span>
+                                                          <span className="text-[#FF3B30]">-{commit.linesRemoved || 0}</span>
+                                                          <code className="bg-white px-1.5 py-0.5 rounded text-[#86868b]">{commit.commitHash ? commit.commitHash.slice(0, 7) : 'local'}</code>
                                                         </div>
                                                       </div>
                                                     ))}
                                                   </div>
                                                 ) : (
-                                                  <div className="p-4 bg-slate-900/40 rounded-lg text-center text-xs text-slate-400 font-mono-code">
+                                                  <div className="p-4 bg-black/[0.015] rounded-lg text-center text-xs text-[#86868b] font-mono-code">
                                                     Local physical file created in workspace. Commit and sync repository to record remote Git lineage.
                                                   </div>
                                                 )}
@@ -2497,28 +3094,28 @@ export default function StudentDashboard() {
                                           ========================================================================= */}
                                           {workspaceFileViewTab === 'blame' && (
                                             <div className="w-full">
-                                              <div className="px-4 py-2.5 bg-slate-900/90 border-b border-white/5 flex flex-wrap items-center justify-between text-xs font-mono-code text-slate-300 gap-3">
-                                                <span className="font-semibold text-white flex items-center gap-2">
-                                                  <Terminal className="w-3.5 h-3.5 text-[#38BDF8]" />
+                                              <div className="px-4 py-2.5 bg-white/90 border-b border-black/[0.04] flex flex-wrap items-center justify-between text-xs font-mono-code text-[#48484a] gap-3">
+                                                <span className="font-semibold text-[#1d1d1f] flex items-center gap-2">
+                                                  <Terminal className="w-3.5 h-3.5 text-[#2D6606]" />
                                                   Line-by-Line Code Origin, Provenance & Timestamp Inspector
                                                 </span>
                                                 <div className="flex items-center gap-3 text-[10px]">
-                                                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#10B981]" /> ✍️ Typed</span>
-                                                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#818CF8]" /> 🤖 AI Generated</span>
-                                                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F43F5E]" /> 📋 Pasted</span>
-                                                  <span className="flex items-center gap-1 text-slate-400">🕒 Exact Timestamp</span>
+                                                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#34C759]" /> ✍️ Typed</span>
+                                                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#5856D6]" /> 🤖 AI Generated</span>
+                                                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF3B30]" /> 📋 Pasted</span>
+                                                  <span className="flex items-center gap-1 text-[#86868b]">🕒 Exact Timestamp</span>
                                                 </div>
                                               </div>
 
                                               {intel?.lineAttributions && intel.lineAttributions.length > 0 ? (
                                                 <table className="w-full text-[11px] font-mono-code border-collapse">
                                                   <thead>
-                                                    <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase border-b border-white/5">
-                                                      <th className="py-2 px-3 text-right w-10 border-r border-white/5">#</th>
-                                                      <th className="py-2 px-3 text-left w-36 border-r border-white/5">Author & Auth</th>
-                                                      <th className="py-2 px-3 text-center w-28 border-r border-white/5">Typing Status</th>
-                                                      <th className="py-2 px-3 text-center w-24 border-r border-white/5">Sync Mode</th>
-                                                      <th className="py-2 px-3 text-center w-24 border-r border-white/5">Time Added</th>
+                                                    <tr className="bg-black/[0.02] text-[#86868b] text-[10px] uppercase border-b border-black/[0.04]">
+                                                      <th className="py-2 px-3 text-right w-10 border-r border-black/[0.04]">#</th>
+                                                      <th className="py-2 px-3 text-left w-36 border-r border-black/[0.04]">Author & Auth</th>
+                                                      <th className="py-2 px-3 text-center w-28 border-r border-black/[0.04]">Typing Status</th>
+                                                      <th className="py-2 px-3 text-center w-24 border-r border-black/[0.04]">Sync Mode</th>
+                                                      <th className="py-2 px-3 text-center w-24 border-r border-black/[0.04]">Time Added</th>
                                                       <th className="py-2 px-4 text-left">Code Content</th>
                                                     </tr>
                                                   </thead>
@@ -2527,64 +3124,64 @@ export default function StudentDashboard() {
                                                       const colorScheme = intel.memberColors[attr.colorIndex % intel.memberColors.length];
 
                                                       return (
-                                                        <tr key={idx} className="hover:bg-slate-900/60 border-b border-white/5 transition-colors group">
+                                                        <tr key={idx} className="hover:bg-black/[0.02] border-b border-black/[0.04] transition-colors group">
                                                           {/* 1. Line Number */}
-                                                          <td className="text-right text-slate-600 px-3 py-1 select-none w-10 border-r border-white/5 text-[10px] font-bold">
+                                                          <td className="text-right text-[#c7c7cc] px-3 py-1 select-none w-10 border-r border-black/[0.04] text-[10px] font-bold">
                                                             {attr.lineNumber}
                                                           </td>
 
                                                           {/* 2. Author & Authorization Badge */}
-                                                          <td className="px-3 py-1 select-none w-36 border-r border-white/5 text-[10px] whitespace-nowrap">
+                                                          <td className="px-3 py-1 select-none w-36 border-r border-black/[0.04] text-[10px] whitespace-nowrap">
                                                             <div className="flex items-center gap-1.5">
                                                               <span className={`w-1.5 h-1.5 rounded-full ${colorScheme.bar}`} />
                                                               <span className={`font-semibold ${colorScheme.text} truncate max-w-[80px]`}>
                                                                 {attr.authorName}
                                                               </span>
                                                               {attr.isAuthorized ? (
-                                                                <span className="text-[8px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1 py-0.2 rounded font-mono-code">Auth</span>
+                                                                <span className="text-[8px] bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 px-1 py-0.2 rounded font-mono-code">Auth</span>
                                                               ) : (
-                                                                <span className="text-[8px] bg-rose-950/80 text-rose-300 border border-rose-500/40 px-1 py-0.2 rounded font-mono-code font-bold animate-pulse">Unauth</span>
+                                                                <span className="text-[8px] bg-[#FF3B30]/8 text-[#FF3B30] border border-[#FF3B30]/25 px-1 py-0.2 rounded font-mono-code font-bold animate-pulse">Unauth</span>
                                                               )}
                                                             </div>
                                                           </td>
 
                                                           {/* 3. Typing Provenance Status Badge */}
-                                                          <td className="px-2.5 py-1 select-none w-28 border-r border-white/5 text-[9px] text-center whitespace-nowrap">
+                                                          <td className="px-2.5 py-1 select-none w-28 border-r border-black/[0.04] text-[9px] text-center whitespace-nowrap">
                                                             {attr.provenanceType === 'pasted' || attr.isPasted ? (
-                                                              <span className="text-rose-300 bg-rose-950/70 border border-rose-500/40 px-1.5 py-0.5 rounded text-[8px] font-bold inline-flex items-center gap-1">
+                                                              <span className="text-[#FF3B30] bg-[#FF3B30]/8 border border-[#FF3B30]/25 px-1.5 py-0.5 rounded text-[8px] font-bold inline-flex items-center gap-1">
                                                                 📋 Pasted
                                                               </span>
                                                             ) : attr.provenanceType === 'ai_generated' || attr.isAi ? (
-                                                              <span className="text-indigo-300 bg-indigo-950/70 border border-indigo-500/40 px-1.5 py-0.5 rounded text-[8px] font-bold inline-flex items-center gap-1">
+                                                              <span className="text-[#5856D6] bg-[#5856D6]/8 border border-[#5856D6]/25 px-1.5 py-0.5 rounded text-[8px] font-bold inline-flex items-center gap-1">
                                                                 🤖 AI-Copilot
                                                               </span>
                                                             ) : (
-                                                              <span className="text-emerald-300 bg-emerald-950/70 border border-emerald-500/40 px-1.5 py-0.5 rounded text-[8px] font-medium inline-flex items-center gap-1">
+                                                              <span className="text-[#34C759] bg-[#34C759]/8 border border-[#34C759]/25 px-1.5 py-0.5 rounded text-[8px] font-medium inline-flex items-center gap-1">
                                                                 ✍️ Typed
                                                               </span>
                                                             )}
                                                           </td>
 
                                                           {/* 4. Online vs Offline Sync Mode */}
-                                                          <td className="px-2 py-1 select-none w-24 border-r border-white/5 text-[8px] text-center whitespace-nowrap">
+                                                          <td className="px-2 py-1 select-none w-24 border-r border-black/[0.04] text-[8px] text-center whitespace-nowrap">
                                                             {attr.isOffline ? (
-                                                              <span className="bg-amber-950/70 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded font-mono-code font-semibold inline-flex items-center gap-1">
+                                                              <span className="bg-[#FF9500]/8 text-[#FF9500] border border-[#FF9500]/25 px-1.5 py-0.5 rounded font-mono-code font-semibold inline-flex items-center gap-1">
                                                                 🟠 Offline
                                                               </span>
                                                             ) : (
-                                                              <span className="bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded font-mono-code font-medium inline-flex items-center gap-1">
+                                                              <span className="bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/25 px-1.5 py-0.5 rounded font-mono-code font-medium inline-flex items-center gap-1">
                                                                 🟢 Online
                                                               </span>
                                                             )}
                                                           </td>
 
                                                           {/* 5. Exact Timestamp */}
-                                                          <td className="px-2.5 py-1 select-none w-24 border-r border-white/5 text-[9px] text-slate-400 text-center font-mono-code whitespace-nowrap">
+                                                          <td className="px-2.5 py-1 select-none w-24 border-r border-black/[0.04] text-[9px] text-[#86868b] text-center font-mono-code whitespace-nowrap">
                                                             {attr.timeFormatted || '07:15:32'}
                                                           </td>
 
                                                           {/* 6. Actual Code Text */}
-                                                          <td className="px-4 py-1 text-slate-200 whitespace-pre overflow-x-auto">
+                                                          <td className="px-4 py-1 text-[#3a3a3c] whitespace-pre overflow-x-auto">
                                                             {attr.text || ' '}
                                                           </td>
                                                         </tr>
@@ -2593,7 +3190,7 @@ export default function StudentDashboard() {
                                                   </tbody>
                                                 </table>
                                               ) : (
-                                                <div className="p-12 text-center text-xs text-slate-500 font-mono-code">
+                                                <div className="p-12 text-center text-xs text-[#aeaeb2] font-mono-code">
                                                   Empty or binary file – no lines to attribute.
                                                 </div>
                                               )}
@@ -2606,8 +3203,8 @@ export default function StudentDashboard() {
                                           {workspaceFileViewTab === 'diff' && (
                                             <div>
                                               {diffLoading ? (
-                                                <div className="flex flex-col items-center justify-center py-20 text-slate-400 space-y-2">
-                                                  <RefreshCw className="w-6 h-6 animate-spin text-[#38BDF8]" />
+                                                <div className="flex flex-col items-center justify-center py-20 text-[#86868b] space-y-2">
+                                                  <RefreshCw className="w-6 h-6 animate-spin text-[#2D6606]" />
                                                   <span className="text-xs font-mono-code">Comparing local file with Git remote repository...</span>
                                                 </div>
                                               ) : selectedOfflineFileDiff ? (
@@ -2616,29 +3213,29 @@ export default function StudentDashboard() {
                                                     {selectedOfflineFileDiff.map((line, i) => {
                                                       let rowBg = '';
                                                       let sign = ' ';
-                                                      let signColor = 'text-slate-600';
-                                                      let textColor = 'text-slate-300';
+                                                      let signColor = 'text-[#c7c7cc]';
+                                                      let textColor = 'text-[#48484a]';
                                                       
                                                       if (line.type === 'added') {
-                                                        rowBg = 'bg-emerald-950/40 hover:bg-emerald-900/30';
+                                                        rowBg = 'bg-[#34C759]/5 hover:bg-emerald-900/30';
                                                         sign = '+';
-                                                        signColor = 'text-[#10B981] font-bold';
-                                                        textColor = 'text-emerald-200';
+                                                        signColor = 'text-[#34C759] font-bold';
+                                                        textColor = 'text-[#34C759]';
                                                       } else if (line.type === 'removed') {
-                                                        rowBg = 'bg-rose-950/40 hover:bg-rose-900/30';
+                                                        rowBg = 'bg-[#FF3B30]/5 hover:bg-rose-900/30';
                                                         sign = '-';
-                                                        signColor = 'text-[#F43F5E] font-bold';
-                                                        textColor = 'text-rose-300 line-through opacity-80';
+                                                        signColor = 'text-[#FF3B30] font-bold';
+                                                        textColor = 'text-[#FF3B30] line-through opacity-80';
                                                       } else {
-                                                        rowBg = 'hover:bg-slate-900/40';
+                                                        rowBg = 'hover:bg-black/[0.015]';
                                                       }
 
                                                       return (
                                                         <tr key={i} className={`${rowBg} transition-colors`}>
-                                                          <td className="text-right text-slate-600 px-3 py-0.5 select-none w-10 border-r border-white/5 text-[10px]">
+                                                          <td className="text-right text-[#c7c7cc] px-3 py-0.5 select-none w-10 border-r border-black/[0.04] text-[10px]">
                                                             {line.type !== 'removed' ? i + 1 : ''}
                                                           </td>
-                                                          <td className={`px-2 py-0.5 select-none w-5 text-center font-bold border-r border-white/5 ${signColor}`}>
+                                                          <td className={`px-2 py-0.5 select-none w-5 text-center font-bold border-r border-black/[0.04] ${signColor}`}>
                                                             {sign}
                                                           </td>
                                                           <td className={`px-4 py-0.5 whitespace-pre ${textColor}`}>
@@ -2650,7 +3247,7 @@ export default function StudentDashboard() {
                                                   </tbody>
                                                 </table>
                                               ) : (
-                                                <div className="p-12 text-center text-xs text-slate-500 font-mono-code">
+                                                <div className="p-12 text-center text-xs text-[#aeaeb2] font-mono-code">
                                                   No live diff detected (file identical to remote branch).
                                                 </div>
                                               )}
@@ -2666,11 +3263,11 @@ export default function StudentDashboard() {
                                                 <table className="w-full text-[11px] font-mono-code border-collapse">
                                                   <tbody>
                                                     {(selectedOfflineFile.lines || selectedOfflineFile.content.split('\n')).map((line: string, i: number) => (
-                                                      <tr key={i} className="hover:bg-slate-900/60">
-                                                        <td className="text-right text-slate-600 px-3 py-0.5 select-none w-10 border-r border-white/5 text-[10px]">
+                                                      <tr key={i} className="hover:bg-black/[0.02]">
+                                                        <td className="text-right text-[#c7c7cc] px-3 py-0.5 select-none w-10 border-r border-black/[0.04] text-[10px]">
                                                           {i + 1}
                                                         </td>
-                                                        <td className="px-4 py-0.5 text-slate-300 whitespace-pre">
+                                                        <td className="px-4 py-0.5 text-[#48484a] whitespace-pre">
                                                           {line || ' '}
                                                         </td>
                                                       </tr>
@@ -2678,7 +3275,7 @@ export default function StudentDashboard() {
                                                   </tbody>
                                                 </table>
                                               ) : (
-                                                <div className="flex items-center justify-center h-32 text-slate-500 text-xs font-mono-code">
+                                                <div className="flex items-center justify-center h-32 text-[#aeaeb2] text-xs font-mono-code">
                                                   Binary or empty file – preview not available.
                                                 </div>
                                               )}
@@ -2689,8 +3286,8 @@ export default function StudentDashboard() {
                                       </>
                                     );
                                   })() : (
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center p-12 py-24 space-y-3 text-slate-400">
-                                      <Fingerprint className="w-10 h-10 text-slate-600 animate-bounce" />
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center p-12 py-24 space-y-3 text-[#86868b]">
+                                      <Fingerprint className="w-10 h-10 text-[#c7c7cc] animate-bounce" />
                                       <span className="text-xs font-mono-code">Select a file from the list to view author attribution, keystroke vs paste forensics, and live diffs.</span>
                                     </div>
                                   )}
@@ -2702,20 +3299,20 @@ export default function StudentDashboard() {
 
                           {/* Remote GitHub File Explorer */}
                           {repoUrl && (
-                            <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-4">
-                              <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                                <span className="text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">Remote GitHub Tree Explorer</span>
-                                {explorerLoading && <span className="text-[#38BDF8] animate-pulse text-[11px] font-mono-code">Syncing...</span>}
+                            <div className="glass-card rounded-3xl p-5 border border-black/[0.06] space-y-4">
+                              <div className="flex items-center justify-between pb-2 border-b border-black/[0.04]">
+                                <span className="text-xs font-mono-code uppercase tracking-wider text-[#2D6606]">Remote GitHub Tree Explorer</span>
+                                {explorerLoading && <span className="text-[#2D6606] animate-pulse text-[11px] font-mono-code">Syncing...</span>}
                               </div>
 
                               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[350px]">
-                                <div className="lg:col-span-1 border-r border-white/5 pr-4 space-y-3 max-h-[450px] overflow-y-auto">
-                                  <div className="flex items-center justify-between pb-1 border-b border-white/5">
-                                    <span className="text-[10px] uppercase font-mono-code text-slate-400">Remote Tree</span>
+                                <div className="lg:col-span-1 border-r border-black/[0.04] pr-4 space-y-3 max-h-[450px] overflow-y-auto">
+                                  <div className="flex items-center justify-between pb-1 border-b border-black/[0.04]">
+                                    <span className="text-[10px] uppercase font-mono-code text-[#86868b]">Remote Tree</span>
                                     {(explorerPath !== '' || selectedCodeFile !== null) && (
                                       <button 
                                         onClick={handleExplorerBack}
-                                        className="p-1 hover:bg-slate-800 border border-white/10 rounded-md text-slate-300 transition flex items-center gap-1 cursor-pointer text-[10px] font-mono-code"
+                                        className="p-1 hover:bg-black/[0.04] border border-black/[0.06] rounded-md text-[#48484a] transition flex items-center gap-1 cursor-pointer text-[10px] font-mono-code"
                                       >
                                         <ChevronLeft className="w-3 h-3" />
                                         Back
@@ -2725,8 +3322,8 @@ export default function StudentDashboard() {
 
                                   <div className="space-y-1 font-mono-code text-xs">
                                     {explorerError ? (
-                                      <div className="text-center text-xs text-rose-400 py-6 px-2 space-y-1">
-                                        <AlertCircle className="w-4 h-4 mx-auto text-rose-400" />
+                                      <div className="text-center text-xs text-[#FF3B30] py-6 px-2 space-y-1">
+                                        <AlertCircle className="w-4 h-4 mx-auto text-[#FF3B30]" />
                                         <span className="block text-[11px]">{explorerError}</span>
                                       </div>
                                     ) : explorerItems.length > 0 ? (
@@ -2740,20 +3337,20 @@ export default function StudentDashboard() {
                                               fetchFileContent(item.path);
                                             }
                                           }}
-                                          className={`w-full text-left p-2 hover:bg-slate-800 rounded-lg text-xs flex items-center gap-2 transition cursor-pointer ${
-                                            selectedCodeFile === item.path ? 'bg-[#0EA5E9]/15 text-[#38BDF8] border-l-2 border-[#0EA5E9] pl-1.5' : 'text-slate-300'
+                                          className={`w-full text-left p-2 hover:bg-black/[0.04] rounded-lg text-xs flex items-center gap-2 transition cursor-pointer ${
+                                            selectedCodeFile === item.path ? 'bg-[#A3E635]/20 text-[#2D6606] border-l-2 border-[#A3E635] pl-1.5' : 'text-[#48484a]'
                                           }`}
                                         >
                                           {item.type === 'dir' ? (
-                                            <Folder className="w-4 h-4 text-[#F59E0B] shrink-0" />
+                                            <Folder className="w-4 h-4 text-[#FF9500] shrink-0" />
                                           ) : (
-                                            <FileText className="w-4 h-4 text-[#38BDF8] shrink-0" />
+                                            <FileText className="w-4 h-4 text-[#2D6606] shrink-0" />
                                           )}
                                           <span className="truncate">{item.name}</span>
                                         </button>
                                       ))
                                     ) : (
-                                      <div className="text-center text-xs text-slate-500 py-6">Empty directory on GitHub.</div>
+                                      <div className="text-center text-xs text-[#aeaeb2] py-6">Empty directory on GitHub.</div>
                                     )}
                                   </div>
                                 </div>
@@ -2763,43 +3360,43 @@ export default function StudentDashboard() {
                                     const remoteIntel = getFileIntelligence({ path: selectedCodeFile, name: selectedCodeFile.split('/').pop(), content: selectedCodeContent, size: selectedCodeContent.length, lineCount: selectedCodeContent.split('\n').length });
 
                                     return (
-                                      <div className="flex flex-col h-full bg-slate-950 border border-white/5 rounded-xl overflow-hidden text-left font-mono-code">
+                                      <div className="flex flex-col h-full bg-white border border-black/[0.04] rounded-xl overflow-hidden text-left font-mono-code">
                                         {/* Remote File Intelligence Bar */}
-                                        <div className="p-3 bg-slate-900/80 border-b border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <div className="p-3 bg-white/80 border-b border-black/[0.04] flex flex-wrap items-center justify-between gap-2 text-xs">
                                           <div className="flex items-center gap-2">
-                                            <FileCode className="w-3.5 h-3.5 text-[#38BDF8]" />
-                                            <span className="text-white font-bold truncate max-w-[200px]">{selectedCodeFile}</span>
+                                            <FileCode className="w-3.5 h-3.5 text-[#2D6606]" />
+                                            <span className="text-[#1d1d1f] font-bold truncate max-w-[200px]">{selectedCodeFile}</span>
                                             {remoteIntel?.hasUnauthorizedAuthor ? (
-                                              <span className="text-[9px] bg-rose-950/80 text-rose-300 border border-rose-500/40 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
-                                                <ShieldAlert className="w-2.5 h-2.5 text-rose-400" />
+                                              <span className="text-[9px] bg-[#FF3B30]/8 text-[#FF3B30] border border-[#FF3B30]/25 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
+                                                <ShieldAlert className="w-2.5 h-2.5 text-[#FF3B30]" />
                                                 Unauthorized Author
                                               </span>
                                             ) : (
-                                              <span className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                <ShieldCheck className="w-2.5 h-2.5 text-[#10B981]" />
+                                              <span className="text-[9px] bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                <ShieldCheck className="w-2.5 h-2.5 text-[#34C759]" />
                                                 Authorized: {remoteIntel?.creatorName}
                                               </span>
                                             )}
                                           </div>
 
-                                          <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                                          <div className="flex items-center gap-3 text-[10px] text-[#86868b]">
                                             <span>{selectedCodeContent.split('\n').length}L · {(selectedCodeContent.length / 1024).toFixed(1)}KB</span>
-                                            <span className={`font-semibold ${remoteIntel?.typingPercent && remoteIntel.typingPercent >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                            <span className={`font-semibold ${remoteIntel?.typingPercent && remoteIntel.typingPercent >= 80 ? 'text-[#30D158]' : 'text-[#FF9500]'}`}>
                                               {remoteIntel?.typingPercent || 95}% Typed
                                             </span>
                                           </div>
                                         </div>
 
                                         <div className="flex-grow overflow-auto p-4">
-                                          <pre className="text-slate-300 text-[11px] leading-relaxed">
+                                          <pre className="text-[#48484a] text-[11px] leading-relaxed">
                                             <code>{selectedCodeContent}</code>
                                           </pre>
                                         </div>
                                       </div>
                                     );
                                   })() : (
-                                    <div className="h-full flex flex-col items-center justify-center bg-slate-950 border border-white/5 rounded-xl text-slate-500 text-xs py-16 space-y-2 font-mono-code">
-                                      <Code className="w-7 h-7 text-slate-600" />
+                                    <div className="h-full flex flex-col items-center justify-center bg-white border border-black/[0.04] rounded-xl text-[#aeaeb2] text-xs py-16 space-y-2 font-mono-code">
+                                      <Code className="w-7 h-7 text-[#c7c7cc]" />
                                       <span>Select a file from the remote GitHub tree on the left.</span>
                                     </div>
                                   )}
@@ -2816,63 +3413,63 @@ export default function StudentDashboard() {
                         <div className="space-y-6 text-left">
                           
                           {/* Active Coding Chart */}
-                          <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-4">
-                            <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">Active Coding Timeline (Last 7 Days)</h3>
+                          <div className="glass-card rounded-3xl p-5 border border-black/[0.06] space-y-4">
+                            <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#2D6606]">Active Coding Timeline (Last 7 Days)</h3>
                             <div className="h-64">
                               <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                   <defs>
                                     <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.4}/>
-                                      <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0}/>
+                                      <stop offset="5%" stopColor="#A3E635" stopOpacity={0.15}/>
+                                      <stop offset="95%" stopColor="#A3E635" stopOpacity={0}/>
                                     </linearGradient>
                                     <linearGradient id="colorCommits" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
-                                      <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                                      <stop offset="5%" stopColor="#34C759" stopOpacity={0.15}/>
+                                      <stop offset="95%" stopColor="#34C759" stopOpacity={0}/>
                                     </linearGradient>
                                   </defs>
-                                  <XAxis dataKey="date" stroke="#64748B" fontSize={11} tickLine={false} />
-                                  <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
-                                  <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: 'rgba(255,255,255,0.1)', color: '#F8FAFC' }} />
+                                  <XAxis dataKey="date" stroke="#c7c7cc" fontSize={11} tickLine={false} />
+                                  <YAxis stroke="#c7c7cc" fontSize={11} tickLine={false} />
+                                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: 'rgba(0,0,0,0.06)', color: '#1d1d1f' }} />
                                   <Legend verticalAlign="top" height={36}/>
-                                  <Area type="monotone" name="VS Code Sessions" dataKey="sessions" stroke="#0EA5E9" strokeWidth={2} fillOpacity={1} fill="url(#colorSessions)" />
-                                  <Area type="monotone" name="Git Commits" dataKey="commits" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#colorCommits)" />
+                                  <Area type="monotone" name="VS Code Sessions" dataKey="sessions" stroke="#A3E635" strokeWidth={2} fillOpacity={1} fill="url(#colorSessions)" />
+                                  <Area type="monotone" name="Git Commits" dataKey="commits" stroke="#34C759" strokeWidth={2} fillOpacity={1} fill="url(#colorCommits)" />
                                 </AreaChart>
                               </ResponsiveContainer>
                             </div>
                           </div>
 
                           {/* Teammate shares */}
-                          <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-4">
-                            <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">Teammate Commit Collaboration Shares</h3>
+                          <div className="glass-card rounded-3xl p-5 border border-black/[0.06] space-y-4">
+                            <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#2D6606]">Teammate Commit Collaboration Shares</h3>
                             <div className="h-64">
                               <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={studentBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                  <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} />
-                                  <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
-                                  <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: 'rgba(255,255,255,0.1)', color: '#F8FAFC' }} />
-                                  <Bar dataKey="commits" name="Git Commits" fill="#0EA5E9" radius={[4, 4, 0, 0]} />
-                                  <Bar dataKey="hours" name="Coding Hours" fill="#818CF8" radius={[4, 4, 0, 0]} />
+                                  <XAxis dataKey="name" stroke="#c7c7cc" fontSize={11} tickLine={false} />
+                                  <YAxis stroke="#c7c7cc" fontSize={11} tickLine={false} />
+                                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: 'rgba(0,0,0,0.06)', color: '#1d1d1f' }} />
+                                  <Bar dataKey="commits" name="Git Commits" fill="#A3E635" radius={[4, 4, 0, 0]} />
+                                  <Bar dataKey="hours" name="Coding Hours" fill="#121417" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                               </ResponsiveContainer>
                             </div>
                           </div>
 
                           {/* Commits Log */}
-                          <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-4">
-                            <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">Repository Commits Log Details</h3>
+                          <div className="glass-card rounded-3xl p-5 border border-black/[0.06] space-y-4">
+                            <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#2D6606]">Repository Commits Log Details</h3>
                             <div className="max-h-[350px] overflow-y-auto space-y-3 pr-2">
                               {commitsList.length > 0 ? (
                                 commitsList.map((c, idx) => (
-                                  <div key={c._id || idx} className="p-3.5 bg-slate-900/60 hover:bg-slate-900 border border-white/5 rounded-xl flex items-center justify-between gap-4 transition text-left">
+                                  <div key={c._id || idx} className="p-3.5 bg-black/[0.02] hover:bg-black/[0.03] border border-black/[0.04] rounded-xl flex items-center justify-between gap-4 transition text-left">
                                     <div className="flex items-center gap-3 min-w-0">
-                                      <div className="w-8 h-8 rounded-lg bg-[#0EA5E9]/20 text-[#38BDF8] border border-[#0EA5E9]/30 font-bold text-xs flex items-center justify-center shrink-0">
+                                      <div className="w-8 h-8 rounded-lg bg-[#A3E635]/25 text-[#2D6606] border border-[#A3E635]/30 font-bold text-xs flex items-center justify-center shrink-0">
                                         {c.studentName?.charAt(0) || 'D'}
                                       </div>
                                       <div className="min-w-0">
-                                        <div className="text-xs font-medium text-white truncate">{c.commitMessage}</div>
-                                        <div className="text-[10px] text-slate-400 mt-1 flex flex-wrap items-center gap-1.5 font-mono-code">
-                                          <span>Authored by: <strong className="text-slate-200">{c.studentName}</strong></span>
+                                        <div className="text-xs font-medium text-[#1d1d1f] truncate">{c.commitMessage}</div>
+                                        <div className="text-[10px] text-[#86868b] mt-1 flex flex-wrap items-center gap-1.5 font-mono-code">
+                                          <span>Authored by: <strong className="text-[#3a3a3c]">{c.studentName}</strong></span>
                                           <span>•</span>
                                           <span>@{c.gitUsername}</span>
                                           <span>•</span>
@@ -2880,13 +3477,13 @@ export default function StudentDashboard() {
                                         </div>
                                       </div>
                                     </div>
-                                    <span className="font-mono-code text-[10px] bg-slate-950 text-[#38BDF8] border border-white/10 px-2 py-1 rounded-lg shrink-0">
+                                    <span className="font-mono-code text-[10px] bg-white text-[#2D6606] border border-black/[0.06] px-2 py-1 rounded-lg shrink-0">
                                       {c.commitHash ? c.commitHash.slice(0, 7) : 'n/a'}
                                     </span>
                                   </div>
                                 ))
                               ) : (
-                                <div className="text-center text-xs text-slate-500 py-12">
+                                <div className="text-center text-xs text-[#aeaeb2] py-12">
                                   No commits synced yet. Enter repository link above and click "Sync Git Data".
                                 </div>
                               )}
@@ -2903,78 +3500,78 @@ export default function StudentDashboard() {
                         <div className="space-y-6 text-left font-sans">
                           
                           {/* Top Header Card */}
-                          <div className="glass-card rounded-2xl p-6 border border-white/10 space-y-4">
-                            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/5">
+                          <div className="glass-card rounded-3xl p-6 border border-black/[0.06] space-y-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-black/[0.04]">
                               <div>
-                                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                                  <Clock className="w-4 h-4 text-[#10B981]" />
+                                <h2 className="text-base font-bold text-[#1d1d1f] flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-[#34C759]" />
                                   Real-Time Contribution & Provenance Timeline
                                 </h2>
-                                <p className="text-xs text-slate-400 font-light mt-0.5">
+                                <p className="text-xs text-[#86868b] font-light mt-0.5">
                                   Continuous chronological ledger tracking manual keystrokes, AI assistance, paste anomalies, and timestamps.
                                 </p>
                               </div>
 
-                              <div className="flex items-center gap-2 bg-emerald-950/60 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-mono-code text-emerald-300">
-                                <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
+                              <div className="flex items-center gap-2 bg-[#34C759]/6 border border-[#34C759]/20 px-3 py-1.5 rounded-xl text-xs font-mono-code text-[#34C759]">
+                                <span className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse"></span>
                                 <span>Autonomous Background Tracker Active</span>
                               </div>
                             </div>
 
                             {/* 4 Provenance Stat Cards */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-                              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-sky-500/20 space-y-1 shadow-xs">
-                                <div className="text-[10px] uppercase font-mono-code text-sky-400 flex items-center justify-between">
+                              <div className="p-3.5 rounded-xl bg-white/80 border border-[#A3E635]/15 space-y-1 shadow-xs">
+                                <div className="text-[10px] uppercase font-mono-code text-[#2D6606] flex items-center justify-between">
                                   <span>✍️ Manual Typed</span>
                                   <span>{report?.metrics?.codingProvenance?.manualPercent ?? 92}%</span>
                                 </div>
-                                <div className="text-lg font-bold text-white">
+                                <div className="text-lg font-bold text-[#1d1d1f]">
                                   {report?.metrics?.keystrokes?.toLocaleString() ?? '1,840'}
-                                  <span className="text-[10px] text-slate-400 font-normal ml-1">keys</span>
+                                  <span className="text-[10px] text-[#86868b] font-normal ml-1">keys</span>
                                 </div>
-                                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                  <div style={{ width: `${report?.metrics?.codingProvenance?.manualPercent ?? 92}%` }} className="bg-[#38BDF8] h-full"></div>
+                                <div className="w-full bg-black/[0.04] h-1.5 rounded-full overflow-hidden">
+                                  <div style={{ width: `${report?.metrics?.codingProvenance?.manualPercent ?? 92}%` }} className="bg-[#A3E635] h-full"></div>
                                 </div>
                               </div>
 
-                              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-indigo-500/20 space-y-1 shadow-xs">
-                                <div className="text-[10px] uppercase font-mono-code text-indigo-400 flex items-center justify-between">
+                              <div className="p-3.5 rounded-xl bg-white/80 border border-indigo-500/20 space-y-1 shadow-xs">
+                                <div className="text-[10px] uppercase font-mono-code text-[#5856D6] flex items-center justify-between">
                                   <span>🤖 AI-Assisted</span>
                                   <span>{report?.metrics?.codingProvenance?.aiPercent ?? 6}%</span>
                                 </div>
-                                <div className="text-lg font-bold text-white">
+                                <div className="text-lg font-bold text-[#1d1d1f]">
                                   {report?.metrics?.codingProvenance?.aiChars ?? '120'}
-                                  <span className="text-[10px] text-slate-400 font-normal ml-1">chars</span>
+                                  <span className="text-[10px] text-[#86868b] font-normal ml-1">chars</span>
                                 </div>
-                                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                  <div style={{ width: `${report?.metrics?.codingProvenance?.aiPercent ?? 6}%` }} className="bg-[#818CF8] h-full"></div>
+                                <div className="w-full bg-black/[0.04] h-1.5 rounded-full overflow-hidden">
+                                  <div style={{ width: `${report?.metrics?.codingProvenance?.aiPercent ?? 6}%` }} className="bg-[#5856D6] h-full"></div>
                                 </div>
                               </div>
 
-                              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-rose-500/20 space-y-1 shadow-xs">
-                                <div className="text-[10px] uppercase font-mono-code text-rose-400 flex items-center justify-between">
+                              <div className="p-3.5 rounded-xl bg-white/80 border border-rose-500/20 space-y-1 shadow-xs">
+                                <div className="text-[10px] uppercase font-mono-code text-[#FF3B30] flex items-center justify-between">
                                   <span>📋 Pasted Block</span>
                                   <span>{report?.metrics?.codingProvenance?.pastePercent ?? 2}%</span>
                                 </div>
-                                <div className="text-lg font-bold text-white">
+                                <div className="text-lg font-bold text-[#1d1d1f]">
                                   {report?.metrics?.charactersPasted ?? '45'}
-                                  <span className="text-[10px] text-slate-400 font-normal ml-1">chars</span>
+                                  <span className="text-[10px] text-[#86868b] font-normal ml-1">chars</span>
                                 </div>
-                                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                  <div style={{ width: `${report?.metrics?.codingProvenance?.pastePercent ?? 2}%` }} className="bg-[#F43F5E] h-full"></div>
+                                <div className="w-full bg-black/[0.04] h-1.5 rounded-full overflow-hidden">
+                                  <div style={{ width: `${report?.metrics?.codingProvenance?.pastePercent ?? 2}%` }} className="bg-[#FF3B30] h-full"></div>
                                 </div>
                               </div>
 
-                              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-emerald-500/20 space-y-1 shadow-xs">
-                                <div className="text-[10px] uppercase font-mono-code text-emerald-400 flex items-center justify-between">
+                              <div className="p-3.5 rounded-xl bg-white/80 border border-emerald-500/20 space-y-1 shadow-xs">
+                                <div className="text-[10px] uppercase font-mono-code text-[#30D158] flex items-center justify-between">
                                   <span>🛡️ Authenticity</span>
                                   <span>100%</span>
                                 </div>
-                                <div className="text-lg font-bold text-emerald-300">
+                                <div className="text-lg font-bold text-[#34C759]">
                                   Verified
-                                  <span className="text-[10px] text-emerald-400 font-normal ml-1">✓</span>
+                                  <span className="text-[10px] text-[#30D158] font-normal ml-1">✓</span>
                                 </div>
-                                <div className="text-[10px] text-slate-400 truncate">
+                                <div className="text-[10px] text-[#86868b] truncate">
                                   Genuine human cadence
                                 </div>
                               </div>
@@ -2982,52 +3579,52 @@ export default function StudentDashboard() {
                           </div>
 
                           {/* Chronological Activity Timeline List */}
-                          <div className="glass-card rounded-2xl p-6 border border-white/10 space-y-5">
-                            <div className="flex items-center justify-between pb-2 border-b border-white/5 text-xs font-mono-code">
-                              <span className="font-semibold text-white uppercase tracking-wider">Chronological Contribution Feed</span>
-                              <span className="text-slate-400 text-[11px]">Synced Automatically • Online & Offline</span>
+                          <div className="glass-card rounded-3xl p-6 border border-black/[0.06] space-y-5">
+                            <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] text-xs font-mono-code">
+                              <span className="font-semibold text-[#1d1d1f] uppercase tracking-wider">Chronological Contribution Feed</span>
+                              <span className="text-[#86868b] text-[11px]">Synced Automatically • Online & Offline</span>
                             </div>
 
-                            <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-[#0EA5E9] before:via-[#10B981] before:to-slate-800">
+                            <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-[#007AFF] before:via-[#34C759] before:to-slate-800">
                               
                               {/* 1. Live Active VS Code Telemetry Session */}
                               <div className="relative group">
-                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#10B981] border-2 border-slate-950 shadow-[0_0_8px_#10B981] animate-ping" />
-                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#10B981] border-2 border-slate-950" />
+                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#34C759] border-2 border-slate-950 shadow-sm animate-ping" />
+                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#34C759] border-2 border-slate-950" />
                                 
-                                <div className="bg-slate-900/90 hover:bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 space-y-3 transition shadow-lg">
+                                <div className="bg-white/90 hover:bg-black/[0.03] border border-[#34C759]/20 rounded-3xl p-4 space-y-3 transition shadow-lg">
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                                        <Code className="w-3.5 h-3.5 text-[#10B981]" />
+                                      <span className="text-xs font-bold text-[#1d1d1f] flex items-center gap-1.5">
+                                        <Code className="w-3.5 h-3.5 text-[#34C759]" />
                                         Active VS Code Live Session
                                       </span>
-                                      <span className="text-[9px] font-mono-code bg-emerald-950 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold">
+                                      <span className="text-[9px] font-mono-code bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 px-2 py-0.5 rounded-md font-bold">
                                         🟢 Live Auto-Sync
                                       </span>
                                     </div>
-                                    <span className="text-[10px] font-mono-code text-slate-400">
+                                    <span className="text-[10px] font-mono-code text-[#86868b]">
                                       Just now • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     </span>
                                   </div>
 
                                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                                    <span className="px-2 py-0.5 rounded-md bg-sky-950/80 text-sky-300 border border-sky-500/30 text-[10px] font-mono-code">
+                                    <span className="px-2 py-0.5 rounded-md bg-[#A3E635]/15 text-[#2D6606] border border-[#A3E635]/20 text-[10px] font-mono-code">
                                       ✍️ 96% Typed ({report?.metrics?.keystrokes || 240} keys)
                                     </span>
-                                    <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono-code">
+                                    <span className="px-2 py-0.5 rounded-md bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 text-[10px] font-mono-code">
                                       +{report?.metrics?.linesAdded || 18} lines added
                                     </span>
-                                    <span className="px-2 py-0.5 rounded-md bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 text-[10px] font-mono-code">
+                                    <span className="px-2 py-0.5 rounded-md bg-[#5856D6]/8/80 text-[#5856D6] border border-[#5856D6]/20 text-[10px] font-mono-code">
                                       🛡️ Authorized Contributor
                                     </span>
                                   </div>
 
-                                  <div className="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-white/5 space-y-1 font-mono-code text-[11px]">
-                                    <span className="text-slate-400 text-[10px] block uppercase">Live Tracked File Locations:</span>
+                                  <div className="text-xs text-[#48484a] bg-black/[0.015] p-2.5 rounded-xl border border-black/[0.04] space-y-1 font-mono-code text-[11px]">
+                                    <span className="text-[#86868b] text-[10px] block uppercase">Live Tracked File Locations:</span>
                                     <div className="flex flex-wrap gap-1.5">
-                                      <span className="bg-slate-900 px-2 py-0.5 rounded text-sky-300 border border-white/10">src/auth/jwt.ts (+14)</span>
-                                      <span className="bg-slate-900 px-2 py-0.5 rounded text-emerald-300 border border-white/10">components/Dashboard.tsx (+4)</span>
+                                      <span className="bg-black/[0.03] px-2 py-0.5 rounded text-[#2D6606] border border-black/[0.06]">src/auth/jwt.ts (+14)</span>
+                                      <span className="bg-black/[0.03] px-2 py-0.5 rounded text-[#34C759] border border-black/[0.06]">components/Dashboard.tsx (+4)</span>
                                     </div>
                                   </div>
                                 </div>
@@ -3036,37 +3633,37 @@ export default function StudentDashboard() {
                               {/* 2. Synced Commits & Offline Batches */}
                               {commitsList.map((c, idx) => (
                                 <div key={c._id || idx} className="relative group">
-                                  <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#0EA5E9] border-2 border-slate-950 group-hover:scale-125 transition" />
+                                  <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#A3E635] border-2 border-slate-950 group-hover:scale-125 transition" />
                                   
-                                  <div className="bg-slate-900/70 hover:bg-slate-900 border border-white/10 rounded-2xl p-4 space-y-3 transition">
+                                  <div className="bg-white/70 hover:bg-black/[0.03] border border-black/[0.06] rounded-3xl p-4 space-y-3 transition">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                       <div className="flex items-center gap-2">
-                                        <GitCommit className="w-3.5 h-3.5 text-[#38BDF8]" />
-                                        <span className="text-xs font-semibold text-white truncate max-w-[280px]">
+                                        <GitCommit className="w-3.5 h-3.5 text-[#2D6606]" />
+                                        <span className="text-xs font-semibold text-[#1d1d1f] truncate max-w-[280px]">
                                           {c.commitMessage}
                                         </span>
                                       </div>
-                                      <span className="text-[10px] font-mono-code text-slate-400">
+                                      <span className="text-[10px] font-mono-code text-[#86868b]">
                                         {new Date(c.commitDate).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                       </span>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono-code">
-                                      <span className="bg-slate-950 text-slate-300 px-2 py-0.5 rounded-md border border-white/10">
-                                        Authored by <strong className="text-white">{c.studentName}</strong> (@{c.gitUsername})
+                                      <span className="bg-white text-[#48484a] px-2 py-0.5 rounded-md border border-black/[0.06]">
+                                        Authored by <strong className="text-[#1d1d1f]">{c.studentName}</strong> (@{c.gitUsername})
                                       </span>
-                                      <span className="bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                                      <span className="bg-[#34C759]/6 text-[#34C759] border border-[#34C759]/20 px-2 py-0.5 rounded-md">
                                         +{c.linesAdded || 42} LOC
                                       </span>
                                       {c.linesRemoved > 0 && (
-                                        <span className="bg-rose-950/60 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md">
+                                        <span className="bg-[#FF3B30]/6 text-[#FF3B30] border border-[#FF3B30]/20 px-2 py-0.5 rounded-md">
                                           -{c.linesRemoved} LOC
                                         </span>
                                       )}
-                                      <span className="bg-sky-950/60 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-md">
+                                      <span className="bg-[#A3E635]/15 text-[#2D6606] border border-[#A3E635]/20 px-2 py-0.5 rounded-md">
                                         ✍️ Verified Typing Cadence
                                       </span>
-                                      <span className="text-slate-500 ml-auto">
+                                      <span className="text-[#aeaeb2] ml-auto">
                                         Hash: {c.commitHash ? c.commitHash.slice(0, 7) : 'head'}
                                       </span>
                                     </div>
@@ -3076,19 +3673,19 @@ export default function StudentDashboard() {
 
                               {/* 3. Offline Batch Cryptographic Reconciliation Node */}
                               <div className="relative group">
-                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#F59E0B] border-2 border-slate-950" />
+                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#FF9500] border-2 border-slate-950" />
                                 
-                                <div className="bg-slate-900/60 border border-amber-500/20 rounded-2xl p-4 space-y-2">
+                                <div className="bg-black/[0.02] border border-[#FF9500]/15 rounded-3xl p-4 space-y-2">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
-                                      <Fingerprint className="w-3.5 h-3.5 text-[#F59E0B]" />
+                                    <span className="text-xs font-semibold text-[#FF9500] flex items-center gap-1.5">
+                                      <Fingerprint className="w-3.5 h-3.5 text-[#FF9500]" />
                                       Offline Cryptographic Attestation Block Reconciled
                                     </span>
-                                    <span className="text-[10px] font-mono-code text-slate-400">
+                                    <span className="text-[10px] font-mono-code text-[#86868b]">
                                       Verified Node Ledger
                                     </span>
                                   </div>
-                                  <p className="text-[11px] text-slate-300 font-light">
+                                  <p className="text-[11px] text-[#48484a] font-light">
                                     Offline telemetry payloads and keystroke timestamps were verified, integrity-checked, and reconciled with remote repository state.
                                   </p>
                                 </div>
@@ -3103,41 +3700,41 @@ export default function StudentDashboard() {
                       {/* TAB CONTENT: 3. KANBAN */}
                       {activeTab === 'kanban' && (
                         <div className="space-y-6 text-left">
-                          <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-6">
+                          <div className="glass-card rounded-3xl p-5 border border-black/[0.06] space-y-6">
                             <div>
-                              <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">Team Kanban Task Manager (20% Weight)</h3>
-                              <p className="text-xs text-slate-300 font-light mt-1">Assign deliverables to team members to boost collaboration scores.</p>
+                              <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#2D6606]">Team Kanban Task Manager (20% Weight)</h3>
+                              <p className="text-xs text-[#48484a] font-light mt-1">Assign deliverables to team members to boost collaboration scores.</p>
                             </div>
 
                             {/* Task Form */}
-                            <form onSubmit={handleAddTask} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-900/60 p-4 rounded-xl border border-white/5">
+                            <form onSubmit={handleAddTask} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-black/[0.02] p-4 rounded-xl border border-black/[0.04]">
                               <div className="space-y-1">
-                                <label className="text-[10px] uppercase text-slate-400 font-mono-code">Task Title</label>
+                                <label className="text-[10px] uppercase text-[#86868b] font-mono-code">Task Title</label>
                                 <input
                                   type="text"
                                   required
                                   value={newTaskTitle}
                                   onChange={(e) => setNewTaskTitle(e.target.value)}
                                   placeholder="E.g. Setup auth routes"
-                                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0EA5E9]"
+                                  className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#A3E635]"
                                 />
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[10px] uppercase text-slate-400 font-mono-code">Description</label>
+                                <label className="text-[10px] uppercase text-[#86868b] font-mono-code">Description</label>
                                 <input
                                   type="text"
                                   value={newTaskDesc}
                                   onChange={(e) => setNewTaskDesc(e.target.value)}
                                   placeholder="Describe work targets"
-                                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0EA5E9]"
+                                  className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#A3E635]"
                                 />
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[10px] uppercase text-slate-400 font-mono-code">Assignee</label>
+                                <label className="text-[10px] uppercase text-[#86868b] font-mono-code">Assignee</label>
                                 <select
                                   value={newTaskAssignee}
                                   onChange={(e) => setNewTaskAssignee(e.target.value)}
-                                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-[#0EA5E9] cursor-pointer"
+                                  className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#48484a] focus:outline-none focus:border-[#A3E635] cursor-pointer"
                                 >
                                   <option value="">Assign to Me</option>
                                   {team.members.map((m: any) => (
@@ -3147,7 +3744,7 @@ export default function StudentDashboard() {
                               </div>
                               <button
                                 type="submit"
-                                className="py-2.5 px-4 rounded-xl bg-[#0EA5E9] hover:bg-[#38BDF8] text-white text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                                className="py-2.5 px-4 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                                 Add Task
@@ -3157,21 +3754,21 @@ export default function StudentDashboard() {
                             {/* Kanban Columns */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans">
                               {/* 1. TODO */}
-                              <div className="bg-slate-900/60 border border-white/5 p-4 rounded-xl space-y-3">
-                                <h4 className="text-xs uppercase tracking-wider text-slate-300 font-mono-code flex items-center gap-2">
-                                  <Circle className="w-3.5 h-3.5 text-slate-400" />
+                              <div className="bg-black/[0.02] border border-black/[0.04] p-4 rounded-xl space-y-3">
+                                <h4 className="text-xs uppercase tracking-wider text-[#48484a] font-mono-code flex items-center gap-2">
+                                  <Circle className="w-3.5 h-3.5 text-[#86868b]" />
                                   To Do
                                 </h4>
                                 <div className="space-y-2.5">
                                   {tasks.filter(t => t.status === 'todo').map(task => (
-                                    <div key={task._id} className="p-3.5 bg-slate-950 border border-white/5 rounded-xl space-y-2">
-                                      <h5 className="font-medium text-xs text-white">{task.title}</h5>
-                                      <p className="text-[10px] text-slate-400 leading-normal font-light">{task.description}</p>
-                                      <div className="flex justify-between items-center pt-2 border-t border-white/5 text-[9px] font-mono-code">
-                                        <span className="text-slate-400">@{task.assignedTo?.name || 'Unassigned'}</span>
+                                    <div key={task._id} className="p-3.5 bg-white border border-black/[0.04] rounded-xl space-y-2">
+                                      <h5 className="font-medium text-xs text-[#1d1d1f]">{task.title}</h5>
+                                      <p className="text-[10px] text-[#86868b] leading-normal font-light">{task.description}</p>
+                                      <div className="flex justify-between items-center pt-2 border-t border-black/[0.04] text-[9px] font-mono-code">
+                                        <span className="text-[#86868b]">@{task.assignedTo?.name || 'Unassigned'}</span>
                                         <div className="flex gap-2">
-                                          <button onClick={() => handleUpdateTaskStatus(task._id, 'inprogress')} className="text-[#38BDF8] hover:underline">Start →</button>
-                                          <button onClick={() => handleDeleteTask(task._id)} className="text-slate-500 hover:text-rose-400"><Trash2 className="w-3 h-3" /></button>
+                                          <button onClick={() => handleUpdateTaskStatus(task._id, 'inprogress')} className="text-[#2D6606] hover:underline">Start →</button>
+                                          <button onClick={() => handleDeleteTask(task._id)} className="text-[#aeaeb2] hover:text-[#FF3B30]"><Trash2 className="w-3 h-3" /></button>
                                         </div>
                                       </div>
                                     </div>
@@ -3180,21 +3777,21 @@ export default function StudentDashboard() {
                               </div>
 
                               {/* 2. IN PROGRESS */}
-                              <div className="bg-slate-900/60 border border-white/5 p-4 rounded-xl space-y-3">
-                                <h4 className="text-xs uppercase tracking-wider text-[#F59E0B] font-mono-code flex items-center gap-2">
+                              <div className="bg-black/[0.02] border border-black/[0.04] p-4 rounded-xl space-y-3">
+                                <h4 className="text-xs uppercase tracking-wider text-[#FF9500] font-mono-code flex items-center gap-2">
                                   <Activity className="w-3.5 h-3.5" />
                                   In Progress
                                 </h4>
                                 <div className="space-y-2.5">
                                   {tasks.filter(t => t.status === 'inprogress').map(task => (
-                                    <div key={task._id} className="p-3.5 bg-slate-950 border border-white/5 rounded-xl space-y-2">
-                                      <h5 className="font-medium text-xs text-white">{task.title}</h5>
-                                      <p className="text-[10px] text-slate-400 leading-normal font-light">{task.description}</p>
-                                      <div className="flex justify-between items-center pt-2 border-t border-white/5 text-[9px] font-mono-code">
-                                        <span className="text-slate-400">@{task.assignedTo?.name || 'Unassigned'}</span>
+                                    <div key={task._id} className="p-3.5 bg-white border border-black/[0.04] rounded-xl space-y-2">
+                                      <h5 className="font-medium text-xs text-[#1d1d1f]">{task.title}</h5>
+                                      <p className="text-[10px] text-[#86868b] leading-normal font-light">{task.description}</p>
+                                      <div className="flex justify-between items-center pt-2 border-t border-black/[0.04] text-[9px] font-mono-code">
+                                        <span className="text-[#86868b]">@{task.assignedTo?.name || 'Unassigned'}</span>
                                         <div className="flex gap-2">
-                                          <button onClick={() => handleUpdateTaskStatus(task._id, 'done')} className="text-[#10B981] hover:underline">Done ✓</button>
-                                          <button onClick={() => handleDeleteTask(task._id)} className="text-slate-500 hover:text-rose-400"><Trash2 className="w-3 h-3" /></button>
+                                          <button onClick={() => handleUpdateTaskStatus(task._id, 'done')} className="text-[#34C759] hover:underline">Done ✓</button>
+                                          <button onClick={() => handleDeleteTask(task._id)} className="text-[#aeaeb2] hover:text-[#FF3B30]"><Trash2 className="w-3 h-3" /></button>
                                         </div>
                                       </div>
                                     </div>
@@ -3203,19 +3800,19 @@ export default function StudentDashboard() {
                               </div>
 
                               {/* 3. DONE */}
-                              <div className="bg-slate-900/60 border border-white/5 p-4 rounded-xl space-y-3">
-                                <h4 className="text-xs uppercase tracking-wider text-[#10B981] font-mono-code flex items-center gap-2">
+                              <div className="bg-black/[0.02] border border-black/[0.04] p-4 rounded-xl space-y-3">
+                                <h4 className="text-xs uppercase tracking-wider text-[#34C759] font-mono-code flex items-center gap-2">
                                   <CheckCircle2 className="w-3.5 h-3.5" />
                                   Done
                                 </h4>
                                 <div className="space-y-2.5">
                                   {tasks.filter(t => t.status === 'done').map(task => (
-                                    <div key={task._id} className="p-3.5 bg-slate-950 border border-white/5 rounded-xl space-y-2 opacity-80">
-                                      <h5 className="font-medium text-xs text-slate-300 line-through">{task.title}</h5>
-                                      <p className="text-[10px] text-slate-500 leading-normal font-light">{task.description}</p>
-                                      <div className="flex justify-between items-center pt-2 border-t border-white/5 text-[9px] font-mono-code">
-                                        <span className="text-slate-400">@{task.assignedTo?.name || 'Unassigned'}</span>
-                                        <button onClick={() => handleDeleteTask(task._id)} className="text-slate-500 hover:text-rose-400"><Trash2 className="w-3 h-3" /></button>
+                                    <div key={task._id} className="p-3.5 bg-white border border-black/[0.04] rounded-xl space-y-2 opacity-80">
+                                      <h5 className="font-medium text-xs text-[#48484a] line-through">{task.title}</h5>
+                                      <p className="text-[10px] text-[#aeaeb2] leading-normal font-light">{task.description}</p>
+                                      <div className="flex justify-between items-center pt-2 border-t border-black/[0.04] text-[9px] font-mono-code">
+                                        <span className="text-[#86868b]">@{task.assignedTo?.name || 'Unassigned'}</span>
+                                        <button onClick={() => handleDeleteTask(task._id)} className="text-[#aeaeb2] hover:text-[#FF3B30]"><Trash2 className="w-3 h-3" /></button>
                                       </div>
                                     </div>
                                   ))}
@@ -3228,93 +3825,173 @@ export default function StudentDashboard() {
 
                     </div>
 
-                    {/* Right Column (1/3 width) - Sidebar Widgets */}
-                    <div className="lg:col-span-1 space-y-6 text-left">
+                    {/* Right Column (1/3 width) - Monetra Sidebar Widgets */}
+                    <div className="lg:col-span-1 space-y-5 text-left">
                       
-                      {/* Score Card */}
-                      <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-4">
-                        <h3 className="text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">My Workspace Evaluation</h3>
-                        {report ? (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between border border-[#0EA5E9]/30 p-4 bg-[#0EA5E9]/10 rounded-xl">
-                              <div>
-                                <span className="text-[9px] uppercase font-mono-code text-slate-300 block">Weighted Score</span>
-                                <span className="text-xs text-white font-medium">Calculated standing</span>
-                              </div>
-                              <span className="text-3xl font-bold text-[#38BDF8] font-mono-code">{report.scores.final}%</span>
-                            </div>
-
-                            <div className="space-y-2 text-xs font-light text-slate-300">
-                              <div className="flex justify-between">
-                                <span>Git Mining (40%):</span>
-                                <span className="font-medium text-white font-mono-code">{report.scores.git}%</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>VS Code Telemetry (30%):</span>
-                                <span className="font-medium text-white font-mono-code">{report.scores.vscode}%</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Kanban Velocity (20%):</span>
-                                <span className="font-medium text-white font-mono-code">{report.scores.task}%</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Team Balance (10%):</span>
-                                <span className="font-medium text-[#10B981] font-mono-code">{report.scores.collab}%</span>
-                              </div>
-                            </div>
+                      {/* Widget 1: Team Peers (Monetra "Quick send" style) */}
+                      <div className="glass-card rounded-3xl p-5 border border-slate-200/70 space-y-3 bg-white">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900 tracking-tight">Team Peers</h3>
+                            <p className="text-[11px] text-slate-400 font-light">Collaborators in cohort</p>
                           </div>
-                        ) : (
-                          <div className="text-center text-xs text-slate-500 py-6">No evaluations generated yet. Link repository & sync logs.</div>
-                        )}
-                      </div>
-
-                      {/* Hours Breakdown */}
-                      <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-4">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                          <span className="text-xs font-mono-code uppercase tracking-wider text-slate-400">Time Spent Insights</span>
-                          <span className="text-[10px] text-[#38BDF8] font-mono-code">Total: {report?.metrics?.codingHours || '0'}h</span>
+                          <span className="text-xs font-mono-code text-slate-400">
+                            {team?.members?.length || studentBreakdown.length || 1} peers
+                          </span>
                         </div>
 
-                        <div className="space-y-3.5">
+                        {/* Avatars row */}
+                        <div className="flex items-center gap-2.5 overflow-x-auto py-1">
                           {studentBreakdown.length > 0 ? (
-                            studentBreakdown.map((s) => {
-                              const maxHours = Math.max(...studentBreakdown.map(x => x.hours), 1);
-                              const pct = (s.hours / maxHours) * 100;
-                              return (
-                                <div key={s.studentId} className="space-y-1">
-                                  <div className="flex justify-between text-xs">
-                                    <span className="text-slate-300 truncate">{s.name}</span>
-                                    <span className="font-mono-code text-slate-400">{s.hours}h</span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-[#0EA5E9] rounded-full" style={{ width: `${pct}%` }} />
-                                  </div>
+                            studentBreakdown.map((s, idx) => (
+                              <div key={s.studentId || idx} className="flex flex-col items-center gap-1 shrink-0 group cursor-pointer" title={s.name}>
+                                <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs border-2 border-white shadow-xs group-hover:border-[#A3E635] transition">
+                                  {s.name?.charAt(0) || 'P'}
                                 </div>
-                              );
-                            })
+                                <span className="text-[9px] text-slate-600 font-medium truncate max-w-[48px]">
+                                  {s.name?.split(' ')[0]}
+                                </span>
+                              </div>
+                            ))
                           ) : (
-                            <div className="text-center text-xs text-slate-500">Sync repository to display team details.</div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs border-2 border-white shadow-xs">
+                                {student?.name?.charAt(0) || 'U'}
+                              </div>
+                              <span className="text-xs text-slate-500 font-light">Sync repo to load team peers</span>
+                            </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Evidence & Quick Links */}
-                      <div className="glass-card rounded-2xl p-5 border border-white/10 space-y-3">
-                        <h3 className="text-xs font-mono-code uppercase tracking-wider text-slate-400">Evidence & Resources</h3>
-                        <div className="space-y-2 text-xs text-slate-300">
-                          <div onClick={() => setActiveTab('commits')} className="flex items-center justify-between p-2.5 hover:bg-slate-800/60 rounded-xl cursor-pointer transition border border-transparent hover:border-white/5">
-                            <span className="flex items-center gap-2"><GitBranch className="w-4 h-4 text-[#10B981]" /> Commits History</span>
-                            <span className="text-[10px] text-slate-500 font-mono-code">Live &gt;</span>
+                      {/* Widget 2: Attestation Node Card (Monetra Dark Credit Card style) */}
+                      <div className="rounded-3xl p-5 bg-[#121612] text-white border border-white/10 shadow-lg space-y-4 relative overflow-hidden">
+                        {/* Ambient subtle green glow */}
+                        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-[#A3E635]/15 blur-2xl pointer-events-none" />
+
+                        <div className="flex justify-between items-center relative z-10">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-[#A3E635]" />
+                            <span className="text-[10px] uppercase font-mono-code tracking-wider text-slate-300 font-bold">
+                              Trace Attestation Node
+                            </span>
                           </div>
-                          <div onClick={() => setActiveTab('kanban')} className="flex items-center justify-between p-2.5 hover:bg-slate-800/60 rounded-xl cursor-pointer transition border border-transparent hover:border-white/5">
-                            <span className="flex items-center gap-2"><Kanban className="w-4 h-4 text-[#F59E0B]" /> Kanban Deliverables</span>
-                            <span className="text-[10px] text-slate-500 font-mono-code">{tasks.length} &gt;</span>
-                          </div>
-                          <div onClick={() => setActiveTab('repository')} className="flex items-center justify-between p-2.5 hover:bg-slate-800/60 rounded-xl cursor-pointer transition border border-transparent hover:border-white/5">
-                            <span className="flex items-center gap-2"><Activity className="w-4 h-4 text-[#0EA5E9]" /> Telemetry Logs</span>
-                            <span className="text-[10px] text-slate-500 font-mono-code">Live &gt;</span>
+                          <span className="text-[10px] font-mono-code bg-white/10 px-2 py-0.5 rounded-full text-[#A3E635] font-bold">
+                            {gitVerification?.status === 'matched' ? 'Active' : 'Standby'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 relative z-10">
+                          <span className="text-[10px] font-mono-code text-slate-400 uppercase tracking-widest block">
+                            Workspace Fingerprint
+                          </span>
+                          <div className="font-mono-code text-sm tracking-wider font-semibold text-slate-100 truncate">
+                            {localDirName ? `**** /${localDirName}` : '**** **** 4892'}
                           </div>
                         </div>
+
+                        <div className="flex justify-between items-end pt-1 relative z-10 text-[11px]">
+                          <div>
+                            <span className="text-[9px] uppercase text-slate-400 font-mono-code block">Researcher</span>
+                            <span className="font-semibold text-slate-100">{student?.name || 'Student Node'}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[9px] uppercase text-slate-400 font-mono-code block">Status</span>
+                            <span className="font-mono-code text-[#A3E635] font-bold">
+                              {gitVerification?.status === 'matched' ? 'Verified' : 'Unlinked'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Monetra action buttons: Deposit & Transfer */}
+                        <div className="grid grid-cols-2 gap-2.5 pt-2 relative z-10">
+                          <button
+                            onClick={handleManualAutoSyncAll}
+                            disabled={autoSyncInProgress || scanning}
+                            className="py-2.5 px-3 rounded-full bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${autoSyncInProgress || scanning ? 'animate-spin' : ''}`} />
+                            <span>Auto-Sync</span>
+                          </button>
+                          <button
+                            onClick={handleSelectFolder}
+                            className="py-2.5 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition border border-white/15 flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Folder className="w-3 h-3" />
+                            <span>Folder</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Widget 3: Evaluation Breakdown Card */}
+                      <div className="glass-card rounded-3xl p-5 border border-slate-200/70 space-y-4 bg-white">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-mono-code uppercase tracking-wider text-slate-500">Evaluation Standing</h3>
+                          <span className="text-xs font-bold text-slate-900 font-mono-code">
+                            {report?.scores?.final ?? 94}%
+                          </span>
+                        </div>
+
+                        {report ? (
+                          <div className="space-y-3 text-xs">
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-slate-600">
+                                <span>Git Mining (40%)</span>
+                                <span className="font-mono-code font-bold text-slate-900">{report.scores.git}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-[#A3E635] rounded-full" style={{ width: `${report.scores.git}%` }} />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-slate-600">
+                                <span>VS Code Telemetry (30%)</span>
+                                <span className="font-mono-code font-bold text-slate-900">{report.scores.vscode}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-slate-900 rounded-full" style={{ width: `${report.scores.vscode}%` }} />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-slate-600">
+                                <span>Kanban Velocity (20%)</span>
+                                <span className="font-mono-code font-bold text-slate-900">{report.scores.task}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-slate-400 rounded-full" style={{ width: `${report.scores.task}%` }} />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-slate-600">
+                                <span>Team Balance (10%)</span>
+                                <span className="font-mono-code font-bold text-[#15803D]">{report.scores.collab}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-[#22C55E] rounded-full" style={{ width: `${report.scores.collab}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-xs text-slate-400 py-4">No evaluations yet. Sync repository data.</div>
+                        )}
+                      </div>
+
+                      {/* Widget 4: Research Plan / Scope Card (Monetra "Starter Plan" style) */}
+                      <div className="glass-card rounded-3xl p-5 border border-slate-200/70 space-y-3 bg-white">
+                        <div>
+                          <h4 className="text-base font-bold text-slate-900 tracking-tight">Research Scope</h4>
+                          <p className="text-xs text-slate-500 font-light mt-0.5">
+                            {selectedAssignment?.title ? `Cohort: ${selectedAssignment.title}` : 'Full provenance & authenticity validation.'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleSyncGit}
+                          disabled={syncingGit}
+                          className="w-full py-3 rounded-full bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-xs transition shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingGit ? 'animate-spin' : ''}`} />
+                          <span>Sync Git Data</span>
+                        </button>
                       </div>
 
                     </div>
@@ -3333,31 +4010,31 @@ export default function StudentDashboard() {
           REPOSITORY MISMATCH RESOLUTION MODAL
       ========================================================================= */}
       {showMismatchModal && pendingVerification && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-md text-left animate-fade-in">
-          <div className="w-full max-w-lg glass-card rounded-2xl border border-rose-500/30 p-8 shadow-2xl space-y-6 bg-[#0F172A]">
-            <div className="flex items-center gap-3 pb-3 border-b border-white/10">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-[#F43F5E]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-md text-left animate-fade-in">
+          <div className="w-full max-w-lg glass-card rounded-3xl border border-[#FF3B30]/20 p-8 shadow-lg space-y-6 bg-[#F6F8FA]">
+            <div className="flex items-center gap-3 pb-3 border-b border-black/[0.06]">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-[#FF3B30]/20 flex items-center justify-center text-[#FF3B30]">
                 <ShieldAlert className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white tracking-tight">Repository Path Mismatch Detected</h3>
-                <span className="text-[10px] text-rose-300 font-mono-code uppercase">.git/config verification alert</span>
+                <h3 className="text-base font-bold text-[#1d1d1f] tracking-tight">Repository Path Mismatch Detected</h3>
+                <span className="text-[10px] text-[#FF3B30] font-mono-code uppercase">.git/config verification alert</span>
               </div>
             </div>
 
             <div className="space-y-4 text-xs">
-              <p className="text-slate-300 font-light leading-relaxed">
-                OffSync checked the hidden <code className="text-[#38BDF8] bg-slate-950 px-1 py-0.5 rounded font-mono-code">.git/config</code> file inside the selected folder <strong className="text-white font-mono-code">{pendingVerification.handle.name}/</strong>, but its remote URL does not match the repository assigned to this team.
+              <p className="text-[#48484a] font-light leading-relaxed">
+                OffSync checked the hidden <code className="text-[#2D6606] bg-white px-1 py-0.5 rounded font-mono-code">.git/config</code> file inside the selected folder <strong className="text-[#1d1d1f] font-mono-code">{pendingVerification.handle.name}/</strong>, but its remote URL does not match the repository assigned to this team.
               </p>
 
-              <div className="space-y-2 font-mono-code text-[11px] bg-slate-950 p-4 rounded-xl border border-white/5">
-                <div className="text-slate-400">
-                  <span className="text-slate-500 block text-[10px] uppercase">Expected Team Repository:</span>
-                  <span className="text-white break-all">{pendingVerification.result.expectedRepoUrl || '(none)'}</span>
+              <div className="space-y-2 font-mono-code text-[11px] bg-white p-4 rounded-xl border border-black/[0.04]">
+                <div className="text-[#86868b]">
+                  <span className="text-[#aeaeb2] block text-[10px] uppercase">Expected Team Repository:</span>
+                  <span className="text-[#1d1d1f] break-all">{pendingVerification.result.expectedRepoUrl || '(none)'}</span>
                 </div>
-                <div className="pt-2 border-t border-white/5 text-rose-300">
-                  <span className="text-slate-500 block text-[10px] uppercase">Found in Local .git/config:</span>
-                  <span className="text-[#F43F5E] break-all font-bold">{pendingVerification.result.localRemoteUrl || 'No remote origin URL found'}</span>
+                <div className="pt-2 border-t border-black/[0.04] text-[#FF3B30]">
+                  <span className="text-[#aeaeb2] block text-[10px] uppercase">Found in Local .git/config:</span>
+                  <span className="text-[#FF3B30] break-all font-bold">{pendingVerification.result.localRemoteUrl || 'No remote origin URL found'}</span>
                 </div>
               </div>
             </div>
@@ -3366,7 +4043,7 @@ export default function StudentDashboard() {
               {pendingVerification.result.localRemoteUrl && team && (
                 <button
                   onClick={handleUpdateRepoFromLocalGit}
-                  className="w-full py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition shadow-[0_0_15px_rgba(14,165,233,0.3)] flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
                   Update Team Repo to Match This Folder
@@ -3375,7 +4052,7 @@ export default function StudentDashboard() {
 
               <button
                 onClick={handleSelectFolder}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-medium transition border border-white/10 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 bg-black/[0.04] hover:bg-black/[0.06] text-[#1d1d1f] rounded-xl text-xs font-medium transition border border-black/[0.06] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Folder className="w-4 h-4" />
                 Select Another Local Folder
@@ -3383,7 +4060,7 @@ export default function StudentDashboard() {
 
               <button
                 onClick={() => finalizeFolderConnection(pendingVerification.handle, pendingVerification.result)}
-                className="w-full py-2 bg-transparent hover:bg-white/5 text-slate-400 hover:text-slate-300 rounded-xl text-[11px] font-mono-code transition cursor-pointer"
+                className="w-full py-2 bg-transparent hover:bg-black/[0.02] text-[#86868b] hover:text-[#48484a] rounded-xl text-[11px] font-mono-code transition cursor-pointer"
               >
                 Proceed with this directory anyway (Manual Override)
               </button>
@@ -3396,31 +4073,31 @@ export default function StudentDashboard() {
           JOIN ASSIGNMENT MODAL
       ========================================================================= */}
       {showJoinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm text-left">
-          <div className="w-full max-w-xl glass-card rounded-2xl border border-white/10 p-8 shadow-2xl space-y-6 bg-[#0F172A]">
-            <div className="flex justify-between items-center pb-2 border-b border-white/10">
-              <h3 className="text-base font-bold text-white font-mono-code">Join Cohort Assignment</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/30 backdrop-blur-sm text-left">
+          <div className="w-full max-w-xl glass-card rounded-3xl border border-black/[0.06] p-8 shadow-lg space-y-6 bg-[#F6F8FA]">
+            <div className="flex justify-between items-center pb-2 border-b border-black/[0.06]">
+              <h3 className="text-base font-bold text-[#1d1d1f] font-mono-code">Join Cohort Assignment</h3>
               <button 
                 onClick={() => { setShowJoinModal(false); setSearchedAssignment(null); setInviteCode(''); setTeamFlow('none'); setSelectedMembers([]); setError(''); setSuccess(''); }}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-[#86868b] hover:text-[#1d1d1f] text-sm"
               >
                 ✕
               </button>
             </div>
 
             {error && (
-              <div className="p-3.5 bg-rose-950/40 border border-rose-500/30 text-rose-200 text-xs rounded-xl text-left">
+              <div className="p-3.5 bg-[#FF3B30]/5 border border-[#FF3B30]/20 text-[#FF3B30] text-xs rounded-xl text-left">
                 {error}
               </div>
             )}
             {success && (
-              <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 text-xs rounded-xl text-left">
+              <div className="p-3.5 bg-[#34C759]/5 border border-[#34C759]/20 text-[#34C759] text-xs rounded-xl text-left">
                 {success}
               </div>
             )}
 
             <div className="space-y-4">
-              <p className="text-xs text-slate-300 font-light">Enter the invitation code provided by your lecturer to join another assignment.</p>
+              <p className="text-xs text-[#48484a] font-light">Enter the invitation code provided by your lecturer to join another assignment.</p>
 
               <form onSubmit={handleSearchInvite} className="flex gap-3">
                 <input
@@ -3429,29 +4106,29 @@ export default function StudentDashboard() {
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   placeholder="Enter invite code (e.g. INV-123)"
-                  className="flex-grow bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0EA5E9]"
+                  className="flex-grow bg-black/[0.03] border border-black/[0.06] rounded-xl px-3.5 py-2 text-xs text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#A3E635]"
                 />
                 <button 
                   type="submit" 
-                  className="px-5 py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition cursor-pointer shadow-xs"
+                  className="px-5 py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition cursor-pointer shadow-xs"
                 >
                   Search Code
                 </button>
               </form>
 
               {searchedAssignment && (
-                <div className="p-5 bg-slate-900/80 border border-white/10 rounded-xl space-y-4 text-left mt-4">
+                <div className="p-5 bg-white/80 border border-black/[0.06] rounded-xl space-y-4 text-left mt-4">
                   <div className="space-y-1">
-                    <h3 className="text-base font-medium text-white">{searchedAssignment.title}</h3>
-                    <p className="text-xs text-slate-400">{searchedAssignment.description}</p>
+                    <h3 className="text-base font-medium text-[#1d1d1f]">{searchedAssignment.title}</h3>
+                    <p className="text-xs text-[#86868b]">{searchedAssignment.description}</p>
                   </div>
 
-                  <div className="space-y-4 border-t border-white/5 pt-4">
+                  <div className="space-y-4 border-t border-black/[0.04] pt-4">
                     <div className="flex gap-3">
                       <button
                         onClick={() => { setTeamFlow('create'); setSelectedMembers([]); }}
                         className={`flex-1 py-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
-                          teamFlow === 'create' ? 'border-[#0EA5E9] bg-[#0EA5E9] text-white' : 'border-white/10 text-slate-400 bg-slate-950'
+                          teamFlow === 'create' ? 'border-[#A3E635] bg-[#A3E635] text-slate-950 font-semibold' : 'border-black/[0.06] text-[#86868b] bg-white'
                         }`}
                       >
                         Form New Team
@@ -3459,7 +4136,7 @@ export default function StudentDashboard() {
                       <button
                         onClick={() => setTeamFlow('join')}
                         className={`flex-1 py-2.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
-                          teamFlow === 'join' ? 'border-[#0EA5E9] bg-[#0EA5E9] text-white' : 'border-white/10 text-slate-400 bg-slate-950'
+                          teamFlow === 'join' ? 'border-[#A3E635] bg-[#A3E635] text-slate-950 font-semibold' : 'border-black/[0.06] text-[#86868b] bg-white'
                         }`}
                       >
                         Join Existing Team
@@ -3470,20 +4147,20 @@ export default function StudentDashboard() {
                       <form onSubmit={handleCreateTeam} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] uppercase text-slate-400 font-mono-code mb-1">Team Name</label>
-                            <input type="text" required value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="ByteCraft Core" className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" />
+                            <label className="block text-[10px] uppercase text-[#86868b] font-mono-code mb-1">Team Name</label>
+                            <input type="text" required value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="ByteCraft Core" className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f]" />
                           </div>
                           <div>
-                            <label className="block text-[10px] uppercase text-slate-400 font-mono-code mb-1">GitHub Username</label>
-                            <input type="text" required value={gitUsername} onChange={(e) => setGitUsername(e.target.value)} placeholder="alex-dev" className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white" />
+                            <label className="block text-[10px] uppercase text-[#86868b] font-mono-code mb-1">GitHub Username</label>
+                            <input type="text" required value={gitUsername} onChange={(e) => setGitUsername(e.target.value)} placeholder="alex-dev" className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f]" />
                           </div>
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="block text-[10px] uppercase text-slate-400 font-mono-code">Select Group Members</label>
-                          <div className="max-h-24 overflow-y-auto border border-white/10 rounded-xl p-2.5 space-y-1.5 bg-slate-950">
+                          <label className="block text-[10px] uppercase text-[#86868b] font-mono-code">Select Group Members</label>
+                          <div className="max-h-24 overflow-y-auto border border-black/[0.06] rounded-xl p-2.5 space-y-1.5 bg-white">
                             {studentsList.filter(s => s.id !== student?.id).map(s => (
-                              <label key={s.id} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                              <label key={s.id} className="flex items-center gap-2 text-xs text-[#48484a] cursor-pointer">
                                 <input
                                   type="checkbox"
                                   checked={selectedMembers.includes(s.id)}
@@ -3494,7 +4171,7 @@ export default function StudentDashboard() {
                                       setSelectedMembers(prev => prev.filter(id => id !== s.id));
                                     }
                                   }}
-                                  className="rounded text-[#0EA5E9] focus:ring-[#0EA5E9] accent-[#0EA5E9]"
+                                  className="rounded text-[#2D6606] focus:ring-[#007AFF] accent-[#007AFF]"
                                 />
                                 <span>{s.name} ({s.email})</span>
                               </label>
@@ -3502,20 +4179,20 @@ export default function StudentDashboard() {
                           </div>
                         </div>
 
-                        <button type="submit" className="w-full py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition cursor-pointer shadow-sm">Create & Register Team</button>
+                        <button type="submit" className="w-full py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition cursor-pointer shadow-sm">Create & Register Team</button>
                       </form>
                     )}
 
                     {teamFlow === 'join' && (
                       <form onSubmit={handleJoinTeam} className="space-y-4 max-w-md mx-auto">
                         <div>
-                          <label className="block text-[10px] uppercase text-slate-400 font-mono-code mb-1">Select Existing Team</label>
+                          <label className="block text-[10px] uppercase text-[#86868b] font-mono-code mb-1">Select Existing Team</label>
                           {searchedTeams.length > 0 ? (
                             <select
                               required
                               value={teamInviteCode}
                               onChange={(e) => setTeamInviteCode(e.target.value)}
-                              className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#0EA5E9] cursor-pointer"
+                              className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2.5 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#A3E635] cursor-pointer"
                             >
                               <option value="">-- Choose Team to Join --</option>
                               {searchedTeams.map(t => (
@@ -3523,12 +4200,12 @@ export default function StudentDashboard() {
                               ))}
                             </select>
                           ) : (
-                            <div className="text-xs text-slate-400 border border-white/10 rounded-xl p-2.5 bg-slate-950 leading-relaxed">
+                            <div className="text-xs text-[#86868b] border border-black/[0.06] rounded-xl p-2.5 bg-white leading-relaxed">
                               No teams have registered for this assignment yet. Form a new team to start!
                             </div>
                           )}
                         </div>
-                        <button type="submit" disabled={!teamInviteCode} className="w-full py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition cursor-pointer shadow-sm disabled:opacity-50">Validate & Join Team</button>
+                        <button type="submit" disabled={!teamInviteCode} className="w-full py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition cursor-pointer shadow-sm disabled:opacity-50">Validate & Join Team</button>
                       </form>
                     )}
                   </div>
@@ -3543,13 +4220,13 @@ export default function StudentDashboard() {
           FORM GENERAL TEAM MODAL
       ========================================================================= */}
       {showGeneralTeamModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm text-left">
-          <div className="w-full max-w-lg glass-card rounded-2xl border border-white/10 p-8 shadow-2xl space-y-6 bg-[#0F172A]">
-            <div className="flex justify-between items-center pb-2 border-b border-white/10">
-              <h3 className="text-base font-bold text-white font-mono-code">Form General Team</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/30 backdrop-blur-sm text-left">
+          <div className="w-full max-w-lg glass-card rounded-3xl border border-black/[0.06] p-8 shadow-lg space-y-6 bg-[#F6F8FA]">
+            <div className="flex justify-between items-center pb-2 border-b border-black/[0.06]">
+              <h3 className="text-base font-bold text-[#1d1d1f] font-mono-code">Form General Team</h3>
               <button 
                 onClick={() => { setShowGeneralTeamModal(false); setGeneralTeamName(''); setGeneralTeamGit(''); setSelectedMembers([]); setError(''); setSuccess(''); }}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-[#86868b] hover:text-[#1d1d1f] text-sm"
               >
                 ✕
               </button>
@@ -3557,34 +4234,34 @@ export default function StudentDashboard() {
 
             <form onSubmit={handleCreateGeneralTeam} className="space-y-4">
               <div>
-                <label className="block text-[10px] uppercase text-slate-400 font-mono-code mb-1">Team Name</label>
+                <label className="block text-[10px] uppercase text-[#86868b] font-mono-code mb-1">Team Name</label>
                 <input
                   type="text"
                   required
                   value={generalTeamName}
                   onChange={(e) => setGeneralTeamName(e.target.value)}
                   placeholder="ByteCraft Elite"
-                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0EA5E9]"
+                  className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#A3E635]"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase text-slate-400 font-mono-code mb-1">Your GitHub Username</label>
+                <label className="block text-[10px] uppercase text-[#86868b] font-mono-code mb-1">Your GitHub Username</label>
                 <input
                   type="text"
                   required
                   value={generalTeamGit}
                   onChange={(e) => setGeneralTeamGit(e.target.value)}
                   placeholder="alex-dev"
-                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0EA5E9]"
+                  className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#A3E635]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] uppercase text-slate-400 font-mono-code">Select Group Members</label>
-                <div className="max-h-28 overflow-y-auto border border-white/10 rounded-xl p-2.5 space-y-1.5 bg-slate-950">
+                <label className="block text-[10px] uppercase text-[#86868b] font-mono-code">Select Group Members</label>
+                <div className="max-h-28 overflow-y-auto border border-black/[0.06] rounded-xl p-2.5 space-y-1.5 bg-white">
                   {studentsList.filter(s => s.id !== student?.id).map(s => (
-                    <label key={s.id} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                    <label key={s.id} className="flex items-center gap-2 text-xs text-[#48484a] cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedMembers.includes(s.id)}
@@ -3595,7 +4272,7 @@ export default function StudentDashboard() {
                             setSelectedMembers(prev => prev.filter(id => id !== s.id));
                           }
                         }}
-                        className="rounded text-[#0EA5E9] focus:ring-[#0EA5E9] accent-[#0EA5E9]"
+                        className="rounded text-[#2D6606] focus:ring-[#007AFF] accent-[#007AFF]"
                       />
                       <span>{s.name} ({s.email})</span>
                     </label>
@@ -3605,7 +4282,7 @@ export default function StudentDashboard() {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-medium transition cursor-pointer shadow-sm"
+                className="w-full py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs rounded-xl text-xs font-medium transition cursor-pointer shadow-sm"
               >
                 Create Team Template
               </button>
