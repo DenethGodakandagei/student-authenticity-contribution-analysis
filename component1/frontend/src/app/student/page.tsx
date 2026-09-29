@@ -1193,21 +1193,26 @@ export default function StudentDashboard() {
     s.email?.toLowerCase().includes(studentSearchQuery.toLowerCase())
   );
 
-  // Dynamic typing cadence data (09:00 - 20:00) with peak highlight
+  // Dynamic typing cadence data (09:00 - 20:00) calculated from actual telemetry sessions
   const cadenceData = [
-    { time: '09:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.02) : 25), isPeak: false },
-    { time: '10:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.035) : 42), isPeak: false },
-    { time: '11:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.045) : 58), isPeak: false },
-    { time: '12:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.025) : 34), isPeak: false },
-    { time: '13:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.038) : 45), isPeak: false },
-    { time: '14:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.055) : 68), isPeak: false },
-    { time: '15:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.062) : 74), isPeak: false },
-    { time: '16:00', wpm: 91.4, isPeak: true },
-    { time: '17:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.04) : 48), isPeak: false },
-    { time: '18:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.03) : 38), isPeak: false },
-    { time: '19:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.045) : 55), isPeak: false },
-    { time: '20:00', wpm: Math.round(report?.metrics?.keystrokes ? (report.metrics.keystrokes * 0.05) : 62), isPeak: false },
-  ];
+    '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
+  ].map(time => {
+    const hour = parseInt(time.split(':')[0], 10);
+    const matchingSessions = sessionsList.filter(s => {
+      if (!s.startTime) return false;
+      const d = new Date(s.startTime);
+      return d.getHours() === hour;
+    });
+    const keystrokesInHour = matchingSessions.reduce((acc, s) => acc + (s.keystrokes || 0), 0);
+    const wpm = keystrokesInHour > 0 ? Math.min(140, Math.round(keystrokesInHour / 5)) : 0;
+    return { time, wpm, isPeak: false };
+  });
+
+  const maxWpm = Math.max(...cadenceData.map(d => d.wpm), 0);
+  if (maxWpm > 0) {
+    const peakItem = cadenceData.find(d => d.wpm === maxWpm);
+    if (peakItem) peakItem.isPeak = true;
+  }
 
   if (!mounted) return null;
 
@@ -1478,22 +1483,22 @@ export default function StudentDashboard() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                Good morning, {student?.name ? student.name.split(' ')[0] : 'Deneth'}
+                Good morning, {student?.name ? student.name.split(' ')[0] : 'Student'}
               </h1>
               <p className="text-xs text-slate-500 font-normal mt-0.5">
                 Continuous keystroke cadence, AST Integrity and team provenance.
               </p>
             </div>
 
-            {/* Right Status Capsule matching screenshot */}
+            {/* Right Status Capsule */}
             <div className="bg-white border border-slate-200/80 rounded-full px-4 py-2 shadow-xs flex items-center gap-3 text-xs text-slate-600 shrink-0">
               <span className="flex items-center gap-1.5 font-medium text-slate-800">
                 <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-                {selectedAssignment?.title ? selectedAssignment.title.toLowerCase().replace(/\s+/g, '-') : 'ds-assignment'}
+                {selectedAssignment?.title ? selectedAssignment.title.toLowerCase().replace(/\s+/g, '-') : 'general-workspace'}
               </span>
               <span className="text-slate-300">•</span>
               <span className="text-slate-600 font-normal">
-                Attested {scannedFiles.length > 0 ? scannedFiles.length : 21} local files
+                Attested {scannedFiles.length} local files
               </span>
               <span className="text-slate-300">•</span>
               <span className="text-slate-600 font-normal">
@@ -1503,7 +1508,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* =========================================================================
-              TEAM REPOSITORY BANNER (MATCHING SCREENSHOT)
+              TEAM REPOSITORY BANNER
           ========================================================================= */}
           <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5 min-w-0">
@@ -1514,11 +1519,11 @@ export default function StudentDashboard() {
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">TEAM REPOSITORY</span>
                   <span className="text-[10px] bg-slate-100 text-slate-600 font-mono font-semibold px-2 py-0.5 rounded-full border border-slate-200">
-                    TEAM-{team?.inviteCode || '4211'}
+                    {team?.inviteCode ? `TEAM-${team.inviteCode}` : 'NO TEAM'}
                   </span>
                 </div>
                 <div className="text-sm font-semibold text-slate-900 font-mono truncate mt-0.5">
-                  {team?.repositoryUrl || repoUrl || 'github.com/DenethGodakandage/ds-assignemnt'}
+                  {team?.repositoryUrl || repoUrl || 'No Repository Linked'}
                 </div>
               </div>
             </div>
@@ -1580,9 +1585,11 @@ export default function StudentDashboard() {
                     <div>
                       <div className="flex items-center justify-between">
                         <h3 className="text-xs font-bold text-slate-900">Integrity & Provenance</h3>
-                        <span className="text-[10px] font-semibold text-[#15803D] bg-[#22C55E]/15 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
-                          Verified
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono ${
+                          report?.scores?.final ? 'text-[#15803D] bg-[#22C55E]/15' : 'text-slate-500 bg-slate-100'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${report?.scores?.final ? 'bg-[#22C55E]' : 'bg-slate-400'}`} />
+                          {report?.scores?.final ? 'Verified' : 'Pending'}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 font-normal mt-0.5">Biometric typing verification</p>
@@ -1590,12 +1597,12 @@ export default function StudentDashboard() {
                       <div className="my-5">
                         <div className="flex items-baseline gap-2">
                           <span className="text-4xl font-black text-slate-900 tracking-tight font-mono">
-                            {report?.scores?.final ?? 100}%
+                            {report?.scores?.final != null ? `${report.scores.final}%` : '0%'}
                           </span>
                           <span className="text-xs uppercase text-slate-400 font-bold tracking-wider">AUTHENTICITY</span>
                         </div>
                         <p className="text-xs text-slate-500 font-normal mt-1">
-                          Genuine human keystroke rhythm verified
+                          {report?.scores?.final ? 'Genuine human keystroke rhythm verified' : 'Awaiting telemetry sync to establish baseline'}
                         </p>
                       </div>
                     </div>
@@ -1606,7 +1613,7 @@ export default function StudentDashboard() {
                         <Laptop className="w-3.5 h-3.5 text-slate-600 mb-1" />
                         <span className="text-[10px] text-slate-500 leading-tight">Manual</span>
                         <span className="text-xs font-bold text-slate-900 mt-0.5">
-                          {report?.metrics?.codingProvenance?.manualPercent ?? 92}%
+                          {report?.metrics?.codingProvenance?.manualPercent ?? 0}%
                         </span>
                       </div>
 
@@ -1614,7 +1621,7 @@ export default function StudentDashboard() {
                         <Bot className="w-3.5 h-3.5 text-purple-600 mb-1" />
                         <span className="text-[10px] text-slate-500 leading-tight">AI Assist</span>
                         <span className="text-xs font-bold text-slate-900 mt-0.5">
-                          {report?.metrics?.codingProvenance?.aiPercent ?? 6}%
+                          {report?.metrics?.codingProvenance?.aiPercent ?? 0}%
                         </span>
                       </div>
 
@@ -1622,7 +1629,7 @@ export default function StudentDashboard() {
                         <ClipboardCheck className="w-3.5 h-3.5 text-rose-500 mb-1" />
                         <span className="text-[10px] text-slate-500 leading-tight">Pasted</span>
                         <span className="text-xs font-bold text-slate-900 mt-0.5">
-                          {report?.metrics?.codingProvenance?.pastePercent ?? 2}%
+                          {report?.metrics?.codingProvenance?.pastePercent ?? 0}%
                         </span>
                       </div>
                     </div>
@@ -1643,10 +1650,10 @@ export default function StudentDashboard() {
                         </div>
                         <div className="flex items-baseline gap-2 mt-3">
                           <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                            {report?.metrics?.keystrokes ? report.metrics.keystrokes.toLocaleString() : '1,840'}
+                            {report?.metrics?.keystrokes ? report.metrics.keystrokes.toLocaleString() : '0'}
                           </span>
                           <span className="text-[10px] font-bold text-[#15803D] bg-[#22C55E]/15 px-2 py-0.5 rounded-full font-mono">
-                            +{report?.metrics?.codingProvenance?.manualPercent ?? 92.0}%
+                            +{report?.metrics?.codingProvenance?.manualPercent ?? 0}%
                           </span>
                         </div>
                       </div>
@@ -1665,11 +1672,11 @@ export default function StudentDashboard() {
                         </div>
                         <div className="flex items-baseline gap-2 mt-3">
                           <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                            {report?.metrics?.codingProvenance?.aiChars ?? 120}
+                            {report?.metrics?.codingProvenance?.aiChars ?? 0}
                             <span className="text-xs font-normal text-slate-400 ml-1">chars</span>
                           </span>
                           <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full font-mono">
-                            {report?.metrics?.codingProvenance?.aiPercent ?? 6}% rate
+                            {report?.metrics?.codingProvenance?.aiPercent ?? 0}% rate
                           </span>
                         </div>
                       </div>
@@ -1691,7 +1698,7 @@ export default function StudentDashboard() {
                             {report?.metrics?.charactersPasted ?? 0}
                             <span className="text-xs font-normal text-slate-400 ml-1">chars</span>
                           </span>
-                          <span className="text-[10px] font-bold text-[#15803D] bg-[#22C55E]/15 px-2 py-0.5 rounded-full font-mono">
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-mono">
                             {report?.metrics?.codingProvenance?.pastePercent ?? 0}% anomaly
                           </span>
                         </div>
@@ -1711,11 +1718,11 @@ export default function StudentDashboard() {
                         </div>
                         <div className="flex items-baseline gap-2 mt-3">
                           <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                            {report?.metrics?.codingHours ?? '10.33'}
+                            {report?.metrics?.codingHours ? Number(report.metrics.codingHours).toFixed(1) : '0.0'}
                             <span className="text-xs font-normal text-slate-400 ml-1">hrs</span>
                           </span>
                           <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full font-mono">
-                            +12.4%
+                            {report?.metrics?.codingHours ? 'Logged' : 'Idle'}
                           </span>
                         </div>
                       </div>
@@ -1736,11 +1743,17 @@ export default function StudentDashboard() {
                       </div>
                       <div className="flex items-baseline gap-3 mt-1.5">
                         <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
-                          91.4 <span className="text-xs font-medium text-slate-400">WPM Peak</span>
+                          {maxWpm > 0 ? maxWpm : 0} <span className="text-xs font-medium text-slate-400">WPM Peak</span>
                         </span>
-                        <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200/70 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
-                          ^ +8.2% vs avg
-                        </span>
+                        {maxWpm > 0 ? (
+                          <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200/70 px-2 py-0.5 rounded-full flex items-center gap-1 font-mono">
+                            ^ Active Telemetry
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-mono">
+                            Awaiting Session
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -1772,36 +1785,39 @@ export default function StudentDashboard() {
                         </button>
                       </div>
 
-                      <div className="bg-white border border-slate-200 rounded-full px-3 py-1 text-xs text-slate-700 font-medium flex items-center gap-1 shadow-xs cursor-pointer">
+                      <div className="bg-white border border-slate-200 rounded-full px-3 py-1 text-xs text-slate-700 font-medium flex items-center gap-1 shadow-xs">
                         <span>Today</span>
-                        <span className="text-slate-400 text-[10px]">▼</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* 12-Hour Bar Chart with 16:00 highlight */}
+                  {/* 12-Hour Bar Chart */}
                   <div className="pt-4 pb-2">
                     <div className="flex items-end justify-between gap-2 h-44 px-2">
                       {cadenceData.map((bar) => {
-                        const heightPercent = bar.isPeak ? 85 : Math.max(18, Math.min(75, bar.wpm * 0.95));
+                        const heightPercent = bar.wpm > 0 
+                          ? (bar.isPeak ? 85 : Math.max(18, Math.min(75, (bar.wpm / (maxWpm || 1)) * 75))) 
+                          : 8;
 
                         return (
                           <div key={bar.time} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                            {bar.isPeak && (
+                            {bar.isPeak && bar.wpm > 0 && (
                               <div className="mb-2 bg-[#121417] text-white text-[11px] font-bold font-mono px-2.5 py-1 rounded-full shadow-md whitespace-nowrap animate-bounce">
-                                91.4 WPM
+                                {bar.wpm} WPM
                               </div>
                             )}
                             <div 
                               style={{ height: `${heightPercent}%` }}
                               className={`w-full max-w-[38px] rounded-t-xl transition-all duration-300 ${
-                                bar.isPeak 
+                                bar.isPeak && bar.wpm > 0
                                   ? 'bg-[#A3E635] shadow-xs' 
-                                  : 'bg-slate-100 hover:bg-slate-200'
+                                  : bar.wpm > 0 
+                                  ? 'bg-slate-300 hover:bg-slate-400' 
+                                  : 'bg-slate-100'
                               }`}
                               title={`${bar.time}: ${bar.wpm} WPM`}
                             />
-                            <span className={`text-[10px] mt-2 font-mono ${bar.isPeak ? 'font-bold text-slate-900' : 'text-slate-400'}`}>
+                            <span className={`text-[10px] mt-2 font-mono ${bar.isPeak && bar.wpm > 0 ? 'font-bold text-slate-900' : 'text-slate-400'}`}>
                               {bar.time}
                             </span>
                           </div>
@@ -1821,26 +1837,39 @@ export default function StudentDashboard() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-900">Team Contributors</h3>
                     <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                      {team?.members?.length || 4} Active
+                      {team?.members?.length || 0} Active
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 font-normal">
                     Academic peers sharing repository telemetry
                   </p>
 
-                  <div className="flex items-center gap-2.5 pt-2">
-                    <div className="w-9 h-9 rounded-full bg-amber-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                      AR
-                    </div>
-                    <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                      DG
-                    </div>
-                    <div className="w-9 h-9 rounded-full bg-teal-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                      LC
-                    </div>
-                    <div className="w-9 h-9 rounded-full bg-rose-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                      SV
-                    </div>
+                  <div className="flex items-center gap-2 pt-2 flex-wrap">
+                    {team?.members && team.members.length > 0 ? (
+                      team.members.map((member: any, idx: number) => {
+                        const name = member.studentId?.name || member.name || member.gitUsername || 'Student';
+                        const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'ST';
+                        const colors = [
+                          'bg-slate-900 text-white',
+                          'bg-emerald-600 text-white',
+                          'bg-indigo-600 text-white',
+                          'bg-amber-600 text-white',
+                          'bg-teal-600 text-white'
+                        ];
+                        const color = colors[idx % colors.length];
+                        return (
+                          <div
+                            key={member._id || idx}
+                            title={`${name} (${member.gitUsername || 'No Git'})`}
+                            className={`w-9 h-9 rounded-full ${color} font-bold text-xs flex items-center justify-center shadow-xs cursor-default`}
+                          >
+                            {initials}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <span className="text-xs text-slate-400 italic py-1">No contributors joined yet</span>
+                    )}
                     <button
                       onClick={() => { setActiveTab('teams'); loadMyTeams(); }}
                       title="Add Contributor"
@@ -1866,15 +1895,15 @@ export default function StudentDashboard() {
 
                     <div className="my-6">
                       <div className="text-sm font-mono tracking-widest text-slate-300">
-                        •••• •••• 3892 7835
+                        {student?._id ? `NODE-${student._id.slice(-8).toUpperCase()}` : 'NODE-LOCAL'}
                       </div>
                     </div>
 
                     <div className="flex items-end justify-between pt-2 border-t border-white/10 text-xs">
                       <div>
                         <div className="text-[9px] uppercase tracking-wider text-slate-400 font-mono">STUDENT LEAD</div>
-                        <div className="font-semibold text-white mt-0.5 text-xs">
-                          {student?.name || 'Deneth Godakandage'}
+                        <div className="font-semibold text-white mt-0.5 text-xs truncate max-w-[140px]">
+                          {student?.name || student?.email || 'Authenticated Student'}
                         </div>
                       </div>
                       <div className="text-right">
@@ -1882,7 +1911,7 @@ export default function StudentDashboard() {
                         <div className="font-semibold text-white mt-0.5 text-xs font-mono">
                           {selectedAssignment?.deadline 
                             ? new Date(selectedAssignment.deadline).toLocaleDateString(undefined, {month: '2-digit', year: 'numeric'}) 
-                            : '09 / 2026'}
+                            : 'No Deadline'}
                         </div>
                       </div>
                     </div>
@@ -1900,7 +1929,7 @@ export default function StudentDashboard() {
                     </button>
                     <button
                       onClick={() => {
-                        alert(`OffSync Student Audit Report\nStudent: ${student?.name || 'Deneth'}\nAuthenticity: ${report?.scores?.final ?? 100}%\nAttested files: ${scannedFiles.length}\nRemote: ${team?.repositoryUrl || repoUrl || 'Active'}`);
+                        alert(`OffSync Student Audit Report\nStudent: ${student?.name || student?.email || 'Student'}\nAuthenticity: ${report?.scores?.final ?? 0}%\nAttested files: ${scannedFiles.length}\nRemote: ${team?.repositoryUrl || repoUrl || 'None'}`);
                       }}
                       className="w-full py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs border border-slate-200/80 shadow-xs transition flex items-center justify-center cursor-pointer"
                     >
@@ -1914,7 +1943,7 @@ export default function StudentDashboard() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-900">Workspace Evaluation</h3>
                     <span className="text-xs font-semibold text-slate-500 font-mono">
-                      Total {report?.metrics?.codingHours ?? '10.33'}h
+                      Total {report?.metrics?.codingHours ? Number(report.metrics.codingHours).toFixed(1) : '0.0'}h
                     </span>
                   </div>
 
@@ -1927,7 +1956,7 @@ export default function StudentDashboard() {
                       <div className="text-xs text-blue-900 font-medium mt-0.5">Calculated Standing</div>
                     </div>
                     <div className="text-3xl font-black text-blue-600 font-mono">
-                      {report?.scores?.final ?? 50}%
+                      {report?.scores?.final ?? 0}%
                     </div>
                   </div>
 
@@ -1949,11 +1978,11 @@ export default function StudentDashboard() {
                     <div>
                       <div className="flex justify-between items-center text-slate-600 mb-1">
                         <span className="font-medium">VS Code Telemetry (30%)</span>
-                        <span className="font-mono font-bold text-slate-900">{report?.scores?.vscode ?? 100}%</span>
+                        <span className="font-mono font-bold text-slate-900">{report?.scores?.vscode ?? 0}%</span>
                       </div>
                       <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                         <div 
-                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.vscode ?? 100))}%` }} 
+                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.vscode ?? 0))}%` }} 
                           className="h-full bg-[#A3E635] transition-all duration-500" 
                         />
                       </div>
@@ -1962,11 +1991,11 @@ export default function StudentDashboard() {
                     <div>
                       <div className="flex justify-between items-center text-slate-600 mb-1">
                         <span className="font-medium">Kanban Velocity (20%)</span>
-                        <span className="font-mono font-bold text-slate-900">{report?.scores?.task ?? 100}%</span>
+                        <span className="font-mono font-bold text-slate-900">{report?.scores?.task ?? 0}%</span>
                       </div>
                       <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                         <div 
-                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.task ?? 100))}%` }} 
+                          style={{ width: `${Math.min(100, Math.max(0, report?.scores?.task ?? 0))}%` }} 
                           className="h-full bg-[#A3E635] transition-all duration-500" 
                         />
                       </div>
@@ -3523,56 +3552,56 @@ export default function StudentDashboard() {
                               <div className="p-3.5 rounded-xl bg-white/80 border border-[#A3E635]/15 space-y-1 shadow-xs">
                                 <div className="text-[10px] uppercase font-mono-code text-[#2D6606] flex items-center justify-between">
                                   <span>✍️ Manual Typed</span>
-                                  <span>{report?.metrics?.codingProvenance?.manualPercent ?? 92}%</span>
+                                  <span>{report?.metrics?.codingProvenance?.manualPercent ?? 0}%</span>
                                 </div>
                                 <div className="text-lg font-bold text-[#1d1d1f]">
-                                  {report?.metrics?.keystrokes?.toLocaleString() ?? '1,840'}
+                                  {report?.metrics?.keystrokes?.toLocaleString() ?? '0'}
                                   <span className="text-[10px] text-[#86868b] font-normal ml-1">keys</span>
                                 </div>
                                 <div className="w-full bg-black/[0.04] h-1.5 rounded-full overflow-hidden">
-                                  <div style={{ width: `${report?.metrics?.codingProvenance?.manualPercent ?? 92}%` }} className="bg-[#A3E635] h-full"></div>
+                                  <div style={{ width: `${report?.metrics?.codingProvenance?.manualPercent ?? 0}%` }} className="bg-[#A3E635] h-full"></div>
                                 </div>
                               </div>
 
                               <div className="p-3.5 rounded-xl bg-white/80 border border-indigo-500/20 space-y-1 shadow-xs">
                                 <div className="text-[10px] uppercase font-mono-code text-[#5856D6] flex items-center justify-between">
                                   <span>🤖 AI-Assisted</span>
-                                  <span>{report?.metrics?.codingProvenance?.aiPercent ?? 6}%</span>
+                                  <span>{report?.metrics?.codingProvenance?.aiPercent ?? 0}%</span>
                                 </div>
                                 <div className="text-lg font-bold text-[#1d1d1f]">
-                                  {report?.metrics?.codingProvenance?.aiChars ?? '120'}
+                                  {report?.metrics?.codingProvenance?.aiChars ?? 0}
                                   <span className="text-[10px] text-[#86868b] font-normal ml-1">chars</span>
                                 </div>
                                 <div className="w-full bg-black/[0.04] h-1.5 rounded-full overflow-hidden">
-                                  <div style={{ width: `${report?.metrics?.codingProvenance?.aiPercent ?? 6}%` }} className="bg-[#5856D6] h-full"></div>
+                                  <div style={{ width: `${report?.metrics?.codingProvenance?.aiPercent ?? 0}%` }} className="bg-[#5856D6] h-full"></div>
                                 </div>
                               </div>
 
                               <div className="p-3.5 rounded-xl bg-white/80 border border-rose-500/20 space-y-1 shadow-xs">
                                 <div className="text-[10px] uppercase font-mono-code text-[#FF3B30] flex items-center justify-between">
                                   <span>📋 Pasted Block</span>
-                                  <span>{report?.metrics?.codingProvenance?.pastePercent ?? 2}%</span>
+                                  <span>{report?.metrics?.codingProvenance?.pastePercent ?? 0}%</span>
                                 </div>
                                 <div className="text-lg font-bold text-[#1d1d1f]">
-                                  {report?.metrics?.charactersPasted ?? '45'}
+                                  {report?.metrics?.charactersPasted ?? 0}
                                   <span className="text-[10px] text-[#86868b] font-normal ml-1">chars</span>
                                 </div>
                                 <div className="w-full bg-black/[0.04] h-1.5 rounded-full overflow-hidden">
-                                  <div style={{ width: `${report?.metrics?.codingProvenance?.pastePercent ?? 2}%` }} className="bg-[#FF3B30] h-full"></div>
+                                  <div style={{ width: `${report?.metrics?.codingProvenance?.pastePercent ?? 0}%` }} className="bg-[#FF3B30] h-full"></div>
                                 </div>
                               </div>
 
                               <div className="p-3.5 rounded-xl bg-white/80 border border-emerald-500/20 space-y-1 shadow-xs">
                                 <div className="text-[10px] uppercase font-mono-code text-[#30D158] flex items-center justify-between">
                                   <span>🛡️ Authenticity</span>
-                                  <span>100%</span>
+                                  <span>{report?.scores?.final != null ? `${report.scores.final}%` : '0%'}</span>
                                 </div>
                                 <div className="text-lg font-bold text-[#34C759]">
-                                  Verified
+                                  {report?.scores?.final ? 'Verified' : 'Pending'}
                                   <span className="text-[10px] text-[#30D158] font-normal ml-1">✓</span>
                                 </div>
                                 <div className="text-[10px] text-[#86868b] truncate">
-                                  Genuine human cadence
+                                  {report?.scores?.final ? 'Genuine human cadence' : 'Awaiting sync'}
                                 </div>
                               </div>
                             </div>
@@ -3587,48 +3616,64 @@ export default function StudentDashboard() {
 
                             <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-[#007AFF] before:via-[#34C759] before:to-slate-800">
                               
-                              {/* 1. Live Active VS Code Telemetry Session */}
-                              <div className="relative group">
-                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#34C759] border-2 border-slate-950 shadow-sm animate-ping" />
-                                <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#34C759] border-2 border-slate-950" />
-                                
-                                <div className="bg-white/90 hover:bg-black/[0.03] border border-[#34C759]/20 rounded-3xl p-4 space-y-3 transition shadow-lg">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold text-[#1d1d1f] flex items-center gap-1.5">
-                                        <Code className="w-3.5 h-3.5 text-[#34C759]" />
-                                        Active VS Code Live Session
-                                      </span>
-                                      <span className="text-[9px] font-mono-code bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 px-2 py-0.5 rounded-md font-bold">
-                                        🟢 Live Auto-Sync
-                                      </span>
-                                    </div>
-                                    <span className="text-[10px] font-mono-code text-[#86868b]">
-                                      Just now • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                    </span>
-                                  </div>
+                              {/* 1. Synced VS Code Sessions from Real Database */}
+                              {sessionsList.length > 0 ? (
+                                sessionsList.slice(0, 6).map((session, sIdx) => {
+                                  const files = [...(session.filesEdited || []), ...(session.filesCreated || [])];
+                                  const dateStr = session.startTime 
+                                    ? new Date(session.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                    : 'Recent Session';
+                                  return (
+                                    <div key={session._id || sIdx} className="relative group">
+                                      <div className="absolute -left-6 top-1.5 w-3.5 h-3.5 rounded-full bg-[#34C759] border-2 border-slate-950" />
+                                      
+                                      <div className="bg-white/90 hover:bg-black/[0.03] border border-[#34C759]/20 rounded-3xl p-4 space-y-3 transition shadow-xs">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2">
+                                            <Code className="w-3.5 h-3.5 text-[#34C759]" />
+                                            <span className="text-xs font-bold text-[#1d1d1f]">
+                                              VS Code Telemetry Session
+                                            </span>
+                                            <span className="text-[9px] font-mono-code bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 px-2 py-0.5 rounded-md font-bold">
+                                              Verified Session
+                                            </span>
+                                          </div>
+                                          <span className="text-[10px] font-mono-code text-[#86868b]">
+                                            {dateStr}
+                                          </span>
+                                        </div>
 
-                                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                                    <span className="px-2 py-0.5 rounded-md bg-[#A3E635]/15 text-[#2D6606] border border-[#A3E635]/20 text-[10px] font-mono-code">
-                                      ✍️ 96% Typed ({report?.metrics?.keystrokes || 240} keys)
-                                    </span>
-                                    <span className="px-2 py-0.5 rounded-md bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 text-[10px] font-mono-code">
-                                      +{report?.metrics?.linesAdded || 18} lines added
-                                    </span>
-                                    <span className="px-2 py-0.5 rounded-md bg-[#5856D6]/8/80 text-[#5856D6] border border-[#5856D6]/20 text-[10px] font-mono-code">
-                                      🛡️ Authorized Contributor
-                                    </span>
-                                  </div>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                          <span className="px-2 py-0.5 rounded-md bg-[#A3E635]/15 text-[#2D6606] border border-[#A3E635]/20 text-[10px] font-mono-code">
+                                            ✍️ {session.keystrokes || 0} keystrokes
+                                          </span>
+                                          <span className="px-2 py-0.5 rounded-md bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20 text-[10px] font-mono-code">
+                                            +{session.linesAdded || 0} lines added
+                                          </span>
+                                          {session.linesRemoved > 0 && (
+                                            <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-mono-code">
+                                              -{session.linesRemoved} lines removed
+                                            </span>
+                                          )}
+                                        </div>
 
-                                  <div className="text-xs text-[#48484a] bg-black/[0.015] p-2.5 rounded-xl border border-black/[0.04] space-y-1 font-mono-code text-[11px]">
-                                    <span className="text-[#86868b] text-[10px] block uppercase">Live Tracked File Locations:</span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      <span className="bg-black/[0.03] px-2 py-0.5 rounded text-[#2D6606] border border-black/[0.06]">src/auth/jwt.ts (+14)</span>
-                                      <span className="bg-black/[0.03] px-2 py-0.5 rounded text-[#34C759] border border-black/[0.06]">components/Dashboard.tsx (+4)</span>
+                                        {files.length > 0 && (
+                                          <div className="text-xs text-[#48484a] bg-black/[0.015] p-2.5 rounded-xl border border-black/[0.04] space-y-1 font-mono-code text-[11px]">
+                                            <span className="text-[#86868b] text-[10px] block uppercase">Tracked File Locations:</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                              {files.map((fp: string, fIdx: number) => (
+                                                <span key={fIdx} className="bg-black/[0.03] px-2 py-0.5 rounded text-[#2D6606] border border-black/[0.06]">
+                                                  {fp}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                </div>
-                              </div>
+                                  );
+                                })
+                              ) : null}
 
                               {/* 2. Synced Commits & Offline Batches */}
                               {commitsList.map((c, idx) => (
@@ -3653,7 +3698,7 @@ export default function StudentDashboard() {
                                         Authored by <strong className="text-[#1d1d1f]">{c.studentName}</strong> (@{c.gitUsername})
                                       </span>
                                       <span className="bg-[#34C759]/6 text-[#34C759] border border-[#34C759]/20 px-2 py-0.5 rounded-md">
-                                        +{c.linesAdded || 42} LOC
+                                        +{c.linesAdded || 0} LOC
                                       </span>
                                       {c.linesRemoved > 0 && (
                                         <span className="bg-[#FF3B30]/6 text-[#FF3B30] border border-[#FF3B30]/20 px-2 py-0.5 rounded-md">
@@ -4152,7 +4197,7 @@ export default function StudentDashboard() {
                           </div>
                           <div>
                             <label className="block text-[10px] uppercase text-[#86868b] font-mono-code mb-1">GitHub Username</label>
-                            <input type="text" required value={gitUsername} onChange={(e) => setGitUsername(e.target.value)} placeholder="alex-dev" className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f]" />
+                            <input type="text" required value={gitUsername} onChange={(e) => setGitUsername(e.target.value)} placeholder="your-github-username" className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f]" />
                           </div>
                         </div>
 
@@ -4252,7 +4297,7 @@ export default function StudentDashboard() {
                   required
                   value={generalTeamGit}
                   onChange={(e) => setGeneralTeamGit(e.target.value)}
-                  placeholder="alex-dev"
+                  placeholder="your-github-username"
                   className="w-full bg-white border border-black/[0.06] rounded-xl px-3 py-2 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#A3E635]"
                 />
               </div>

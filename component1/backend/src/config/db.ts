@@ -14,7 +14,7 @@ export const connectDB = async (): Promise<void> => {
   try {
     console.log('Connecting to MongoDB Cloud (Atlas)...');
     await mongoose.connect(MONGO_URI, {
-      serverSelectionTimeoutMS: 5000
+      serverSelectionTimeoutMS: 15000
     });
     console.log('Mongoose: Successfully connected to MongoDB Cloud Atlas!');
   } catch (error: any) {

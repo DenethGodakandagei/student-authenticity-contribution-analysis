@@ -16,69 +16,13 @@ export const mockTelemetryEvents: any[] = [];
 const DATA_DIR = path.join(__dirname, '../../data');
 const DATA_FILE = path.join(DATA_DIR, 'mock_store.json');
 
-// Save mock data to disk for permanent persistence across server restarts
-export const saveToDisk = () => {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    const payload = {
-      mockUsers,
-      mockAssignments,
-      mockTeams,
-      mockTasks,
-      mockVscodeSessions,
-      mockGitActivities,
-      mockAnalyticsReports,
-      mockTelemetryEvents
-    };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
-  } catch (err: any) {
-    console.warn('MockStore saveToDisk warning:', err.message);
-  }
-};
+// Disk persistence disabled: Real data is saved directly to MongoDB
+export const saveToDisk = () => {};
 
-// Load mock data from disk if available
 export const loadFromDisk = (): boolean => {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      const data = JSON.parse(raw);
-      if (data && Array.isArray(data.mockUsers) && data.mockUsers.length > 0) {
-        mockUsers.length = 0;
-        mockAssignments.length = 0;
-        mockTeams.length = 0;
-        mockTasks.length = 0;
-        mockVscodeSessions.length = 0;
-        mockGitActivities.length = 0;
-        mockAnalyticsReports.length = 0;
-        mockTelemetryEvents.length = 0;
-
-        mockUsers.push(...data.mockUsers);
-        if (data.mockAssignments) mockAssignments.push(...data.mockAssignments);
-        if (data.mockTeams) mockTeams.push(...data.mockTeams);
-        if (data.mockTasks) mockTasks.push(...data.mockTasks);
-        if (data.mockVscodeSessions) mockVscodeSessions.push(...data.mockVscodeSessions);
-        if (data.mockGitActivities) mockGitActivities.push(...data.mockGitActivities);
-        if (data.mockAnalyticsReports) mockAnalyticsReports.push(...data.mockAnalyticsReports);
-        if (data.mockTelemetryEvents) mockTelemetryEvents.push(...data.mockTelemetryEvents);
-
-        // Ensure lecture2@gmail.com exists
-        if (!mockUsers.some(u => u.email === 'lecture2@gmail.com')) {
-          const defaultPassword = bcrypt.hashSync('password123', 10);
-          mockUsers.push({ _id: '667790901f95305cc857f099', name: 'Lecturer 2', email: 'lecture2@gmail.com', password: defaultPassword, role: 'lecturer' });
-          saveToDisk();
-        }
-
-        console.log(`MockStore: Restored ${mockUsers.length} users and data from persistent file ${DATA_FILE}`);
-        return true;
-      }
-    }
-  } catch (err: any) {
-    console.warn('MockStore loadFromDisk notice:', err.message);
-  }
   return false;
 };
+
 
 // Helper to generate mongo-like string IDs
 export const generateId = (): string => {
@@ -391,6 +335,5 @@ export const seedMockDatabase = () => {
   console.log(`Mock database populated: Users=${mockUsers.length}, Sessions=${mockVscodeSessions.length}, GitActivities=${mockGitActivities.length}`);
 };
 
-// Automatically pre-populate default mockup store on module load
-seedMockDatabase();
+// Mock seeding disabled: All tracking and analytics must be saved directly to MongoDB.
 

@@ -98,13 +98,13 @@ const startServer = async () => {
   let dbStatus = 'ONLINE (Cloud Atlas)';
   try {
     await connectDB();
+    console.log('✅ Real Database Connected: All IDE & sensor telemetry will be persisted directly to MongoDB.');
   } catch (err: any) {
-    console.warn('\n⚠️ =======================================================');
-    console.warn(`  WARNING: MongoDB connection failed: ${err.message}`);
-    console.warn('  FALLING BACK TO IN-MEMORY MOCK DATABASE MODE');
-    console.warn('=========================================================\n');
-    
-    dbStatus = 'OFFLINE (Mock Store Mode)';
+    console.error('\n❌ =======================================================');
+    console.error(`  ERROR: MongoDB connection failed: ${err.message}`);
+    console.error('  Please check network or MONGO_URI in backend/.env');
+    console.error('=========================================================\n');
+    dbStatus = 'FAILED';
   }
 
   app.listen(PORT, () => {

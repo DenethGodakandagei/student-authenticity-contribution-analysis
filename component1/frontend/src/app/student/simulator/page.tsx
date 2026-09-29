@@ -501,19 +501,24 @@ export default function VSCodeSimulator() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col justify-between font-sans selection:bg-[#0EA5E9]/30 selection:text-[#38BDF8]">
+    <div className="min-h-screen bg-[#F6F8FA] text-slate-900 flex flex-col justify-between font-sans selection:bg-[#A3E635] selection:text-slate-950">
       
       {/* Header */}
-      <header className="border-b border-white/10 bg-[#0F172A]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-black/[0.06] bg-white/90 backdrop-blur-xl px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Link href="/student" className="flex items-center gap-2 text-[#38BDF8] hover:text-white transition text-xs font-mono-code font-medium">
+          <Link href="/student" className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition text-xs font-medium">
             <Undo className="w-4 h-4" />
-            Back to Dashboard
+            <span>Back to Dashboard</span>
           </Link>
-          <span className="text-slate-600">|</span>
+          <span className="text-slate-300">|</span>
           <div className="flex items-center gap-2">
-            <Code2 className="w-4 h-4 text-[#0EA5E9]" />
-            <span className="text-sm font-semibold text-white tracking-tight">VS Code Telemetry & Provenance Simulator</span>
+            <div className="w-7 h-7 rounded-lg bg-slate-950 text-[#A3E635] flex items-center justify-center shadow-xs">
+              <Code2 className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <span className="text-sm font-bold text-slate-900 tracking-tight">VS Code Telemetry Sensor Simulator</span>
+            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+              Diagnostic Mode
+            </span>
           </div>
         </div>
 
@@ -523,7 +528,7 @@ export default function VSCodeSimulator() {
             <select
               value={selectedAssignmentId}
               onChange={(e) => setSelectedAssignmentId(e.target.value)}
-              className="bg-slate-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-300 outline-none focus:border-[#0EA5E9]"
+              className="bg-white border border-slate-200 rounded-full px-3.5 py-1.5 text-xs text-slate-800 outline-none focus:border-[#A3E635] shadow-xs cursor-pointer"
             >
               {assignments.map(a => (
                 <option key={a._id} value={a._id}>{a.title}</option>
@@ -536,20 +541,20 @@ export default function VSCodeSimulator() {
               setIsOnline(!isOnline);
               addLog(`[NETWORK] State switched to: ${!isOnline ? 'ONLINE' : 'OFFLINE'}`);
             }}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all border flex items-center gap-2 cursor-pointer shadow-xs ${
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition border flex items-center gap-2 cursor-pointer shadow-xs ${
               isOnline 
-                ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' 
-                : 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                : 'bg-amber-50 border-amber-200 text-amber-700'
             }`}
           >
             {isOnline ? (
               <>
-                <Wifi className="w-3.5 h-3.5 animate-pulse" />
+                <Wifi className="w-3.5 h-3.5 animate-pulse text-[#22C55E]" />
                 Online
               </>
             ) : (
               <>
-                <WifiOff className="w-3.5 h-3.5" />
+                <WifiOff className="w-3.5 h-3.5 text-amber-600" />
                 Offline (Local Buffer)
               </>
             )}
@@ -558,43 +563,48 @@ export default function VSCodeSimulator() {
       </header>
 
       {/* Editor Mockup Area */}
-      <main className="flex-grow grid grid-cols-1 lg:grid-cols-4 gap-6 p-6">
+      <main className="flex-grow grid grid-cols-1 lg:grid-cols-4 gap-6 p-6 max-w-7xl mx-auto w-full">
         
         {/* Left Column: File Tree & Session Controller */}
-        <div className="lg:col-span-1 glass-card rounded-2xl border border-white/10 p-5 flex flex-col justify-between space-y-6 text-left">
+        <div className="lg:col-span-1 bg-white rounded-3xl border border-slate-200/80 p-5 flex flex-col justify-between space-y-6 text-left shadow-xs">
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs font-mono-code text-[#38BDF8]">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
               <div className="flex items-center gap-2">
-                <FolderOpen className="w-4 h-4 text-[#38BDF8]" />
-                <span>Tracked File Locations</span>
+                <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                  <FolderOpen className="w-4 h-4 text-slate-800" />
+                </div>
+                <span>Tracked Files</span>
               </div>
-              <span className="text-[10px] text-slate-400">{Object.keys(files).length} files</span>
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{Object.keys(files).length} files</span>
             </div>
 
             {/* Files List */}
-            <div className="space-y-1.5 font-mono-code text-xs">
+            <div className="space-y-1.5 font-mono text-xs">
               {Object.keys(files).map(key => {
                 const fa = fileActivities[key];
+                const isActive = selectedFile === key;
                 return (
                   <button
                     key={key}
                     onClick={() => setSelectedFile(key)}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all ${
-                      selectedFile === key 
-                        ? 'bg-[#0EA5E9]/15 border border-[#0EA5E9]/30 text-white shadow-xs' 
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                    className={`w-full text-left px-3 py-2.5 rounded-2xl text-xs flex items-center justify-between transition-all cursor-pointer ${
+                      isActive 
+                        ? 'bg-[#121417] text-white shadow-xs font-medium' 
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center gap-2 truncate max-w-[170px]">
-                      <File className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+                    <div className="flex items-center gap-2 truncate max-w-[160px]">
+                      <File className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#A3E635]' : 'text-slate-400'}`} />
                       <span className="truncate">{key}</span>
                     </div>
                     {fa && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                        fa.typingProvenance === 'manual' ? 'bg-sky-950 text-sky-300 border border-sky-500/30' :
-                        fa.typingProvenance === 'ai_assisted' ? 'bg-indigo-950 text-indigo-300 border border-indigo-500/30' :
-                        fa.typingProvenance === 'copy_paste' ? 'bg-rose-950 text-rose-300 border border-rose-500/30' :
-                        'bg-amber-950 text-amber-300 border border-amber-500/30'
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-sans font-semibold ${
+                        isActive
+                          ? 'bg-white/15 text-white'
+                          : fa.typingProvenance === 'manual' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                            fa.typingProvenance === 'ai_assisted' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                            fa.typingProvenance === 'copy_paste' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                            'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>
                         {fa.typingProvenance === 'manual' ? '✍️ Manual' : fa.typingProvenance === 'ai_assisted' ? '🤖 AI' : fa.typingProvenance === 'copy_paste' ? '📋 Paste' : '⚡ Mixed'}
                       </span>
@@ -605,54 +615,64 @@ export default function VSCodeSimulator() {
             </div>
 
             {/* Create file */}
-            <form onSubmit={handleCreateFile} className="flex gap-2 pt-3 border-t border-white/5">
+            <form onSubmit={handleCreateFile} className="flex gap-2 pt-3 border-t border-slate-100">
               <input
                 type="text"
                 required
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
                 placeholder="path/new-file.ts"
-                className="flex-grow bg-slate-900 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#0EA5E9]"
+                className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#A3E635] focus:bg-white transition"
               />
-              <button type="submit" className="px-3 bg-[#0EA5E9] hover:bg-[#38BDF8] text-white rounded-xl text-xs font-bold">+</button>
+              <button 
+                type="submit" 
+                className="w-8 h-8 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-sm flex items-center justify-center transition shadow-xs cursor-pointer"
+                title="Add Tracked File"
+              >
+                +
+              </button>
             </form>
           </div>
 
           {/* Session Controller Panel */}
-          <div className="bg-slate-900/80 border border-white/10 p-4 rounded-xl space-y-4 text-center">
-            <span className="text-[10px] block uppercase text-slate-400 tracking-wider font-mono-code">Telemetry Daemon Controller</span>
+          <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-2xl space-y-4 text-center">
+            <span className="text-[10px] block font-bold uppercase text-slate-400 tracking-wider">
+              Telemetry Daemon Controller
+            </span>
             
             <div className="flex gap-3">
               {!isCoding ? (
                 <button
                   onClick={handleStartCoding}
-                  className="flex-1 py-2.5 rounded-xl bg-[#10B981] hover:bg-emerald-600 text-white font-medium text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  className="flex-1 py-2.5 rounded-2xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <Play className="w-3.5 h-3.5" />
+                  <Play className="w-3.5 h-3.5 fill-current" />
                   Start Logging
                 </button>
               ) : (
                 <button
                   onClick={handleStopCoding}
-                  className="flex-1 py-2.5 rounded-xl bg-[#F43F5E] hover:bg-rose-600 text-white font-medium text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  className="flex-1 py-2.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <Square className="w-3.5 h-3.5" />
+                  <Square className="w-3.5 h-3.5 fill-current" />
                   Stop & Buffer
                 </button>
               )}
             </div>
 
             {/* Cache Sync panel */}
-            <div className="pt-3 border-t border-white/5 text-left space-y-2">
-              <div className="flex justify-between items-center text-xs font-mono-code">
-                <span className="text-slate-400">Offline Cached:</span>
-                <span className="text-[#F59E0B] font-bold">{offlineCacheCount} sessions</span>
+            <div className="pt-3 border-t border-slate-200 text-left space-y-2.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-medium">Offline Cached:</span>
+                <span className="text-amber-600 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px]">
+                  {offlineCacheCount} sessions
+                </span>
               </div>
               
               <button
                 onClick={handleSyncCachedSessions}
                 disabled={syncing || offlineCacheCount === 0}
-                className="w-full py-2 bg-[#0EA5E9] hover:bg-[#38BDF8] disabled:bg-slate-900 disabled:text-slate-600 border border-[#0EA5E9]/30 text-white text-xs font-medium rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:cursor-not-allowed"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
                 Reconcile Offline Buffer
@@ -665,154 +685,185 @@ export default function VSCodeSimulator() {
         <div className="lg:col-span-2 flex flex-col space-y-4">
           
           {/* Provenance Live Gauge Card */}
-          <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10 font-mono-code text-xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-slate-300 font-semibold flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-[#38BDF8]" />
+          <div className="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-slate-900 font-semibold text-xs flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-600" />
                 Live Coding Provenance
               </span>
-              <span className="text-[11px] text-[#38BDF8] bg-sky-950 px-2 py-0.5 rounded border border-sky-500/30">
+              <span className="text-[11px] font-semibold text-slate-800 bg-[#A3E635]/20 border border-[#A3E635]/50 px-2.5 py-0.5 rounded-full">
                 {currentStyle}
               </span>
             </div>
 
-            <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden flex mb-2">
-              <div style={{ width: `${manualPct}%` }} className="bg-[#38BDF8] h-full transition-all" title={`Manual: ${manualPct}%`}></div>
-              <div style={{ width: `${aiPct}%` }} className="bg-[#818CF8] h-full transition-all" title={`AI: ${aiPct}%`}></div>
-              <div style={{ width: `${pastePct}%` }} className="bg-[#F43F5E] h-full transition-all" title={`Pasted: ${pastePct}%`}></div>
+            {/* Multi-segment progress bar */}
+            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex mb-3 p-0.5 border border-slate-200/60">
+              <div style={{ width: `${manualPct}%` }} className="bg-[#A3E635] h-full rounded-l-full transition-all" title={`Manual: ${manualPct}%`}></div>
+              <div style={{ width: `${aiPct}%` }} className="bg-purple-500 h-full transition-all" title={`AI: ${aiPct}%`}></div>
+              <div style={{ width: `${pastePct}%` }} className="bg-rose-500 h-full rounded-r-full transition-all" title={`Pasted: ${pastePct}%`}></div>
             </div>
 
-            <div className="flex justify-between text-[11px] text-slate-400">
-              <span className="text-[#38BDF8]">✍️ {manualPct}% Manual ({keystrokes} chars)</span>
-              <span className="text-[#818CF8]">🤖 {aiPct}% AI Assisted ({aiCharsCount} chars)</span>
-              <span className="text-[#F43F5E]">📋 {pastePct}% Pasted ({charactersPasted} chars)</span>
+            <div className="grid grid-cols-3 gap-2 text-[11px]">
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-2 text-center">
+                <span className="text-slate-500 block text-[10px]">Manual Typing</span>
+                <span className="font-bold text-slate-900">{manualPct}% <span className="text-[10px] font-normal text-slate-500">({keystrokes} chars)</span></span>
+              </div>
+              <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-2 text-center">
+                <span className="text-purple-600 block text-[10px]">AI Copilot</span>
+                <span className="font-bold text-purple-900">{aiPct}% <span className="text-[10px] font-normal text-purple-600">({aiCharsCount} chars)</span></span>
+              </div>
+              <div className="bg-rose-50/60 border border-rose-100 rounded-xl p-2 text-center">
+                <span className="text-rose-600 block text-[10px]">Bulk Pasted</span>
+                <span className="font-bold text-rose-900">{pastePct}% <span className="text-[10px] font-normal text-rose-600">({charactersPasted} chars)</span></span>
+              </div>
             </div>
           </div>
 
           {/* Editor Container */}
-          <div className="flex-grow bg-slate-950 border border-white/10 rounded-2xl p-5 flex flex-col justify-between shadow-2xl">
+          <div className="flex-grow bg-white border border-slate-200/80 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
             
             {/* Top Editor Bar & Quick Simulation Actions */}
-            <div className="pb-3 border-b border-white/5 mb-4 text-xs font-mono-code space-y-3">
-              <div className="flex items-center justify-between text-slate-300">
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-medium">LOCATION: {selectedFile}</span>
-                  <div className="flex bg-slate-900 border border-white/10 rounded-lg p-0.5 text-[10px]">
+            <div className="pb-3 border-b border-slate-100 mb-4 text-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* macOS traffic light window dots */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56] border border-[#E0443E]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E] border border-[#DEA123]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F] border border-[#1AAB29]"></span>
+                  </div>
+                  <span className="text-slate-900 font-mono font-semibold text-xs">{selectedFile}</span>
+                  
+                  {/* View Mode Switcher */}
+                  <div className="flex bg-slate-100 p-0.5 rounded-full text-[11px] border border-slate-200/80">
                     <button
                       type="button"
                       onClick={() => setSimulatorViewMode('editor')}
-                      className={`px-2 py-1 rounded-md transition ${simulatorViewMode === 'editor' ? 'bg-[#0EA5E9] text-white font-medium' : 'text-slate-400 hover:text-white'}`}
+                      className={`px-3 py-1 rounded-full font-medium transition cursor-pointer ${
+                        simulatorViewMode === 'editor' 
+                          ? 'bg-white text-slate-950 shadow-xs' 
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      📝 Live Editor
+                      Live Editor
                     </button>
                     <button
                       type="button"
                       onClick={() => setSimulatorViewMode('inspector')}
-                      className={`px-2 py-1 rounded-md transition ${simulatorViewMode === 'inspector' ? 'bg-[#0EA5E9] text-white font-medium' : 'text-slate-400 hover:text-white'}`}
+                      className={`px-3 py-1 rounded-full font-medium transition cursor-pointer ${
+                        simulatorViewMode === 'inspector' 
+                          ? 'bg-white text-slate-950 shadow-xs' 
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      🔍 Line-by-Line Inspector
+                      Line Inspector
                     </button>
                   </div>
                 </div>
+
                 {isCoding ? (
-                  <span className="text-[#10B981] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
-                    {isAutoTyping ? 'Simulating Manual Keystrokes...' : 'Telemetry Active'}
+                  <span className="text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {isAutoTyping ? 'Simulating Typing...' : 'Telemetry Active'}
                   </span>
                 ) : (
-                  <span className="text-slate-500">Logging Paused</span>
+                  <span className="text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-1 rounded-full text-[11px] font-medium">
+                    Logging Paused
+                  </span>
                 )}
               </div>
 
               {/* Simulation Mode Buttons */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="grid grid-cols-3 gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={handleSimulateManualTyping}
                   disabled={isAutoTyping}
-                  className="p-2 rounded-xl bg-sky-950/70 hover:bg-sky-900 border border-sky-500/40 text-sky-300 text-xs flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-xs"
+                  className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-800 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50 shadow-2xs"
                 >
-                  <Keyboard className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  <Keyboard className="w-3.5 h-3.5 text-slate-700" />
                   <span>✍️ Manual Typing</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleSimulateAiGeneration}
-                  className="p-2 rounded-xl bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-300 text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+                  className="p-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-700 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-2xs"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#818CF8]" />
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
                   <span>🤖 AI Copilot</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleSimulateCopyPaste}
-                  className="p-2 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+                  className="p-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-2xs"
                 >
-                  <Clipboard className="w-3.5 h-3.5 text-[#F43F5E]" />
+                  <Clipboard className="w-3.5 h-3.5 text-rose-600" />
                   <span>📋 Bulk Paste</span>
                 </button>
               </div>
             </div>
 
             {simulatorViewMode === 'editor' ? (
-              <textarea
-                className="flex-grow w-full bg-transparent text-slate-200 text-xs font-mono-code outline-none resize-none leading-relaxed"
-                rows={18}
-                value={files[selectedFile]?.content}
-                onChange={handleEditorChange}
-                placeholder="// Type code here or use the simulation buttons above to generate typing, AI, or paste telemetry..."
-              />
+              <div className="flex-grow rounded-2xl bg-[#0B101B] border border-slate-800 p-4 shadow-inner flex flex-col">
+                <textarea
+                  className="flex-grow w-full bg-transparent text-emerald-300 font-mono text-xs outline-none resize-none leading-relaxed tracking-wide placeholder-slate-600"
+                  rows={17}
+                  value={files[selectedFile]?.content}
+                  onChange={handleEditorChange}
+                  placeholder="// Type code here or use the simulation buttons above to generate typing, AI, or paste telemetry..."
+                />
+              </div>
             ) : (
-              <div className="flex-grow overflow-y-auto max-h-[380px] border border-white/10 rounded-xl bg-slate-950/90 font-mono-code">
+              <div className="flex-grow overflow-y-auto max-h-[380px] border border-slate-200 rounded-2xl bg-slate-50 font-mono">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-900/90 text-slate-400 text-[10px] uppercase border-b border-white/10 sticky top-0 z-10">
-                      <th className="py-2 px-3 text-right w-10 border-r border-white/5">#</th>
-                      <th className="py-2 px-3 text-center w-28 border-r border-white/5">Status</th>
-                      <th className="py-2 px-3 text-center w-24 border-r border-white/5">Sync Mode</th>
-                      <th className="py-2 px-3 text-center w-24 border-r border-white/5">Timestamp</th>
-                      <th className="py-2 px-4 text-left">Line Content</th>
+                    <tr className="bg-slate-100 text-slate-600 text-[10px] font-bold uppercase border-b border-slate-200 sticky top-0 z-10">
+                      <th className="py-2.5 px-3 text-right w-10 border-r border-slate-200">#</th>
+                      <th className="py-2.5 px-3 text-center w-28 border-r border-slate-200">Status</th>
+                      <th className="py-2.5 px-3 text-center w-24 border-r border-slate-200">Sync Mode</th>
+                      <th className="py-2.5 px-3 text-center w-24 border-r border-slate-200">Timestamp</th>
+                      <th className="py-2.5 px-4 text-left">Line Content</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5 text-[11px]">
+                  <tbody className="divide-y divide-slate-200 text-[11px]">
                     {(files[selectedFile]?.content.split('\n') || []).map((line, i) => {
                       const isAi = line.includes('AI-Copilot') || line.includes('RoomGateway') || line.includes('broadcast');
                       const isPaste = line.includes('BULK COPIED') || line.includes('matrixMultiply') || line.length > 85;
                       const statusBadge = isPaste 
-                        ? { label: '📋 Pasted', cls: 'bg-rose-950/80 text-rose-300 border-rose-500/40' }
+                        ? { label: '📋 Pasted', cls: 'bg-rose-100 text-rose-700 border-rose-200' }
                         : isAi 
-                        ? { label: '🤖 AI Copilot', cls: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40' }
-                        : { label: '✍️ Typed', cls: 'bg-sky-950/80 text-sky-300 border-sky-500/40' };
+                        ? { label: '🤖 AI Copilot', cls: 'bg-purple-100 text-purple-700 border-purple-200' }
+                        : { label: '✍️ Typed', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
                       
                       const timeStr = new Date(Date.now() - (files[selectedFile]?.content.split('\n').length - i) * 12000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
                       return (
-                        <tr key={i} className="hover:bg-slate-900/60 transition">
-                          <td className="text-right text-slate-600 px-3 py-1.5 select-none w-10 border-r border-white/5 text-[10px] font-bold">
+                        <tr key={i} className="hover:bg-white transition bg-white/60">
+                          <td className="text-right text-slate-400 px-3 py-1.5 select-none w-10 border-r border-slate-200 text-[10px] font-mono">
                             {i + 1}
                           </td>
-                          <td className="px-2.5 py-1.5 select-none w-28 border-r border-white/5 text-[9px] text-center whitespace-nowrap">
-                            <span className={`px-2 py-0.5 rounded font-mono-code border ${statusBadge.cls}`}>
+                          <td className="px-2.5 py-1.5 select-none w-28 border-r border-slate-200 text-[9px] text-center whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded-full font-sans font-semibold border ${statusBadge.cls}`}>
                               {statusBadge.label}
                             </span>
                           </td>
-                          <td className="px-2 py-1.5 select-none w-24 border-r border-white/5 text-[8px] text-center whitespace-nowrap">
+                          <td className="px-2.5 py-1.5 select-none w-24 border-r border-slate-200 text-[9px] text-center whitespace-nowrap">
                             {offlineCacheCount > 0 && i % 3 === 0 ? (
-                              <span className="bg-amber-950/70 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded font-mono-code font-semibold">
-                                🟠 Offline
+                              <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-sans font-semibold">
+                                Offline
                               </span>
                             ) : (
-                              <span className="bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded font-mono-code font-medium">
-                                🟢 Online
+                              <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-sans font-semibold">
+                                Online
                               </span>
                             )}
                           </td>
-                          <td className="px-2.5 py-1.5 select-none w-24 border-r border-white/5 text-[9px] text-slate-400 text-center font-mono-code whitespace-nowrap">
+                          <td className="px-2.5 py-1.5 select-none w-24 border-r border-slate-200 text-[10px] text-slate-500 text-center font-mono whitespace-nowrap">
                             {timeStr}
                           </td>
-                          <td className="px-4 py-1.5 text-slate-200 whitespace-pre overflow-x-auto">
+                          <td className="px-4 py-1.5 text-slate-800 whitespace-pre overflow-x-auto font-mono text-[11px]">
                             {line || ' '}
                           </td>
                         </tr>
@@ -824,59 +875,70 @@ export default function VSCodeSimulator() {
             )}
             
             {/* Status bar */}
-            <div className="flex justify-between items-center pt-3 border-t border-white/5 mt-4 text-[11px] text-slate-400 font-mono-code">
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100 mt-4 text-[11px] text-slate-500 font-mono">
               <div className="flex gap-4">
-                <span className="flex items-center gap-1 text-[#38BDF8]"><Keyboard className="w-3.5 h-3.5" /> Keystrokes: {keystrokes}</span>
-                <span className="text-[#10B981]">+ Lines: {linesAdded}</span>
-                <span className="text-[#F43F5E]">- Lines: {linesRemoved}</span>
+                <span className="flex items-center gap-1.5 text-slate-800 font-medium">
+                  <Keyboard className="w-3.5 h-3.5 text-slate-600" /> Keystrokes: {keystrokes}
+                </span>
+                <span className="text-emerald-600 font-medium">+ Lines: {linesAdded}</span>
+                <span className="text-rose-600 font-medium">- Lines: {linesRemoved}</span>
               </div>
               <div>
-                <span>Modified Files: {editedFilesList.size}</span>
+                <span className="bg-slate-100 px-2.5 py-1 rounded-full text-slate-700 font-medium">
+                  Modified Files: {editedFilesList.size}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Column: Console Sync Logger */}
-        <div className="lg:col-span-1 glass-card rounded-2xl border border-white/10 p-5 flex flex-col justify-between space-y-4 text-left">
-          <div className="flex items-center justify-between pb-3 border-b border-white/5">
-            <div className="flex items-center gap-2 text-xs font-mono-code uppercase tracking-wider text-[#38BDF8]">
-              <Terminal className="w-4 h-4" />
+        <div className="lg:col-span-1 bg-white rounded-3xl border border-slate-200/80 p-5 flex flex-col justify-between space-y-4 text-left shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-900">
+              <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                <Terminal className="w-4 h-4 text-slate-800" />
+              </div>
               <span>Telemetry Output</span>
             </div>
-            <button onClick={clearLogs} className="text-[10px] text-slate-500 hover:text-white font-mono-code">Clear</button>
+            <button 
+              onClick={clearLogs} 
+              className="text-[11px] text-slate-400 hover:text-slate-800 font-medium cursor-pointer transition px-2 py-0.5 rounded-lg hover:bg-slate-100"
+            >
+              Clear
+            </button>
           </div>
 
-          <div className="flex-grow bg-slate-950/90 rounded-xl p-3.5 overflow-y-auto text-[10px] font-mono-code space-y-2 h-96 border border-white/5">
+          <div className="flex-grow bg-[#0B101B] rounded-2xl p-4 overflow-y-auto text-[10px] font-mono space-y-2 h-96 border border-slate-800 shadow-inner">
             {consoleLogs.length > 0 ? (
               consoleLogs.map((log, index) => (
                 <div key={index} className={`leading-relaxed ${
-                  log.includes('SUCCESS') ? 'text-[#10B981]' :
-                  log.includes('ERROR') ? 'text-[#F43F5E]' :
-                  log.includes('OFFLINE') ? 'text-[#F59E0B]' :
-                  log.includes('AI') ? 'text-[#818CF8]' :
-                  log.includes('PASTE') ? 'text-[#F43F5E]' :
-                  log.includes('SESSION') ? 'text-[#38BDF8]' :
-                  'text-slate-400'
+                  log.includes('SUCCESS') ? 'text-[#A3E635]' :
+                  log.includes('ERROR') ? 'text-rose-400' :
+                  log.includes('OFFLINE') ? 'text-amber-400' :
+                  log.includes('AI') ? 'text-purple-300' :
+                  log.includes('PASTE') ? 'text-rose-400' :
+                  log.includes('SESSION') ? 'text-sky-300' :
+                  'text-slate-300'
                 }`}>
                   {log}
                 </div>
               ))
             ) : (
-              <div className="text-slate-600 text-center py-20">Console idle. Telemetry logs will output here in real-time.</div>
+              <div className="text-slate-600 text-center py-20 font-sans text-xs">Console idle. Telemetry logs will output here in real-time.</div>
             )}
           </div>
 
-          <div className="p-3.5 bg-slate-900/60 border border-white/5 rounded-xl text-[11px] leading-relaxed text-slate-400">
-            <div className="flex items-center gap-1.5 text-slate-200 font-medium mb-1">
-              <Info className="w-3.5 h-3.5 text-[#38BDF8]" />
+          <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs leading-relaxed text-slate-600 space-y-2">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold">
+              <Info className="w-4 h-4 text-slate-700" />
               <span>How To Test Provenance:</span>
             </div>
-            <ol className="list-decimal pl-4 space-y-1 text-[10px]">
-              <li>Click <strong>✍️ Manual Typing</strong> to generate authentic keystrokes.</li>
-              <li>Click <strong>🤖 AI Copilot</strong> or <strong>📋 Bulk Paste</strong>.</li>
-              <li>Observe the <strong>Live Coding Provenance</strong> gauge shift in real-time.</li>
-              <li>Click <strong>Stop & Buffer</strong> and reconcile with database.</li>
+            <ol className="list-decimal pl-4 space-y-1.5 text-[11px] text-slate-600">
+              <li>Click <strong className="text-slate-900 font-medium">✍️ Manual Typing</strong> to generate authentic keystrokes.</li>
+              <li>Click <strong className="text-slate-900 font-medium">🤖 AI Copilot</strong> or <strong className="text-slate-900 font-medium">📋 Bulk Paste</strong>.</li>
+              <li>Observe the <strong className="text-slate-900 font-medium">Live Coding Provenance</strong> gauge shift in real-time.</li>
+              <li>Click <strong className="text-slate-900 font-medium">Stop & Buffer</strong> and reconcile with database.</li>
             </ol>
           </div>
         </div>
@@ -885,3 +947,4 @@ export default function VSCodeSimulator() {
     </div>
   );
 }
+
