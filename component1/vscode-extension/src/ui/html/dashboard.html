@@ -537,7 +537,7 @@
         <input type="number" id="cfgInterval" min="1" max="60" value="5">
       </div>
       <button class="btn" onclick="saveConfiguration()">Save Configuration</button>
-      <button class="btn btn-secondary" onclick="postCmd('testConnection')" style="margin-left:8px;">Test Connection</button>
+      <button class="btn btn-secondary" onclick="testConnection()" style="margin-left:8px;">Test Connection</button>
       <div id="testResultBox" class="test-box"></div>
     </div>
 
@@ -572,6 +572,26 @@
       });
     }
 
+    function testConnection() {
+      const serverUrl = document.getElementById('cfgServerUrl').value.trim();
+      const authToken = document.getElementById('cfgAuthToken').value.trim();
+      const assignmentId = document.getElementById('cfgAssignmentId').value.trim();
+
+      const box = document.getElementById('testResultBox');
+      if (box) {
+        box.className = 'test-box';
+        box.style.display = 'block';
+        box.innerText = '⚡ Testing connection to ' + (serverUrl || 'backend') + '...';
+      }
+
+      vscode.postMessage({
+        command: 'testConnection',
+        serverUrl,
+        authToken,
+        assignmentId
+      });
+    }
+
     window.addEventListener('message', event => {
       const msg = event.data;
       if (msg.type === 'updateState') renderState(msg.state);
@@ -585,7 +605,7 @@
       const box = document.getElementById('testResultBox');
       if (!box) return;
       box.className = 'test-box ' + (res.success ? 'success' : 'error');
-      box.innerText = res.message;
+      box.innerText = (res.success ? '✅ ' : '❌ ') + res.message;
     }
 
     function renderState(s) {

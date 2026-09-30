@@ -155,7 +155,8 @@ export async function testBackendConnection(cfg: ExtConfig): Promise<{ success: 
   });
 
   if (result.ok) {
-    return { success: true, message: `Connected successfully! Server acknowledged authentication at ${cfg.serverUrl}` };
+    const msg = result.data?.message || `Connected successfully! Server acknowledged authentication at ${cfg.serverUrl}`;
+    return { success: true, message: msg };
   } else {
     const errorMsg = result.data?.error || `HTTP ${result.statusCode || 'Connection Failed'}`;
     return { success: false, message: `Connection failed: ${errorMsg}` };

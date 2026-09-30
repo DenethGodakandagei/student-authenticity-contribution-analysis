@@ -1,20 +1,88 @@
 import { Response } from 'express';
-import { VSCodeSession, Team, GitActivity, User } from '../models';
+import mongoose from 'mongoose';
+import { VSCodeSession, Team, GitActivity, User, Assignment } from '../models';
 import { calculateAssignmentAnalytics } from '../lib/scoring';
 import * as mockDb from '../models/mockStore';
 
 export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void> => {
   try {
-    const { sessions, assignmentId } = req.body;
+    const { sessions, assignmentId, ping } = req.body;
     const studentId = req.user.id;
+
+    // Handle connection test ping from VS Code extension
+    if (ping) {
+      let user: any = null;
+      if (!mockDb.isDbConnected()) {
+        user = mockDb.mockUsers.find((u: any) => u._id === studentId);
+      } else {
+        if (mongoose.isValidObjectId(studentId)) {
+          user = await User.findById(studentId).select('-password');
+        } else if (req.user?.email) {
+          user = await User.findOne({ email: req.user.email }).select('-password');
+        }
+      }
+
+      if (!user) {
+        user = {
+          _id: studentId,
+          name: req.user?.name || 'Student',
+          email: req.user?.email || 'student@domain.edu'
+        };
+      }
+
+      let assignment: any = null;
+      let team: any = null;
+
+      if (assignmentId) {
+        if (!mockDb.isDbConnected()) {
+          assignment = mockDb.mockAssignments.find((a: any) => a._id === assignmentId);
+          team = mockDb.mockTeams.find((t: any) =>
+            t.assignment === assignmentId && t.members.some((m: any) => m.student === studentId)
+          );
+        } else {
+          if (mongoose.isValidObjectId(assignmentId)) {
+            try {
+              assignment = await Assignment.findById(assignmentId);
+            } catch (_) {}
+            try {
+              team = await Team.findOne({
+                assignment: assignmentId,
+                'members.student': user._id || studentId
+              });
+            } catch (_) {}
+          }
+        }
+      }
+
+      const assignmentMsg = assignment
+        ? ` Assignment: "${assignment.title.trim()}".`
+        : (assignmentId ? ` (Assignment ID ${assignmentId} acknowledged).` : '');
+      const teamMsg = team
+        ? ` Active in team "${team.name}".`
+        : ` (Note: not enrolled in a team for this assignment yet).`;
+
+      res.status(200).json({
+        ok: true,
+        message: `Connected successfully! Authenticated as ${user.name} (${user.email}).${assignmentMsg}${teamMsg}`,
+        student: { id: user._id, name: user.name, email: user.email },
+        assignment: assignment ? { id: assignment._id, title: assignment.title } : null,
+        team: team ? { id: team._id, name: team.name } : null
+      });
+      return;
+    }
 
     if (!assignmentId) {
       res.status(400).json({ error: 'Assignment ID is required' });
       return;
     }
 
+    if (!sessions) {
+      res.status(400).json({ error: 'No sessions provided for synchronization' });
+      return;
+    }
+
     // Sessions can be a single session object or an array of cached offline sessions
-    const sessionList = Array.isArray(sessions) ? sessions : [sessions];
+    const sessionList = (Array.isArray(sessions) ? sessions : [sessions]).filter(Boolean);
 
     if (sessionList.length === 0) {
       res.status(400).json({ error: 'No sessions provided for synchronization' });
