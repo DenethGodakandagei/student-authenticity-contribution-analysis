@@ -1740,7 +1740,7 @@ export function activate(context: vscode.ExtensionContext) {
       const nonEmptyLines = lines.filter(l => l.trim().length > 0);
       const isMultiLine = nonEmptyLines.length > 1;
       const isLargeBlock = textLen >= 25 && isMultiLine;
-      const isInstantBurstWithoutClipboard = timeDelta < 85 && textLen > 5 && !isClipboardMatch;
+      const isInstantBurstWithoutClipboard = isMultiLine && textLen >= 40 && timeDelta < 80 && !isClipboardMatch;
 
       let lineProvenance: 'manual' | 'ai_assisted' | 'copy_paste' = 'manual';
 

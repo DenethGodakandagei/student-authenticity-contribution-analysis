@@ -329,7 +329,8 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
               commitDate: new Date(commit.date),
               linesAdded: commit.insertions || 0,
               linesRemoved: commit.deletions || 0,
-              filesChanged: commit.filesChanged || 0,
+              filesChanged: commit.filesChanged || (s.filesEdited || []).length || 0,
+              filesList: commit.filesList || commit.filesEdited || s.filesEdited || [],
               activityType: 'commit'
             });
             await activity.save();

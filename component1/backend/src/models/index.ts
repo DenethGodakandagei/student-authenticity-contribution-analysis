@@ -121,6 +121,13 @@ export interface IFileActivity {
   typingProvenance: 'manual' | 'ai_assisted' | 'copy_paste' | 'mixed';
   linesAdded: number;
   linesRemoved: number;
+  lineRecords?: Array<{
+    lineNumber: number;
+    lineText?: string;
+    provenance: 'manual' | 'copy_paste' | 'ai_assisted';
+    isOffline?: boolean;
+    timestamp?: string;
+  }>;
   timestamp?: Date;
 }
 
@@ -155,6 +162,14 @@ export interface IVSCodeSession extends Document {
   createdAt: Date;
 }
 
+const LineRecordSchema = new Schema({
+  lineNumber: { type: Number, required: true },
+  lineText: { type: String, default: '' },
+  provenance: { type: String, enum: ['manual', 'copy_paste', 'ai_assisted'], default: 'manual' },
+  isOffline: { type: Boolean, default: false },
+  timestamp: { type: String }
+}, { _id: false });
+
 const FileActivitySchema = new Schema({
   filePath: { type: String, required: true },
   action: { type: String, enum: ['created', 'edited', 'deleted'], default: 'edited' },
@@ -167,8 +182,9 @@ const FileActivitySchema = new Schema({
   typingProvenance: { type: String, enum: ['manual', 'ai_assisted', 'copy_paste', 'mixed'], default: 'manual' },
   linesAdded: { type: Number, default: 0 },
   linesRemoved: { type: Number, default: 0 },
+  lineRecords: [LineRecordSchema],
   timestamp: { type: Date, default: Date.now }
-}, { _id: false });
+}, { _id: false, strict: false });
 
 const VSCodeSessionSchema: Schema = new Schema({
   student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
