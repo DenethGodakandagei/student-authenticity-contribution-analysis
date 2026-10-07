@@ -10,6 +10,7 @@ export type EventType =
   | 'FILE_OPEN'
   | 'FILE_CREATE'
   | 'FILE_DELETE'
+  | 'BACKGROUND_MUTATION'
   | 'FOCUS'
   | 'BLUR'
   | 'TAB_SWITCH'

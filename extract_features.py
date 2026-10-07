@@ -127,7 +127,12 @@ def calculate_window_features(events_in_window: List[Dict[str, Any]], session_id
     pasted_chars = 0
     manual_chars_inserted = 0
     chars_deleted = 0
+    backspace_delete_count = 0
     active_timestamps = []
+    
+    # Check for ground-truth participant condition tags in the window
+    ground_truth_label = None
+    detected_participant_id = student_id
     
     for evt in events_in_window:
         t = evt.get("timestamp", 0)
@@ -147,6 +152,21 @@ def calculate_window_features(events_in_window: List[Dict[str, Any]], session_id
         net_inserted = int(payload.get("netInsertedChars", char_count))
         deleted = int(payload.get("deletedChars", 0))
         chars_deleted += deleted
+        
+        if deleted > 0 or "delete" in event_type.lower() or "backspace" in event_type.lower():
+            backspace_delete_count += 1
+            
+        # Ground truth check from participant setup
+        if ground_truth_label is None:
+            if "conditionLabel" in payload:
+                ground_truth_label = int(payload["conditionLabel"])
+            elif payload.get("taskCondition") == "TASK_B_AI" or evt.get("task_id") == "TASK_B_AI":
+                ground_truth_label = 1
+            elif payload.get("taskCondition") == "TASK_A_MANUAL" or evt.get("task_id") == "TASK_A_MANUAL":
+                ground_truth_label = 0
+                
+        if payload.get("participantId"):
+            detected_participant_id = str(payload["participantId"])
         
         if event_type in ["PASTE_BURST", "PASTE"]:
             paste_count += 1
@@ -176,15 +196,22 @@ def calculate_window_features(events_in_window: List[Dict[str, Any]], session_id
     paste_velocity = round(pasted_chars / max(paste_count, 1), 2)
     total_content_chars = manual_chars_inserted + pasted_chars
     paste_ratio = round(pasted_chars / max(total_content_chars, 1), 4)
+    
+    # Code churn calculation: chars_deleted / (chars_added + chars_deleted)
+    total_churn_chars = total_content_chars + chars_deleted
+    code_churn_ratio = round(chars_deleted / max(total_churn_chars, 1), 4) if total_churn_chars > 0 else 0.0
 
-    # Label assignment rule:
-    # Class 0 = Genuine Human Coding (High keystrokes, minimal paste ratio)
-    # Class 1 = Pasted / AI Generated (High paste ratio or massive paste velocity with low keystrokes)
-    is_pasted_ai = 1 if (paste_ratio > 0.60 or (pasted_chars > 150 and keystroke_count < 30)) else 0
+    # Label assignment:
+    # 1. Prefer ground-truth participant label if logged by extension (Task A = 0, Task B = 1)
+    # 2. Fallback to heuristic rule if unconfigured
+    if ground_truth_label is not None:
+        label = ground_truth_label
+    else:
+        label = 1 if (paste_ratio > 0.60 or (pasted_chars > 150 and keystroke_count < 30)) else 0
 
     return {
         "session_id": session_id,
-        "student_id": student_id,
+        "participant_id": detected_participant_id,
         "window_index": window_index,
         "window_start_iso": datetime.fromtimestamp(window_start_ms / 1000.0, tz=timezone.utc).isoformat(),
         "window_end_iso": datetime.fromtimestamp(window_end_ms / 1000.0, tz=timezone.utc).isoformat(),
@@ -193,12 +220,14 @@ def calculate_window_features(events_in_window: List[Dict[str, Any]], session_id
         "keystroke_count": keystroke_count,
         "manual_chars_inserted": manual_chars_inserted,
         "chars_deleted": chars_deleted,
+        "backspace_delete_count": backspace_delete_count,
+        "code_churn_ratio": code_churn_ratio,
         "paste_count": paste_count,
         "pasted_chars": pasted_chars,
         "paste_velocity": paste_velocity,
         "typing_speed_cpm": typing_speed_cpm,
         "paste_ratio": paste_ratio,
-        "label": is_pasted_ai
+        "label": label
     }
 
 

@@ -50,6 +50,21 @@
         "command": "collabintel.viewQueueStatus",
         "title": "Telemetry: View Local Queue Status",
         "icon": "$(database)"
+      },
+      {
+        "command": "collabintel.setupParticipant",
+        "title": "Experiment: Set Participant & Task Mode (P01-P20)",
+        "icon": "$(account)"
+      },
+      {
+        "command": "collabintel.switchTask",
+        "title": "Experiment: Switch Current Task (Task A / Task B)",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "telemetry.exportBundle",
+        "title": "Experiment: 1-Click Export Local Telemetry Database (.sqlite)",
+        "icon": "$(cloud-download)"
       }
     ],
     "viewsContainers": {

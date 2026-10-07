@@ -56,6 +56,10 @@ import {
   verifyStudentIdAnonymization
 } from './security/privacy';
 
+// ─── Volunteer Experiment & Offline Export (Phase 1) ─────────────────────────
+import { ensureParticipantSession, switchTaskCondition, reconfigureParticipant, getExperimentSession } from './ui/onboarding';
+import { registerExportCommand } from './ui/export-bundle';
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  SESSION & EXTENSION GLOBAL STATE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -433,10 +437,23 @@ function storeEvent(
       const sanitizedPayload = sanitizePayload(payload, workspaceRoot);
       const studentCheck = verifyStudentIdAnonymization(cfg.assignmentId || 'unknown');
 
+      const expParticipantId = extensionContext?.workspaceState?.get<string>('telemetry_participant_id');
+      const expTaskCondition = extensionContext?.workspaceState?.get<string>('telemetry_task_condition');
+
+      const studentIdToUse = expParticipantId || studentCheck.sanitizedId;
+      const taskIdToUse = expTaskCondition || cfg.assignmentId || '';
+
+      const enrichedPayload = {
+        ...sanitizedPayload,
+        participantId: expParticipantId || 'P01',
+        taskCondition: expTaskCondition || 'TASK_A_MANUAL',
+        conditionLabel: expTaskCondition === 'TASK_B_AI' ? 1 : 0
+      };
+
       insertEvent({
         session_id: currentSessionId,
-        student_id: studentCheck.sanitizedId,
-        task_id: cfg.assignmentId || '',
+        student_id: studentIdToUse,
+        task_id: taskIdToUse,
         repo_id: currentRepoId,
         branch: currentBranch,
         commit_sha: currentCommitSha,
@@ -444,7 +461,7 @@ function storeEvent(
         category,
         file_path: sanitizedPath,
         timestamp: Date.now(),
-        payload_json: JSON.stringify(sanitizedPayload)
+        payload_json: JSON.stringify(enrichedPayload)
       });
     } catch (err) {
       console.error('[CollabIntel] Error storing event:', err);
@@ -507,7 +524,11 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // ── Initial Setup Check ────────────────────────────────────────────────
+  // ── Initial Setup & Experiment Onboarding Check ────────────────────────
+  ensureParticipantSession(context).catch(err => {
+    console.warn('[CollabIntel] Onboarding dialog notice:', err);
+  });
+
   if (!cfg.authToken || !cfg.assignmentId) {
     updateStatusBar('unconfigured', broadcastStateToWebviews);
     vscode.window.showInformationMessage(
@@ -1005,6 +1026,35 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
+
+  // ── Volunteer Experiment & Offline Export Commands (Phase 1) ───────────
+  context.subscriptions.push(
+    vscode.commands.registerCommand('collabintel.setupParticipant', () => reconfigureParticipant(context))
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('collabintel.switchTask', () => switchTaskCondition(context))
+  );
+
+  // 1-Click offline failsafe exporter
+  registerExportCommand(context, globalStoragePath);
+
+  // ── Closed-File Background Mutation Watcher (External Agent / Disk writes) ──
+  const diskMutationWatcher = vscode.workspace.createFileSystemWatcher('**/*');
+  diskMutationWatcher.onDidChange(uri => {
+    if (uri.scheme !== 'file' || !shouldTrackFile(uri)) return;
+    const isDocOpen = vscode.workspace.textDocuments.some(
+      doc => !doc.isClosed && doc.uri.fsPath === uri.fsPath
+    );
+    if (!isDocOpen) {
+      const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
+      storeEvent('BACKGROUND_MUTATION', categorizeFile(uri), rel, {
+        action: 'disk_mutation',
+        external: true
+      });
+    }
+  });
+  context.subscriptions.push(diskMutationWatcher);
 
   // ── Flush Offline Cache on Startup ─────────────────────────────────────
   flushOfflineCache(context);
