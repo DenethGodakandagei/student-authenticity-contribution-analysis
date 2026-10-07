@@ -109,7 +109,23 @@ export const api = {
     getAssignmentReports: (assignmentId: string) => request(`/analytics/assignment/${assignmentId}`, { method: 'GET' }),
     getStudentReport: (assignmentId: string) => request(`/analytics/student/${assignmentId}`, { method: 'GET' }),
     getTeamAnalytics: (teamId: string) => request(`/analytics/team/${teamId}`, { method: 'GET' }),
-    recalculate: (assignmentId: string) => request('/analytics/recalculate', { method: 'POST', body: JSON.stringify({ assignmentId }) })
+    recalculate: (assignmentId: string) => request('/analytics/recalculate', { method: 'POST', body: JSON.stringify({ assignmentId }) }),
+    downloadCsv: async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const res = await fetch(`${API_BASE_URL}/analytics/export/csv`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('CSV Download failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'telemetry_dataset.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    }
   },
 
   // Users API

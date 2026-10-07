@@ -71,10 +71,14 @@ export const getStudentReport = async (req: any, res: Response): Promise<void> =
       return;
     }
 
-    let report = await AnalyticsReport.findOne({ assignment: assignmentId, student: studentId });
+    let report = await AnalyticsReport.findOne({ assignment: assignmentId, student: studentId })
+      .populate('student', 'name email')
+      .populate('team', 'name');
     if (!report) {
       await calculateAssignmentAnalytics(assignmentId);
-      report = await AnalyticsReport.findOne({ assignment: assignmentId, student: studentId });
+      report = await AnalyticsReport.findOne({ assignment: assignmentId, student: studentId })
+        .populate('student', 'name email')
+        .populate('team', 'name');
     }
 
     res.status(200).json({ report });
@@ -299,6 +303,128 @@ export const triggerManualEvaluation = async (req: any, res: Response): Promise<
     res.status(200).json({ message: 'Analytics scores calculated successfully!', count: reports.length });
   } catch (error: any) {
     console.error('Trigger Evaluation Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export const exportTelemetryCsv = async (req: any, res: Response): Promise<void> => {
+  try {
+    let sessions: any[] = [];
+    if (!mockDb.isDbConnected()) {
+      sessions = mockDb.mockVscodeSessions;
+    } else {
+      sessions = await VSCodeSession.find({})
+        .populate('student', 'name email')
+        .populate('assignment', 'title')
+        .populate('team', 'name')
+        .sort({ sessionStart: 1 });
+    }
+
+    const headers = [
+      'session_id', 'student_id', 'student_name', 'student_email', 'team_id', 'team_name',
+      'assignment_id', 'assignment_title', 'session_start_iso', 'session_end_iso',
+      'duration_minutes', 'keystrokes', 'lines_added', 'lines_removed', 'net_lines',
+      'paste_count', 'characters_pasted', 'manual_chars', 'paste_chars', 'ai_chars',
+      'manual_percent', 'paste_percent', 'ai_percent', 'typing_speed_cpm',
+      'keystroke_efficiency_keff', 'paste_ratio', 'is_offline', 'files_edited_count',
+      'files_edited_list', 'primary_file', 'coding_style', 'authenticity_label'
+    ];
+
+    const csvLines = [headers.join(',')];
+
+    sessions.forEach(s => {
+      const studentName = s.student?.name || 'Student';
+      const studentEmail = s.student?.email || '';
+      const studentId = s.student?._id || s.student || '';
+      const teamName = s.team?.name || 'Team';
+      const teamId = s.team?._id || s.team || '';
+      const assignmentTitle = s.assignment?.title || 'Assignment';
+      const assignmentId = s.assignment?._id || s.assignment || '';
+
+      const durMin = Math.max(1, s.durationMinutes || 1);
+      const keys = s.keystrokes || 0;
+      const added = s.linesAdded || 0;
+      const removed = s.linesRemoved || 0;
+      const netLines = added - removed;
+      const pasteCount = s.pasteCount || 0;
+      const charsPasted = s.charactersPasted || 0;
+
+      let manualChars = 0;
+      let pasteChars = 0;
+      let aiChars = 0;
+      if (s.fileActivities && s.fileActivities.length > 0) {
+        s.fileActivities.forEach((fa: any) => {
+          manualChars += (fa.manualChars || 0);
+          pasteChars += (fa.pasteChars || 0);
+          aiChars += (fa.aiChars || 0);
+        });
+      } else {
+        manualChars = keys;
+        pasteChars = charsPasted;
+      }
+
+      const totalChars = manualChars + pasteChars + aiChars;
+      const manualPct = totalChars > 0 ? Math.round((manualChars / totalChars) * 100) : (keys > 0 ? 100 : 0);
+      const pastePct = totalChars > 0 ? Math.round((pasteChars / totalChars) * 100) : (charsPasted > 0 ? 100 : 0);
+      const aiPct = totalChars > 0 ? Math.max(0, 100 - manualPct - pastePct) : 0;
+
+      const cpm = (manualChars / durMin).toFixed(2);
+      const keff = added > 0 ? (keys / added).toFixed(2) : (keys > 0 ? keys.toFixed(2) : '0.00');
+      const pasteRatio = totalChars > 0 ? (pasteChars / totalChars).toFixed(4) : '0.0000';
+      const filesList = (s.filesEdited || []).join(';').replace(/,/g, '|');
+      const primaryFile = (s.filesEdited && s.filesEdited[0]) ? s.filesEdited[0] : 'none';
+
+      let style = 'Manual Typing';
+      if (pastePct > 45 || charsPasted > 300) style = 'Heavy Copy-Paste';
+      else if (aiPct > 35 || aiChars > 400) style = 'AI-Assisted Development';
+      else if (aiPct > 15) style = 'Balanced Copilot-Assisted';
+      else if (manualPct >= 75) style = 'Authentic Manual Typing';
+
+      const label = (aiPct > 50 || pastePct > 40 || (charsPasted > 200 && keys < 30)) ? 1 : 0;
+
+      const row = [
+        s._id,
+        studentId,
+        `"${studentName.replace(/"/g, '""')}"`,
+        studentEmail,
+        teamId,
+        `"${teamName.replace(/"/g, '""')}"`,
+        assignmentId,
+        `"${assignmentTitle.replace(/"/g, '""')}"`,
+        s.sessionStart ? new Date(s.sessionStart).toISOString() : '',
+        s.sessionEnd ? new Date(s.sessionEnd).toISOString() : '',
+        durMin,
+        keys,
+        added,
+        removed,
+        netLines,
+        pasteCount,
+        charsPasted,
+        manualChars,
+        pasteChars,
+        aiChars,
+        manualPct,
+        pastePct,
+        aiPct,
+        cpm,
+        keff,
+        pasteRatio,
+        s.isOffline ? 1 : 0,
+        (s.filesEdited || []).length,
+        `"${filesList}"`,
+        `"${primaryFile}"`,
+        `"${style}"`,
+        label
+      ];
+      csvLines.push(row.join(','));
+    });
+
+    const csvContent = csvLines.join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="telemetry_dataset.csv"');
+    res.status(200).send(csvContent);
+  } catch (error: any) {
+    console.error('Export CSV Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

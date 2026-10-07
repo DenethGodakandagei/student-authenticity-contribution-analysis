@@ -9,7 +9,7 @@ import { createTeam, joinTeam, updateRepositoryUrl, getTeamByAssignment, createG
 import { createTask, getTasksByTeam, updateTaskStatus, deleteTask } from './controllers/tasks';
 import { syncVSCodeTelemetry } from './controllers/vscode';
 import { validateRepository, syncRepositoryData, getRepositoryContents, getFileContent } from './controllers/github';
-import { getAssignmentReports, getStudentReport, getTeamAnalytics, triggerManualEvaluation } from './controllers/analytics';
+import { getAssignmentReports, getStudentReport, getTeamAnalytics, triggerManualEvaluation, exportTelemetryCsv } from './controllers/analytics';
 import { getHealth } from './controllers/health';
 import { syncTelemetryBatch } from './controllers/telemetry';
 
@@ -89,6 +89,7 @@ app.get('/api/analytics/assignment/:assignmentId', authenticateToken, getAssignm
 app.get('/api/analytics/student/:assignmentId', authenticateToken, getStudentReport);
 app.get('/api/analytics/team/:teamId', authenticateToken, getTeamAnalytics);
 app.post('/api/analytics/recalculate', authenticateToken, triggerManualEvaluation);
+app.get('/api/analytics/export/csv', authenticateToken, exportTelemetryCsv);
 
 import mongoose from 'mongoose';
 

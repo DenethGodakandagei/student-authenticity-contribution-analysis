@@ -30,7 +30,7 @@ import {
   Clipboard, History, Fingerprint, FileCode, Split,
   Eye, Layers, Lock, ShieldBan, Info, User, CheckCircle,
   Bell, Settings, LayoutDashboard, CreditCard, Laptop, Bot, BarChart3, MoreHorizontal,
-  HelpCircle, ClipboardCheck
+  HelpCircle, ClipboardCheck, Download
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend, BarChart, Bar
