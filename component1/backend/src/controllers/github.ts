@@ -95,7 +95,7 @@ export const syncRepositoryData = async (req: any, res: Response): Promise<void>
       );
 
       if (!commitResponse.ok) {
-        const errDetails = await commitResponse.json().catch(() => ({}));
+        const errDetails: any = await commitResponse.json().catch(() => ({}));
         res.status(400).json({ 
           error: `GitHub API Error: ${errDetails.message || commitResponse.statusText}. Please verify the repository is public or check your GITHUB_TOKEN in backend/.env.` 
         });
@@ -264,7 +264,7 @@ export const getRepositoryContents = async (req: any, res: Response): Promise<vo
     const response = await fetch(url, { headers });
 
     if (!response.ok) {
-      const errJson = await response.json().catch(() => ({}));
+      const errJson: any = await response.json().catch(() => ({}));
       console.warn(`GitHub API contents query returned ${response.status}: ${errJson.message || response.statusText}`);
       res.status(response.status).json({ 
         error: errJson.message || `Failed to fetch remote contents for ${parsed.owner}/${parsed.repo}/${cleanPath}`,
@@ -343,7 +343,7 @@ export const getFileContent = async (req: any, res: Response): Promise<void> => 
     const response = await fetch(url, { headers });
 
     if (!response.ok) {
-      const errJson = await response.json().catch(() => ({}));
+      const errJson: any = await response.json().catch(() => ({}));
       res.status(response.status).json({ 
         error: errJson.message || `File "${cleanPath}" not found on GitHub remote repository.` 
       });
