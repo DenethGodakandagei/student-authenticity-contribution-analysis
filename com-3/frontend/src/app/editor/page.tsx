@@ -1282,13 +1282,13 @@ function EditorComponent() {
       <ReportsManagerModal
         isOpen={reportsModalOpen}
         onClose={() => setReportsModalOpen(false)}
-        onSelectDocument={(id) => setSelectedDocId(id)}
-        onShareDocument={(doc) => {
+        onSelectDocument={(id: string) => setSelectedDocId(id)}
+        onShareDocument={(doc: any) => {
           setSelectedDocId(doc._id);
           setShareModalOpen(true);
         }}
-        onDocumentDeleted={(deletedId) => {
-          setAvailableDocs(prev => prev.filter(d => d._id !== deletedId));
+        onDocumentDeleted={(deletedId: string) => {
+          setAvailableDocs((prev: any[]) => prev.filter((d: any) => d._id !== deletedId));
           if (selectedDocId === deletedId) {
             fetchDocs();
           }
@@ -1301,7 +1301,7 @@ function EditorComponent() {
         onClose={() => setShareModalOpen(false)}
         documentId={selectedDocId}
         docDetails={docDetails}
-        onShareUpdated={(updatedDoc) => {
+        onShareUpdated={(updatedDoc: any) => {
           setDocDetails(updatedDoc);
           fetchDocs();
         }}
@@ -1376,16 +1376,16 @@ function EditorComponent() {
                       No other registered members found. You can also share later using the Share button.
                     </div>
                   ) : (
-                    registeredUsersForCreate.map(u => {
+                    registeredUsersForCreate.map((u: any) => {
                       const userIdentifier = u.username || u.studentId || u.email;
                       const displayName = u.name ? `${u.name} (${userIdentifier})` : userIdentifier;
                       const isSelected = selectedMembersForCreate.includes(userIdentifier);
 
                       const toggleMember = () => {
                         if (isSelected) {
-                          setSelectedMembersForCreate(prev => prev.filter(id => id !== userIdentifier));
+                          setSelectedMembersForCreate((prev: string[]) => prev.filter(id => id !== userIdentifier));
                         } else {
-                          setSelectedMembersForCreate(prev => [...prev, userIdentifier]);
+                          setSelectedMembersForCreate((prev: string[]) => [...prev, userIdentifier]);
                         }
                       };
 
@@ -1448,5 +1448,13 @@ function EditorComponent() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>Loading Editor...</div>}>
+      <EditorComponent />
+    </Suspense>
   );
 }
