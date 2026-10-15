@@ -1,9 +1,43 @@
 "use client";
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { getBackendUrl } from '../utils/apiConfig';
 
-const AuthContext = createContext();
+export interface User {
+  id?: string;
+  _id?: string;
+  username?: string;
+  name?: string;
+  studentId?: string;
+  email?: string;
+  role?: string;
+  [key: string]: any;
+}
 
-export const AuthProvider = ({ children }) => {
+export interface RegisterData {
+  username?: string;
+  name?: string;
+  studentId?: string;
+  email?: string;
+  password?: string;
+  role?: string;
+  [key: string]: any;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  login: (identifier: string, password: string) => Promise<User>;
+  register: (data: RegisterData) => Promise<User>;
+  logout: () => void;
+  authModalOpen: boolean;
+  setAuthModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('doc_evo_user');
@@ -29,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const login = async (identifier, password) => {
-    const res = await fetch('http://localhost:8001/api/auth/login', {
+    const res = await fetch(`${getBackendUrl()}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier, password }),
@@ -44,7 +78,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async ({ username, name, studentId, email, password, role }) => {
-    const res = await fetch('http://localhost:8001/api/auth/register', {
+    const res = await fetch(`${getBackendUrl()}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, name, studentId, email, password, role }),
@@ -82,7 +116,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');

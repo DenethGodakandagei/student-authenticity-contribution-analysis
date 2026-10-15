@@ -1,12 +1,14 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { usePathname, useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from "next/navigation";
 import ContributionHeatmap from '../../components/ContributionHeatmap';
 import DocumentTimeline from '../../components/DocumentTimeline';
 import WordGrowthChart from '../../components/WordGrowthChart';
 import AuthorHighlightViewer from '../../components/AuthorHighlightViewer';
+import MLRevisionAnalytics from '../../components/MLRevisionAnalytics';
+import { getApiBase } from '../../utils/apiConfig';
 
-const API_BASE = 'http://localhost:8001/api/documents';
+const API_BASE = getApiBase();
 
 const FileTextIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
 const UsersIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
@@ -14,42 +16,44 @@ const ActivityIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill=
 const AlertTriangleIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
 const SparklesIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>;
 
-export default function Dashboard() {
-  const location = usePathname();
-  const navigate = useRouter();
+function DashboardComponent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const docIdQuery = searchParams ? searchParams.get('selectedDocId') : null;
+
   const [activeTab, setActiveTab] = useState('individual');
-  const [timeline, setTimeline] = useState([]);
-  const [heatmap, setHeatmap] = useState(null);
-  const [growth, setGrowth] = useState([]);
-  const [anomalies, setAnomalies] = useState([]);
-  const [processSummary, setProcessSummary] = useState(null);
-  const [authorMarkup, setAuthorMarkup] = useState(null);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [heatmap, setHeatmap] = useState<any>(null);
+  const [growth, setGrowth] = useState<any[]>([]);
+  const [anomalies, setAnomalies] = useState<any[]>([]);
+  const [processSummary, setProcessSummary] = useState<any>(null);
+  const [authorMarkup, setAuthorMarkup] = useState<any>(null);
   const [markupLoading, setMarkupLoading] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [availableDocs, setAvailableDocs] = useState([]);
-  const [selectedDocId, setSelectedDocId] = useState('doc_collaborative_1');
+  const [availableDocs, setAvailableDocs] = useState<any[]>([]);
+  const [selectedDocId, setSelectedDocId] = useState<string>('doc_collaborative_1');
 
   // Cross Group Compare States
-  const [compareDocIds, setCompareDocIds] = useState([]);
-  const [comparisonResult, setComparisonResult] = useState(null);
+  const [compareDocIds, setCompareDocIds] = useState<string[]>([]);
+  const [comparisonResult, setComparisonResult] = useState<any>(null);
   const [compareLoading, setCompareLoading] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:8001/api/documents')
+    fetch(API_BASE)
       .then(res => res.json())
       .then(data => {
         const docs = data || [];
         setAvailableDocs(docs);
         
-        // Handle router state redirection parameter
-        if (location.state?.selectedDocId) {
-          setSelectedDocId(location.state.selectedDocId);
+        // Handle router search parameter
+        if (docIdQuery) {
+          setSelectedDocId(docIdQuery);
         } else if (docs.length > 0) {
-          setSelectedDocId(prev => (docs.some(d => d._id === prev) ? prev : docs[0]._id));
+          setSelectedDocId(prev => (docs.some((d: any) => d._id === prev) ? prev : docs[0]._id));
         }
       })
       .catch(err => console.error("Failed to fetch documents list", err));
-  }, [location.state]);
+  }, [docIdQuery]);
 
   const fetchData = async (isInitial = false) => {
     if (!selectedDocId) return;
@@ -59,7 +63,7 @@ export default function Dashboard() {
         setMarkupLoading(true);
       }
 
-      const fetchJson = async (url) => {
+      const fetchJson = async (url: string) => {
         try {
           const res = await fetch(url);
           if (!res.ok) return null;
@@ -100,8 +104,8 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [selectedDocId]);
 
-  const handleCompareSelect = (docId) => {
-    setCompareDocIds(prev => 
+  const handleCompareSelect = (docId: string) => {
+    setCompareDocIds((prev: string[]) => 
       prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]
     );
   };
@@ -123,7 +127,7 @@ export default function Dashboard() {
     }
   };
 
-  const getSourceBadge = (source) => {
+  const getSourceBadge = (source?: string) => {
     switch (source) {
       case 'google_docs':
         return <span style={{ padding: '0.25rem 0.6rem', borderRadius: '4px', background: '#4285F4', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>Google Docs</span>;
@@ -134,7 +138,7 @@ export default function Dashboard() {
     }
   };
 
-  const selectedDocObj = availableDocs.find(d => d._id === selectedDocId);
+  const selectedDocObj = availableDocs.find((d: any) => d._id === selectedDocId);
 
   return (
     <div className="dashboard-container">
@@ -160,6 +164,25 @@ export default function Dashboard() {
               Document Insights
             </button>
             <button
+              onClick={() => setActiveTab('ml_analytics')}
+              style={{
+                border: 'none',
+                background: activeTab === 'ml_analytics' ? 'white' : 'transparent',
+                color: activeTab === 'ml_analytics' ? 'black' : 'var(--text-secondary)',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '0.85rem',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}
+            >
+              <span>🧠</span> ML Revision Analytics
+            </button>
+            <button
               onClick={() => setActiveTab('comparison')}
               style={{
                 border: 'none',
@@ -178,7 +201,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {activeTab === 'individual' && (
+        {(activeTab === 'individual' || activeTab === 'ml_analytics') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <label style={{ color: 'var(--text-secondary)' }}>Select Document:</label>
             <select 
@@ -187,7 +210,7 @@ export default function Dashboard() {
               style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontWeight: '600' }}
             >
               {availableDocs.length === 0 && <option value="doc_collaborative_1">doc_collaborative_1</option>}
-              {availableDocs.map(doc => (
+              {availableDocs.map((doc: any) => (
                 <option key={doc._id} value={doc._id}>{doc.title || doc._id}</option>
               ))}
             </select>
@@ -256,15 +279,17 @@ export default function Dashboard() {
               <div style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.4)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.7' }}>
                   {processSummary?.summary ? (
-                    processSummary.summary.split('\n').map((line, idx) => {
+                    processSummary.summary.split('\n').map((line: string, idx: number) => {
                       if (line.startsWith('- **')) {
                         const match = line.match(/- \*\*(.*?)\*\*(.*)/);
-                        return (
-                          <div key={idx} style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: '0.25rem', color: '#8b5cf6' }}>•</span>
-                            <strong>{match[1]}</strong>{match[2]}
-                          </div>
-                        );
+                        if (match) {
+                          return (
+                            <div key={idx} style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', position: 'relative' }}>
+                              <span style={{ position: 'absolute', left: '0.25rem', color: '#8b5cf6' }}>•</span>
+                              <strong>{match[1]}</strong>{match[2]}
+                            </div>
+                          );
+                        }
                       }
                       return <p key={idx} style={{ margin: '0.75rem 0' }}>{line}</p>;
                     })
@@ -315,7 +340,7 @@ export default function Dashboard() {
             {/* Sudden Growth paste detection notifications */}
             {anomalies.length > 0 && (
               <div style={{ marginTop: '1rem' }}>
-                {anomalies.map(anomaly => (
+                {anomalies.map((anomaly: any) => (
                   <div className="anomaly-alert" key={anomaly.id}>
                     <div className="anomaly-icon"><AlertTriangleIcon /></div>
                     <div className="anomaly-content">
@@ -331,6 +356,11 @@ export default function Dashboard() {
             )}
           </>
         )
+      ) : activeTab === 'ml_analytics' ? (
+        <MLRevisionAnalytics
+          documentId={selectedDocId}
+          docTitle={selectedDocObj?.title || selectedDocId}
+        />
       ) : (
         /* Cross Group Comparison Tab View */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -341,7 +371,7 @@ export default function Dashboard() {
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
-              {availableDocs.map(doc => (
+              {availableDocs.map((doc: any) => (
                 <label
                   key={doc._id}
                   style={{
@@ -400,17 +430,17 @@ export default function Dashboard() {
                     <thead>
                       <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
                         <th style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Document Submission</th>
-                        {comparisonResult.documents.map(d => (
+                        {comparisonResult.documents?.map((d: any) => (
                           <th key={d.id} style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{d.title}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {comparisonResult.documents.map(rowDoc => (
+                      {comparisonResult.documents?.map((rowDoc: any) => (
                         <tr key={rowDoc.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
                           <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{rowDoc.title}</td>
-                          {comparisonResult.documents.map(colDoc => {
-                            const val = comparisonResult.similarityMatrix[rowDoc.id]?.[colDoc.id] || 0;
+                          {comparisonResult.documents?.map((colDoc: any) => {
+                            const val = comparisonResult.similarityMatrix?.[rowDoc.id]?.[colDoc.id] || 0;
                             const isSelf = rowDoc.id === colDoc.id;
                             
                             // Color code background based on value
@@ -450,20 +480,20 @@ export default function Dashboard() {
               </div>
 
               {/* Duplicate Alerts */}
-              {comparisonResult.alerts.length > 0 && (
+              {comparisonResult.alerts && comparisonResult.alerts.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <h3 style={{ color: 'var(--text-primary)', margin: 0 }}>Active Plagiarism Warnings</h3>
-                  {comparisonResult.alerts.map((alert, idx) => (
+                  {comparisonResult.alerts.map((alert: any, idx: number) => (
                     <div key={idx} className="anomaly-alert" style={{ background: alert.severity === 'High' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)', borderColor: alert.severity === 'High' ? '#ef4444' : '#f59e0b' }}>
                       <div className="anomaly-icon" style={{ color: alert.severity === 'High' ? '#ef4444' : '#f59e0b' }}><AlertTriangleIcon /></div>
                       <div className="anomaly-content" style={{ flex: 1 }}>
                         <h4 style={{ color: alert.severity === 'High' ? '#ef4444' : '#d97706' }}>{alert.severity} Similarity Warning ({alert.similarity}%)</h4>
                         <p style={{ margin: '0.25rem 0 0.5rem 0' }}>{alert.message}</p>
-                        {alert.duplicatePhrases.length > 0 && (
+                        {alert.duplicatePhrases && alert.duplicatePhrases.length > 0 && (
                           <div style={{ fontSize: '0.8rem', background: 'rgba(0,0,0,0.03)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
                             <strong>Overlapping segments detected:</strong>
                             <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0 }}>
-                              {alert.duplicatePhrases.map((phrase, pIdx) => (
+                              {alert.duplicatePhrases.map((phrase: any, pIdx: number) => (
                                 <li key={pIdx} style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>"... {phrase} ..."</li>
                               ))}
                             </ul>
@@ -489,13 +519,13 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {comparisonResult.documents.map(doc => (
+                      {comparisonResult.documents?.map((doc: any) => (
                         <tr key={doc.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                           <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{doc.title}</td>
                           <td style={{ padding: '0.75rem' }}>{getSourceBadge(doc.source)}</td>
                           <td style={{ padding: '0.75rem', color: 'var(--text-primary)' }}>{doc.wordCount} words</td>
                           <td style={{ padding: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                            {doc.collaborators.join(', ')}
+                            {doc.collaborators?.join(', ')}
                           </td>
                         </tr>
                       ))}
@@ -508,5 +538,13 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>Loading Dashboard...</div>}>
+      <DashboardComponent />
+    </Suspense>
   );
 }

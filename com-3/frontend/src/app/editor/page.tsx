@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { usePathname, useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Underline } from '@tiptap/extension-underline';
@@ -19,30 +19,31 @@ import { io } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 import ShareModal from '../../components/ShareModal';
 import ReportsManagerModal from '../../components/ReportsManagerModal';
+import { getBackendUrl } from '../../utils/apiConfig';
 
-const SOCKET_URL = 'http://localhost:8001';
+const SOCKET_URL = getBackendUrl();
 
 // IndexedDB Helper Functions
-const openDB = () => {
+const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("DocumentOfflineDB", 1);
-    request.onupgradeneeded = (e) => {
+    request.onupgradeneeded = (e: any) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains("pending_edits")) {
         db.createObjectStore("pending_edits", { keyPath: "id" });
       }
     };
-    request.onsuccess = (e) => resolve(e.target.result);
-    request.onerror = (e) => reject(e.target.error);
+    request.onsuccess = (e: any) => resolve(e.target.result);
+    request.onerror = (e: any) => reject(e.target.error);
   });
 };
 
-const savePendingEdit = async (docId, content, author, revisions) => {
+const savePendingEdit = async (docId: string, content: string, author: string, revisions: any[]) => {
   try {
     const db = await openDB();
     const tx = db.transaction("pending_edits", "readwrite");
     const store = tx.objectStore("pending_edits");
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const request = store.put({ id: docId, content, author, revisions, timestamp: Date.now() });
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -52,7 +53,7 @@ const savePendingEdit = async (docId, content, author, revisions) => {
   }
 };
 
-const getPendingEdit = async (docId) => {
+const getPendingEdit = async (docId: string): Promise<any> => {
   try {
     const db = await openDB();
     const tx = db.transaction("pending_edits", "readonly");
@@ -68,12 +69,12 @@ const getPendingEdit = async (docId) => {
   }
 };
 
-const clearPendingEdit = async (docId) => {
+const clearPendingEdit = async (docId: string) => {
   try {
     const db = await openDB();
     const tx = db.transaction("pending_edits", "readwrite");
     const store = tx.objectStore("pending_edits");
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const request = store.delete(docId);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
@@ -83,7 +84,7 @@ const clearPendingEdit = async (docId) => {
   }
 };
 
-const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSaveAndRename }) => {
+const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSaveAndRename }: any) => {
   if (!editor) return null;
   
   const addImage = () => {
@@ -132,7 +133,7 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSaveAndRename
 
         <input 
           type="color" 
-          onInput={(e) => editor.chain().focus().setColor(e.target.value).run()} 
+          onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()} 
           value={editor.getAttributes('textStyle').color || '#000000'}
           title="Text Color"
           style={{ width: '30px', height: '30px', padding: '0', border: 'none', cursor: 'pointer', background: 'transparent' }}
@@ -210,37 +211,36 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSaveAndRename
   );
 };
 
-export default function EditorPage() {
-  const location = usePathname();
-  const navigate = useRouter();
-  const queryParams = new URLSearchParams(location.search);
-  const docIdParam = queryParams.get('docId');
+function EditorComponent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const docIdParam = searchParams ? searchParams.get('docId') : null;
 
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
-  const [socket, setSocket] = useState(null);
-  const [availableDocs, setAvailableDocs] = useState([]);
-  const [selectedDocId, setSelectedDocId] = useState(docIdParam || 'doc_collaborative_1');
-  const [docDetails, setDocDetails] = useState(null);
+  const [socket, setSocket] = useState<any>(null);
+  const [availableDocs, setAvailableDocs] = useState<any[]>([]);
+  const [selectedDocId, setSelectedDocId] = useState<string>(docIdParam || 'doc_collaborative_1');
+  const [docDetails, setDocDetails] = useState<any>(null);
   
   // Security & Modals State
   const [accessDenied, setAccessDenied] = useState(false);
-  const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
+  const [accessDeniedInfo, setAccessDeniedInfo] = useState<any>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
-  const [registeredUsersForCreate, setRegisteredUsersForCreate] = useState([]);
-  const [selectedMembersForCreate, setSelectedMembersForCreate] = useState([]);
+  const [registeredUsersForCreate, setRegisteredUsersForCreate] = useState<any[]>([]);
+  const [selectedMembersForCreate, setSelectedMembersForCreate] = useState<string[]>([]);
 
   // Fetch users when create modal opens
   useEffect(() => {
     if (createModalOpen) {
-      fetch('http://localhost:8001/api/auth/users')
+      fetch(`${SOCKET_URL}/api/auth/users`)
         .then(res => res.json())
         .then(data => {
           // Filter out current logged in user
-          const others = (data || []).filter(u => {
+          const others = (data || []).filter((u: any) => {
             const cleanCur = (user?.username || user?.studentId || '').toLowerCase();
             return (u.username || u.studentId || '').toLowerCase() !== cleanCur;
           });
@@ -253,18 +253,18 @@ export default function EditorPage() {
   // Offline Sync State
   const [isOffline, setIsOffline] = useState(false);
   const [syncStatus, setSyncStatus] = useState('synced');
-  const [offlineRevisions, setOfflineRevisions] = useState([]);
+  const [offlineRevisions, setOfflineRevisions] = useState<any[]>([]);
   const [lastText, setLastText] = useState('');
 
   // Author Highlighting & Word-like layout state
-  const [markupData, setMarkupData] = useState(null);
+  const [markupData, setMarkupData] = useState<any>(null);
   const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('ALL');
   const [isHighlightMode, setIsHighlightMode] = useState(false);
-  const [hoveredSegment, setHoveredSegment] = useState(null);
+  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
   const fetchMarkupData = () => {
     if (!selectedDocId) return;
-    fetch(`http://localhost:8001/api/documents/${selectedDocId}/author-markup`)
+    fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/author-markup`)
       .then(res => res.json())
       .then(data => setMarkupData(data))
       .catch(err => console.error("Failed to fetch markup data", err));
@@ -287,8 +287,8 @@ export default function EditorPage() {
 
   const fetchDocs = () => {
     if (!user) return;
-    const query = `username=${encodeURIComponent(user.username)}&studentId=${encodeURIComponent(user.studentId)}&role=${encodeURIComponent(user.role)}`;
-    fetch(`http://localhost:8001/api/documents?${query}`)
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+    fetch(`${SOCKET_URL}/api/documents?${query}`)
       .then(res => res.json())
       .then(data => setAvailableDocs(data || []))
       .catch(err => console.error("Failed to fetch documents", err));
@@ -304,8 +304,8 @@ export default function EditorPage() {
     if (!selectedDocId || !user) return;
     setAccessDenied(false);
 
-    const query = `username=${encodeURIComponent(user.username)}&studentId=${encodeURIComponent(user.studentId)}&role=${encodeURIComponent(user.role)}`;
-    fetch(`http://localhost:8001/api/documents/${selectedDocId}?${query}`)
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+    fetch(`${SOCKET_URL}/api/documents/${selectedDocId}?${query}`)
       .then(async res => {
         const data = await res.json();
         if (res.status === 403 || data.isAccessDenied) {
@@ -372,7 +372,7 @@ export default function EditorPage() {
             section: "Offline Session"
           };
           
-          setOfflineRevisions(prev => {
+          setOfflineRevisions((prev: any[]) => {
             const updated = [...prev, newRev];
             savePendingEdit(selectedDocId, html, effectiveAuthor, updated);
             return updated;
@@ -421,7 +421,7 @@ export default function EditorPage() {
     s.on('receive-changes', (content) => {
       if (editor && !editor.isDestroyed) {
         const currentSelection = editor.state.selection;
-        editor.commands.setContent(content, false);
+        editor.commands.setContent(content, { emitUpdate: false });
         editor.commands.setTextSelection(currentSelection);
         setLastText(editor.getText());
       }
@@ -440,7 +440,7 @@ export default function EditorPage() {
       try {
         const pending = await getPendingEdit(selectedDocId);
         if (pending && pending.revisions && pending.revisions.length > 0) {
-          const response = await fetch(`http://localhost:8001/api/documents/${selectedDocId}/sync-offline`, {
+          const response = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/sync-offline`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -495,7 +495,7 @@ export default function EditorPage() {
         const pending = await getPendingEdit(selectedDocId);
         
         if (pending && pending.revisions && pending.revisions.length > 0) {
-          const response = await fetch(`http://localhost:8001/api/documents/${selectedDocId}/sync-offline`, {
+          const response = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/sync-offline`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -521,12 +521,12 @@ export default function EditorPage() {
     }
   };
 
-  const handleCreateDocument = async (e) => {
+  const handleCreateDocument = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDocTitle.trim()) return;
+    if (!newDocTitle.trim() || !user) return;
 
     try {
-      const res = await fetch('http://localhost:8001/api/documents/create', {
+      const res = await fetch(`${SOCKET_URL}/api/documents/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -545,12 +545,12 @@ export default function EditorPage() {
       setSelectedMembersForCreate([]);
       fetchDocs();
       setSelectedDocId(data.document._id);
-    } catch (err) {
+    } catch (err: any) {
       alert(`Error creating document: ${err.message}`);
     }
   };
 
-  const handleRenameDocument = async (customTitle = null) => {
+  const handleRenameDocument = async (customTitle: string | null = null) => {
     if (!selectedDocId || !user) return;
     const currentTitle = docDetails?.title || selectedDocId;
     const newTitle = customTitle !== null ? customTitle : window.prompt("Rename Document Title:", currentTitle);
@@ -559,7 +559,7 @@ export default function EditorPage() {
     if (newTitle.trim() === currentTitle && customTitle === null) return;
 
     try {
-      const res = await fetch(`http://localhost:8001/api/documents/${selectedDocId}/rename`, {
+      const res = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/rename`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -573,10 +573,10 @@ export default function EditorPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to rename document');
 
-      setDocDetails(prev => prev ? { ...prev, title: data.title } : null);
+      setDocDetails((prev: any) => prev ? { ...prev, title: data.title } : null);
       fetchDocs();
       alert(`Document renamed successfully to "${data.title}"!`);
-    } catch (err) {
+    } catch (err: any) {
       alert(`Error renaming document: ${err.message}`);
     }
   };
@@ -604,22 +604,22 @@ export default function EditorPage() {
     if (!confirmDelete) return;
 
     try {
-      const query = `username=${encodeURIComponent(user.username)}&studentId=${encodeURIComponent(user.studentId)}&role=${encodeURIComponent(user.role)}`;
-      const res = await fetch(`http://localhost:8001/api/documents/${selectedDocId}?${query}`, {
+      const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+      const res = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}?${query}`, {
         method: 'DELETE'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete document');
 
       alert("Document deleted successfully!");
-      const updated = availableDocs.filter(d => d._id !== selectedDocId);
+      const updated = availableDocs.filter((d: any) => d._id !== selectedDocId);
       setAvailableDocs(updated);
       if (updated.length > 0) {
         setSelectedDocId(updated[0]._id);
       } else {
         setSelectedDocId('doc_collaborative_1');
       }
-    } catch (err) {
+    } catch (err: any) {
       alert(`Error deleting document: ${err.message}`);
     }
   };
@@ -1152,7 +1152,7 @@ export default function EditorPage() {
                 </button>
               </div>
 
-              {markupData?.segments?.map((seg) => {
+              {markupData?.segments?.map((seg: any) => {
                 const isMatched = selectedAuthorFilter === 'ALL' || seg.author === selectedAuthorFilter;
                 const authorColor = seg.color || '#4285f4';
                 const authorBg = seg.bgColor || 'rgba(66, 133, 244, 0.2)';
@@ -1212,8 +1212,8 @@ export default function EditorPage() {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {markupData?.authors?.length > 0 ? (
-              markupData.authors.map(a => {
+            {markupData?.authors && markupData.authors.length > 0 ? (
+              markupData.authors.map((a: any) => {
                 const isActive = selectedAuthorFilter === a.author;
                 return (
                   <div
@@ -1283,13 +1283,13 @@ export default function EditorPage() {
       <ReportsManagerModal
         isOpen={reportsModalOpen}
         onClose={() => setReportsModalOpen(false)}
-        onSelectDocument={(id) => setSelectedDocId(id)}
-        onShareDocument={(doc) => {
+        onSelectDocument={(id: string) => setSelectedDocId(id)}
+        onShareDocument={(doc: any) => {
           setSelectedDocId(doc._id);
           setShareModalOpen(true);
         }}
-        onDocumentDeleted={(deletedId) => {
-          setAvailableDocs(prev => prev.filter(d => d._id !== deletedId));
+        onDocumentDeleted={(deletedId: string) => {
+          setAvailableDocs((prev: any[]) => prev.filter((d: any) => d._id !== deletedId));
           if (selectedDocId === deletedId) {
             fetchDocs();
           }
@@ -1302,7 +1302,7 @@ export default function EditorPage() {
         onClose={() => setShareModalOpen(false)}
         documentId={selectedDocId}
         docDetails={docDetails}
-        onShareUpdated={(updatedDoc) => {
+        onShareUpdated={(updatedDoc: any) => {
           setDocDetails(updatedDoc);
           fetchDocs();
         }}
@@ -1377,16 +1377,16 @@ export default function EditorPage() {
                       No other registered members found. You can also share later using the Share button.
                     </div>
                   ) : (
-                    registeredUsersForCreate.map(u => {
+                    registeredUsersForCreate.map((u: any) => {
                       const userIdentifier = u.username || u.studentId || u.email;
                       const displayName = u.name ? `${u.name} (${userIdentifier})` : userIdentifier;
                       const isSelected = selectedMembersForCreate.includes(userIdentifier);
 
                       const toggleMember = () => {
                         if (isSelected) {
-                          setSelectedMembersForCreate(prev => prev.filter(id => id !== userIdentifier));
+                          setSelectedMembersForCreate((prev: string[]) => prev.filter(id => id !== userIdentifier));
                         } else {
-                          setSelectedMembersForCreate(prev => [...prev, userIdentifier]);
+                          setSelectedMembersForCreate((prev: string[]) => [...prev, userIdentifier]);
                         }
                       };
 
@@ -1449,5 +1449,13 @@ export default function EditorPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>Loading Editor...</div>}>
+      <EditorComponent />
+    </Suspense>
   );
 }

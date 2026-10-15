@@ -12,9 +12,9 @@ const GoogleDocsIcon = () => (
   </svg>
 );
 
-export default function AuthorHighlightViewer({ markupData, loading }) {
+export default function AuthorHighlightViewer({ markupData, loading }: { markupData: any; loading?: boolean }) {
   const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('ALL');
-  const [hoveredSegment, setHoveredSegment] = useState(null);
+  const [hoveredSegment, setHoveredSegment] = useState<any>(null);
   const [viewMode, setViewMode] = useState('gdoc'); // 'gdoc' (Google Doc Canvas) or 'cards' (Detailed Cards)
   const [highlightStyle, setHighlightStyle] = useState('background'); // 'background', 'border', 'underline'
   const [showInlineChips, setShowInlineChips] = useState(true);
@@ -81,7 +81,7 @@ export default function AuthorHighlightViewer({ markupData, loading }) {
         display: 'flex',
         flexWrap: 'wrap',
         gap: '1rem',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         {/* Left: Title & Mode Selector */}
@@ -371,7 +371,7 @@ export default function AuthorHighlightViewer({ markupData, loading }) {
           {/* Document Header Bar */}
           <div style={{
             display: 'flex',
-            justify: 'space-between',
+            justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '1.25rem',
             paddingBottom: '0.85rem',

@@ -1,13 +1,12 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
 
-const ContributionHeatmap = ({ data }) => {
-  const svgRef = useRef();
+const ContributionHeatmap = ({ data }: { data: any }) => {
+  const svgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!data || !data.authors || !data.sections || !data.data || !window.d3) return;
-    
-    const d3 = window.d3;
+    const d3 = (typeof window !== 'undefined' ? (window as any).d3 : null);
+    if (!data || !data.authors || !data.sections || !data.data || !d3) return;
 
     // Clear previous SVG
     d3.select(svgRef.current).selectAll("*").remove();

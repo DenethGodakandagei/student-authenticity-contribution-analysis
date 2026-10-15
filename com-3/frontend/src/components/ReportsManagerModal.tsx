@@ -1,14 +1,15 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getBackendUrl } from '../utils/apiConfig';
 
-export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument, onShareDocument, onDocumentDeleted }) {
+export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument, onShareDocument, onDocumentDeleted }: any) {
   const { user } = useAuth();
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [deletingId, setDeletingId] = useState(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchAllReports = async () => {
     if (!isOpen || !user) return;
@@ -16,8 +17,11 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
     setError('');
 
     try {
-      const query = `username=${encodeURIComponent(user.username)}&studentId=${encodeURIComponent(user.studentId)}&role=${encodeURIComponent(user.role)}`;
-      const res = await fetch(`http://localhost:8001/api/documents?${query}`);
+      const uName = user.username || '';
+      const sId = user.studentId || '';
+      const uRole = user.role || '';
+      const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&role=${encodeURIComponent(uRole)}`;
+      const res = await fetch(`${getBackendUrl()}/api/documents?${query}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load documents');
       setDocuments(data || []);
@@ -40,7 +44,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
     if (!newTitle || !newTitle.trim() || newTitle.trim() === currentTitle) return;
 
     try {
-      const res = await fetch(`http://localhost:8001/api/documents/${docId}/rename`, {
+      const res = await fetch(`${getBackendUrl()}/api/documents/${docId}/rename`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,8 +76,11 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
     setError('');
 
     try {
-      const query = `username=${encodeURIComponent(user.username)}&studentId=${encodeURIComponent(user.studentId)}&role=${encodeURIComponent(user.role)}`;
-      const res = await fetch(`http://localhost:8001/api/documents/${docId}?${query}`, {
+      const uName = user?.username || '';
+      const sId = user?.studentId || '';
+      const uRole = user?.role || '';
+      const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&role=${encodeURIComponent(uRole)}`;
+      const res = await fetch(`${getBackendUrl()}/api/documents/${docId}?${query}`, {
         method: 'DELETE'
       });
       const data = await res.json();

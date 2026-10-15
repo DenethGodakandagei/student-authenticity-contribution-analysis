@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getBackendUrl } from '../utils/apiConfig';
 
-export default function ShareModal({ isOpen, onClose, documentId, docDetails, onShareUpdated }) {
+export default function ShareModal({ isOpen, onClose, documentId, docDetails, onShareUpdated }: any) {
   const { user } = useAuth();
   const [targetIdentifier, setTargetIdentifier] = useState('');
-  const [registeredUsers, setRegisteredUsers] = useState([]);
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -18,7 +19,7 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
     if (isOpen) {
       setError('');
       setSuccessMsg('');
-      fetch('http://localhost:8001/api/auth/users')
+      fetch(`${getBackendUrl()}/api/auth/users`)
         .then(res => res.json())
         .then(data => setRegisteredUsers(data || []))
         .catch(err => console.error("Failed to load registered users", err));
@@ -27,7 +28,7 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
 
   if (!isOpen || !documentId) return null;
 
-  const handleShare = async (e, identifierToShare = null, action = 'add') => {
+  const handleShare = async (e: any, identifierToShare: string | null = null, action: string = 'add') => {
     if (e) e.preventDefault();
     const identifier = identifierToShare || targetIdentifier;
 
@@ -41,7 +42,7 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`http://localhost:8001/api/documents/${documentId}/share`, {
+      const res = await fetch(`${getBackendUrl()}/api/documents/${documentId}/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

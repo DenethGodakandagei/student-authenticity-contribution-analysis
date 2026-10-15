@@ -1,17 +1,18 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
+import { getApiBase } from '../../utils/apiConfig';
 
-const API_BASE = 'http://localhost:8001/api/documents';
+const API_BASE = getApiBase();
 
 export default function Integrations() {
-  const navigate = useRouter();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('google');
   const [docUrl, setDocUrl] = useState('');
   const [docTitle, setDocTitle] = useState('');
   const [importing, setImporting] = useState(false);
   const [importStep, setImportStep] = useState(0);
-  const [linkedDocs, setLinkedDocs] = useState([]);
+  const [linkedDocs, setLinkedDocs] = useState<any[]>([]);
   const [error, setError] = useState('');
 
   const fetchLinkedDocs = () => {
@@ -29,7 +30,7 @@ export default function Integrations() {
     fetchLinkedDocs();
   }, []);
 
-  const handleImport = async (e) => {
+  const handleImport = async (e: any) => {
     e.preventDefault();
     if (!docUrl.trim()) {
       setError('Please provide a document URL.');
@@ -308,7 +309,7 @@ export default function Integrations() {
                         ⚡ Work Collaboratively ({isGoogle ? 'Google Docs' : 'MS Word'})
                       </button>
                       <button
-                        onClick={() => router.push('/dashboard', { state: { selectedDocId: doc._id } })}
+                        onClick={() => router.push(`/dashboard?selectedDocId=${doc._id}`)}
                         style={{
                           background: 'transparent',
                           border: '1px solid var(--accent-teal)',
@@ -320,8 +321,8 @@ export default function Integrations() {
                           fontSize: '0.8rem',
                           transition: 'all 0.2s'
                         }}
-                        onMouseEnter={e => { e.target.style.background = 'var(--accent-teal)'; e.target.style.color = 'white'; }}
-                        onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--text-primary)'; }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--accent-teal)'; (e.currentTarget as HTMLElement).style.color = 'white'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
                       >
                         View Analytics
                       </button>

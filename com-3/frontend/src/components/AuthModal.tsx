@@ -2,7 +2,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function AuthModal({ isOpen, onClose }) {
+interface AuthModalProps {
+  isOpen: boolean;
+  onClose?: () => void;
+}
+
+export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { login, register } = useAuth();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [error, setError] = useState('');
