@@ -1,19 +1,20 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
 
-const WordGrowthChart = ({ data }) => {
-  const canvasRef = useRef(null);
-  const chartInstance = useRef(null);
+const WordGrowthChart = ({ data }: { data: any[] }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartInstance = useRef<any>(null);
 
   useEffect(() => {
-    if (!data || data.length === 0 || !window.Chart || !canvasRef.current) return;
+    const Chart = typeof window !== 'undefined' ? (window as any).Chart : null;
+    if (!data || data.length === 0 || !Chart || !canvasRef.current) return;
 
     if (chartInstance.current) {
       chartInstance.current.destroy();
     }
 
     const labels = data.map(d => d.date);
-    const authors = Object.keys(data[0]).filter(k => k !== 'date');
+    const authors = Object.keys(data[0] || {}).filter(k => k !== 'date');
     
     const colors = [
       { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)' },
@@ -34,7 +35,8 @@ const WordGrowthChart = ({ data }) => {
     }));
 
     const ctx = canvasRef.current.getContext('2d');
-    chartInstance.current = new window.Chart(ctx, {
+    if (!ctx) return;
+    chartInstance.current = new Chart(ctx, {
       type: 'line',
       data: { labels, datasets },
       options: {

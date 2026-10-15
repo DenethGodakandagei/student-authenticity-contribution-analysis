@@ -1,13 +1,13 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
 
-const DocumentTimeline = ({ data }) => {
-  const svgRef = useRef();
+const DocumentTimeline = ({ data }: { data: any[] }) => {
+  const svgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!data || data.length === 0 || !window.d3) return;
+    const d3 = (typeof window !== 'undefined' ? (window as any).d3 : null);
+    if (!data || data.length === 0 || !d3) return;
 
-    const d3 = window.d3;
     d3.select(svgRef.current).selectAll("*").remove();
 
     const margin = { top: 40, right: 40, bottom: 40, left: 40 };

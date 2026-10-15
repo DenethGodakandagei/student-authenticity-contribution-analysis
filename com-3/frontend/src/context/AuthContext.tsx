@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { getBackendUrl } from '../utils/apiConfig';
 
 export interface User {
   id?: string;
@@ -62,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user]);
 
   const login = async (identifier, password) => {
-    const res = await fetch('http://localhost:8001/api/auth/login', {
+    const res = await fetch(`${getBackendUrl()}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier, password }),
@@ -77,7 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const register = async ({ username, name, studentId, email, password, role }) => {
-    const res = await fetch('http://localhost:8001/api/auth/register', {
+    const res = await fetch(`${getBackendUrl()}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, name, studentId, email, password, role }),

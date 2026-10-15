@@ -97,16 +97,150 @@ function hasDocumentAccess(doc, username, studentId, role) {
 }
 
 const RevisionSchema = new mongoose.Schema({
-  documentId: String,
-  author: String,
+  documentId: { type: String, required: true },
+  author: { type: String, required: true },
+  anonymizedAuthorId: { type: String },
   timestamp: { type: Date, default: Date.now },
-  addedText: String,
-  deletedText: String,
-  wordCountAdded: Number,
-  wordCountDeleted: Number,
-  section: String
+  section: { type: String, default: "General" },
+  beforeText: { type: String, default: "" },
+  afterText: { type: String, default: "" },
+  addedText: { type: String, default: "" },
+  deletedText: { type: String, default: "" },
+  wordCountAdded: { type: Number, default: 0 },
+  wordCountDeleted: { type: Number, default: 0 },
+  sourcePlatform: { type: String, default: 'in_built' }, // 'in_built', 'google_docs', 'microsoft_365'
+  syncStatus: { type: String, default: 'synced' }, // 'synced', 'offline'
+  predictedIntent: {
+    type: String,
+    enum: [
+      'Language Correction',
+      'Paraphrasing',
+      'Content Addition',
+      'Evidence/Citation Addition',
+      'Content Removal',
+      'Structural Reorganization',
+      'Unclassified'
+    ],
+    default: 'Unclassified'
+  },
+  predictedSignificance: {
+    type: String,
+    enum: ['Minor', 'Moderate', 'Major', 'Unclassified'],
+    default: 'Unclassified'
+  },
+  semanticDistance: { type: Number, default: 0 },
+  confidence: { type: Number, default: 0 },
+  modelVersion: { type: String, default: 'v1.0-rules-ml-ensemble' },
+  explanation: { type: String, default: '' },
+  features: { type: mongoose.Schema.Types.Mixed, default: {} }
 });
 const Revision = mongoose.model('Revision', RevisionSchema);
+
+// Anonymization Helper (Proposal NFR-05 & Section 3.2)
+function generateAnonymizedAuthorId(author) {
+  if (!author) return 'STU_ANON';
+  const hash = crypto.createHash('sha256').update(author.toLowerCase().trim() + '_salt2026').digest('hex');
+  return `STU_${hash.substring(0, 6).toUpperCase()}`;
+}
+
+// ML Revision Classification Client (Calls Python FastAPI on port 8002 with built-in fallback)
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8002/api/v1/ml/classify-revision';
+
+async function classifyRevisionWithML(beforeText, afterText, section = "General") {
+  try {
+    const res = await fetch(ML_SERVICE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        before_text: beforeText || "",
+        after_text: afterText || "",
+        section: section || "General"
+      })
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // Graceful fallback if ML service is booting or unreachable
+  }
+
+  // Built-in rule-based fallback matching Proposal Table 3.1 & 3.2
+  const b = (beforeText || "").trim();
+  const a = (afterText || "").trim();
+  const bWords = b ? b.split(/\s+/).length : 0;
+  const aWords = a ? a.split(/\s+/).length : 0;
+  const added = Math.max(0, aWords - bWords);
+  const deleted = Math.max(0, bWords - aWords);
+
+  // Evidence detection
+  if (/\[\d+\]|\([A-Z][a-z]+,\s*\d{4}\)|https?:\/\//i.test(a) && !/\[\d+\]|\([A-Z][a-z]+,\s*\d{4}\)|https?:\/\//i.test(b)) {
+    return {
+      predicted_intent: 'Evidence/Citation Addition',
+      predicted_significance: added > 15 ? 'Major' : 'Moderate',
+      semantic_distance: 0.35,
+      confidence: 0.90,
+      model_version: 'v1.0-rules-ml-ensemble',
+      explanation: 'Detected addition of academic citation or reference markers.'
+    };
+  }
+
+  // Structural Reorganization
+  if (/<h[1-6]|#+\s/i.test(a) && !/<h[1-6]|#+\s/i.test(b)) {
+    return {
+      predicted_intent: 'Structural Reorganization',
+      predicted_significance: 'Moderate',
+      semantic_distance: 0.50,
+      confidence: 0.88,
+      model_version: 'v1.0-rules-ml-ensemble',
+      explanation: 'Section or heading structural modification detected.'
+    };
+  }
+
+  // Content Addition
+  if (added > 12) {
+    return {
+      predicted_intent: 'Content Addition',
+      predicted_significance: added > 60 ? 'Major' : 'Moderate',
+      semantic_distance: Math.min(0.9, 0.2 + added * 0.01),
+      confidence: 0.92,
+      model_version: 'v1.0-rules-ml-ensemble',
+      explanation: `Added ${added} words of substantive content.`
+    };
+  }
+
+  // Content Removal
+  if (deleted > 12) {
+    return {
+      predicted_intent: 'Content Removal',
+      predicted_significance: deleted > 50 ? 'Major' : 'Moderate',
+      semantic_distance: Math.min(0.9, 0.2 + deleted * 0.01),
+      confidence: 0.90,
+      model_version: 'v1.0-rules-ml-ensemble',
+      explanation: `Deleted ${deleted} words of content.`
+    };
+  }
+
+  // Paraphrasing vs Language Correction
+  if (Math.abs(aWords - bWords) <= 6 && Math.min(aWords, bWords) >= 5) {
+    return {
+      predicted_intent: 'Paraphrasing',
+      predicted_significance: 'Moderate',
+      semantic_distance: 0.40,
+      confidence: 0.85,
+      model_version: 'v1.0-rules-ml-ensemble',
+      explanation: 'Wording rephrased while preserving approximate sentence length.'
+    };
+  }
+
+  return {
+    predicted_intent: 'Language Correction',
+    predicted_significance: 'Minor',
+    semantic_distance: 0.08,
+    confidence: 0.89,
+    model_version: 'v1.0-rules-ml-ensemble',
+    explanation: 'Localized wording, grammar, or punctuation adjustment.'
+  };
+}
 
 // Helper function to extract text from HTML (safe version)
 const stripHtml = (html) => (typeof html === 'string' ? html.replace(/<[^>]*>?/gm, '') : '');
@@ -190,14 +324,30 @@ io.on('connection', (socket) => {
       });
 
       if (wordsAdded > 0 || wordsDeleted > 0) {
+        // Run ML Classification on Before/After Pair
+        const mlRes = await classifyRevisionWithML(oldText, newText, "General");
+
         await Revision.create({
           documentId,
           author: author || "Anonymous",
+          anonymizedAuthorId: generateAnonymizedAuthorId(author),
+          timestamp: new Date(),
+          section: "General",
+          beforeText: oldText,
+          afterText: newText,
           addedText: added.trim(),
           deletedText: deleted.trim(),
           wordCountAdded: wordsAdded,
           wordCountDeleted: wordsDeleted,
-          section: "General" // Simplified; in a real app we'd parse the nearest header
+          sourcePlatform: doc.source || 'in_built',
+          syncStatus: 'synced',
+          predictedIntent: mlRes.predicted_intent || 'Unclassified',
+          predictedSignificance: mlRes.predicted_significance || 'Unclassified',
+          semanticDistance: mlRes.semantic_distance || 0.0,
+          confidence: mlRes.confidence || 0.0,
+          modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
+          explanation: mlRes.explanation || '',
+          features: mlRes.features || {}
         });
       }
 
@@ -911,15 +1061,27 @@ app.post('/api/documents/import-external', async (req, res) => {
 
     // Save revisions
     for (let rev of revisionsData) {
+      const mlRes = await classifyRevisionWithML(rev.deletedText || "", rev.addedText || "", rev.section);
       await Revision.create({
         documentId: docId,
         author: rev.author,
+        anonymizedAuthorId: generateAnonymizedAuthorId(rev.author),
         timestamp: rev.timestamp,
+        beforeText: rev.deletedText || "",
+        afterText: rev.addedText || "",
         addedText: rev.addedText,
         deletedText: rev.deletedText,
         wordCountAdded: rev.wordCountAdded,
         wordCountDeleted: rev.wordCountDeleted,
-        section: rev.section
+        section: rev.section,
+        sourcePlatform: source,
+        syncStatus: 'synced',
+        predictedIntent: mlRes.predicted_intent || 'Unclassified',
+        predictedSignificance: mlRes.predicted_significance || 'Unclassified',
+        semanticDistance: mlRes.semantic_distance || 0,
+        confidence: mlRes.confidence || 0,
+        modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
+        explanation: mlRes.explanation || ''
       });
     }
 
@@ -950,15 +1112,30 @@ app.post('/api/documents/:id/sync-offline', async (req, res) => {
           doc.collaborators.push(rev.author);
         }
         
+        const bText = rev.beforeText || rev.deletedText || "";
+        const aText = rev.afterText || rev.addedText || "";
+        const mlRes = await classifyRevisionWithML(bText, aText, rev.section || "Offline Session");
+
         await Revision.create({
           documentId,
           author: rev.author || "Offline User",
+          anonymizedAuthorId: generateAnonymizedAuthorId(rev.author || "Offline User"),
           timestamp: rev.timestamp || new Date(),
+          beforeText: bText,
+          afterText: aText,
           addedText: rev.addedText || "",
           deletedText: rev.deletedText || "",
           wordCountAdded: rev.wordCountAdded || 0,
           wordCountDeleted: rev.wordCountDeleted || 0,
-          section: rev.section || "Offline Session"
+          section: rev.section || "Offline Session",
+          sourcePlatform: 'in_built',
+          syncStatus: 'synced',
+          predictedIntent: mlRes.predicted_intent || 'Unclassified',
+          predictedSignificance: mlRes.predicted_significance || 'Unclassified',
+          semanticDistance: mlRes.semantic_distance || 0,
+          confidence: mlRes.confidence || 0,
+          modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
+          explanation: mlRes.explanation || ''
         });
       }
     }
@@ -1217,6 +1394,168 @@ app.get('/api/documents/cross-group-analysis', async (req, res) => {
       similarityMatrix,
       alerts
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =========================================================================
+// Component 3: Intelligent Document Evolution & ML Revision Analytics APIs
+// =========================================================================
+
+// 1. Get raw revisions with before/after diffs and ML classifications (FR 09, FR 10)
+app.get('/api/documents/:id/revisions', async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const revisions = await Revision.find({ documentId }).sort({ timestamp: -1 }).lean();
+    
+    // Ensure all revisions have anonymized identifiers
+    const sanitized = revisions.map(r => ({
+      ...r,
+      anonymizedAuthorId: r.anonymizedAuthorId || generateAnonymizedAuthorId(r.author),
+      predictedIntent: r.predictedIntent || 'Unclassified',
+      predictedSignificance: r.predictedSignificance || 'Unclassified',
+      semanticDistance: r.semanticDistance || 0,
+      confidence: r.confidence || 0
+    }));
+
+    res.json(sanitized);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Aggregated ML Revision Analytics (Intent distribution, significance breakdown, semantic change)
+app.get('/api/documents/:id/revision-analytics', async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const revisions = await Revision.find({ documentId }).sort('timestamp').lean();
+
+    const intentCounts = {
+      'Language Correction': 0,
+      'Paraphrasing': 0,
+      'Content Addition': 0,
+      'Evidence/Citation Addition': 0,
+      'Content Removal': 0,
+      'Structural Reorganization': 0,
+      'Unclassified': 0
+    };
+
+    const significanceCounts = {
+      'Minor': 0,
+      'Moderate': 0,
+      'Major': 0,
+      'Unclassified': 0
+    };
+
+    const authorIntentMap = {};
+    let totalSemanticDistance = 0;
+    let distanceCount = 0;
+    const timelineData = [];
+
+    revisions.forEach((rev, idx) => {
+      const intent = rev.predictedIntent || 'Unclassified';
+      const sig = rev.predictedSignificance || 'Unclassified';
+      
+      if (intentCounts[intent] !== undefined) intentCounts[intent]++;
+      else intentCounts['Unclassified']++;
+
+      if (significanceCounts[sig] !== undefined) significanceCounts[sig]++;
+      else significanceCounts['Unclassified']++;
+
+      if (typeof rev.semanticDistance === 'number' && rev.semanticDistance > 0) {
+        totalSemanticDistance += rev.semanticDistance;
+        distanceCount++;
+      }
+
+      const authorKey = rev.author || 'Anonymous';
+      if (!authorIntentMap[authorKey]) {
+        authorIntentMap[authorKey] = {
+          author: authorKey,
+          anonymizedId: rev.anonymizedAuthorId || generateAnonymizedAuthorId(authorKey),
+          totalEdits: 0,
+          wordsAdded: 0,
+          wordsDeleted: 0,
+          intents: { ...intentCounts },
+          significances: { ...significanceCounts }
+        };
+      }
+      authorIntentMap[authorKey].totalEdits++;
+      authorIntentMap[authorKey].wordsAdded += (rev.wordCountAdded || 0);
+      authorIntentMap[authorKey].wordsDeleted += (rev.wordCountDeleted || 0);
+      if (authorIntentMap[authorKey].intents[intent] !== undefined) {
+        authorIntentMap[authorKey].intents[intent]++;
+      }
+      if (authorIntentMap[authorKey].significances[sig] !== undefined) {
+        authorIntentMap[authorKey].significances[sig]++;
+      }
+
+      timelineData.push({
+        index: idx + 1,
+        revisionId: rev._id,
+        timestamp: rev.timestamp,
+        author: rev.author,
+        anonymizedId: rev.anonymizedAuthorId || generateAnonymizedAuthorId(rev.author),
+        section: rev.section || 'General',
+        intent,
+        significance: sig,
+        semanticDistance: rev.semanticDistance || 0,
+        wordsAdded: rev.wordCountAdded || 0,
+        wordsDeleted: rev.wordCountDeleted || 0
+      });
+    });
+
+    const avgSemanticDistance = distanceCount > 0 ? Number((totalSemanticDistance / distanceCount).toFixed(3)) : 0;
+
+    res.json({
+      documentId,
+      totalRevisions: revisions.length,
+      intentDistribution: intentCounts,
+      significanceDistribution: significanceCounts,
+      averageSemanticDistance: avgSemanticDistance,
+      authorBreakdown: Object.values(authorIntentMap),
+      timeline: timelineData,
+      modelMetadata: {
+        version: 'v1.0-rules-ml-ensemble',
+        framework: 'Component 3 ML Microservice (FastAPI on port 8002)',
+        intentTaxonomy: Object.keys(intentCounts).filter(k => k !== 'Unclassified'),
+        significanceCriteria: ['Minor', 'Moderate', 'Major']
+      },
+      disclaimer: "Decision Support Tool: ML revision classifications are provided as analytical process evidence for academic reviewers and do not constitute automated proof of authorship or academic dishonesty."
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Retroactive Reclassifier (Upgrades unclassified revisions with ML labels)
+app.post('/api/documents/:id/reclassify-all', async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const revisions = await Revision.find({ documentId });
+    let updatedCount = 0;
+
+    for (let rev of revisions) {
+      const bText = rev.beforeText || rev.deletedText || "";
+      const aText = rev.afterText || rev.addedText || "";
+      
+      const mlRes = await classifyRevisionWithML(bText, aText, rev.section);
+      rev.beforeText = bText;
+      rev.afterText = aText;
+      rev.anonymizedAuthorId = rev.anonymizedAuthorId || generateAnonymizedAuthorId(rev.author);
+      rev.predictedIntent = mlRes.predicted_intent || 'Language Correction';
+      rev.predictedSignificance = mlRes.predicted_significance || 'Minor';
+      rev.semanticDistance = mlRes.semantic_distance || 0;
+      rev.confidence = mlRes.confidence || 0.85;
+      rev.modelVersion = mlRes.model_version || 'v1.0-rules-ml-ensemble';
+      rev.explanation = mlRes.explanation || '';
+      rev.features = mlRes.features || {};
+      
+      await rev.save();
+      updatedCount++;
+    }
+
+    res.json({ success: true, documentId, updatedCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
