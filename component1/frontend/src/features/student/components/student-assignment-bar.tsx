@@ -1,0 +1,67 @@
+'use client';
+
+import React from 'react';
+import { Plus, RefreshCw } from 'lucide-react';
+
+interface StudentAssignmentBarProps {
+  assignments: any[];
+  selectedAssignment: any;
+  onAssignmentChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onOpenJoinCohort: () => void;
+  team: any;
+  syncingGit: boolean;
+  onSyncGit: () => void;
+}
+
+export const StudentAssignmentBar: React.FC<StudentAssignmentBarProps> = ({
+  assignments,
+  selectedAssignment,
+  onAssignmentChange,
+  onOpenJoinCohort,
+  team,
+  syncingGit,
+  onSyncGit
+}) => {
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 text-left">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-mono">
+          Cohort:
+        </span>
+        <select
+          onChange={onAssignmentChange}
+          value={selectedAssignment?._id || ''}
+          className="bg-white border border-slate-200 rounded-full px-4 py-1.5 text-xs text-slate-900 font-medium outline-none focus:border-slate-900 shadow-xs cursor-pointer"
+        >
+          {assignments.map((a) => (
+            <option key={a._id} value={a._id}>
+              {a.title}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={onOpenJoinCohort}
+          className="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-medium transition shadow-xs flex items-center gap-1 cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5 text-[#A3E635]" />
+          Join Cohort
+        </button>
+      </div>
+
+      {team && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onSyncGit}
+            disabled={syncingGit}
+            className="px-3.5 py-1.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium transition border border-slate-200 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 text-slate-900 ${syncingGit ? 'animate-spin' : ''}`}
+            />
+            <span>{syncingGit ? 'Syncing...' : 'Sync Git'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};

@@ -112,7 +112,7 @@ export const api = {
     recalculate: (assignmentId: string) => request('/analytics/recalculate', { method: 'POST', body: JSON.stringify({ assignmentId }) }),
     downloadCsv: async () => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-      const res = await fetch(`${API_BASE_URL}/analytics/export/csv`, {
+      const res = await fetch(`${BASE_URL}/analytics/export/csv`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('CSV Download failed');
