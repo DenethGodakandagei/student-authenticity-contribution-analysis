@@ -21,8 +21,9 @@ const io = new Server(server, {
 const dmp = new DiffMatchPatch();
 
 // MongoDB Setup
-mongoose.connect('mongodb://127.0.0.1:27017/document-evolution')
-  .then(() => console.log('Connected to MongoDB'))
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/document-evolution';
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB:', MONGODB_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Password Hashing Helper
