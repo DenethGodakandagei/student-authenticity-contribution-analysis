@@ -383,7 +383,12 @@ function EditorComponent() {
         setSyncStatus('offline');
       } else {
         if (socket) {
-          socket.emit('send-changes', { documentId: selectedDocId, content: html, author: effectiveAuthor });
+          socket.emit('send-changes', {
+            documentId: selectedDocId,
+            content: html,
+            author: effectiveAuthor,
+            studentId: user?.studentId || user?.username
+          });
         }
       }
       setLastText(plainText);
