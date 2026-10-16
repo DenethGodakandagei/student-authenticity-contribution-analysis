@@ -220,7 +220,7 @@ function EditorComponent() {
 
   const [socket, setSocket] = useState<any>(null);
   const [availableDocs, setAvailableDocs] = useState<any[]>([]);
-  const [selectedDocId, setSelectedDocId] = useState<string>(docIdParam || 'doc_collaborative_1');
+  const [selectedDocId, setSelectedDocId] = useState<string>(docIdParam || '');
   const [docDetails, setDocDetails] = useState<any>(null);
   
   // Security & Modals State
@@ -290,7 +290,20 @@ function EditorComponent() {
     const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
     fetch(`${getSocketUrl()}/api/documents?${query}`)
       .then(res => res.json())
-      .then(data => setAvailableDocs(data || []))
+      .then(data => {
+        const docs = Array.isArray(data) ? data : [];
+        setAvailableDocs(docs);
+        if (docs.length > 0) {
+          if (docIdParam) {
+            setSelectedDocId(docIdParam);
+          } else {
+            setSelectedDocId(prev => {
+              const stillValid = docs.some((d: any) => d._id === prev);
+              return stillValid && prev ? prev : docs[0]._id;
+            });
+          }
+        }
+      })
       .catch(err => console.error("Failed to fetch documents", err));
   };
 
@@ -679,7 +692,40 @@ function EditorComponent() {
     );
   }
 
-  // Access Denied Security Screen
+  // Friendly Onboarding Screen when no documents exist yet
+  if (!selectedDocId && availableDocs.length === 0) {
+    return (
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div style={{ maxWidth: '520px', width: '100%', padding: '2.5rem', borderRadius: '12px', background: 'var(--bg-secondary, #1e293b)', border: '1px solid var(--border-color, #334155)', textAlign: 'center' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>📄</div>
+          <h2 style={{ color: '#f8fafc', fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Welcome, {user?.name || 'Student'}!
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
+            You do not have any collaborative group reports yet. Create your first document to start writing with your team!
+          </p>
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            style={{
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'white',
+              padding: '0.85rem 1.5rem',
+              borderRadius: '8px',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            + Create My First Group Document
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Access Denied Security Screen (Only if a specific restricted doc was requested)
   if (accessDenied) {
     return (
       <div className="access-denied-screen" style={{
