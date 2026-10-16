@@ -410,7 +410,7 @@ function EditorComponent() {
 
   // Setup Socket Connection with Security Guard
   useEffect(() => {
-    if (!isAuthenticated || !user || isOffline || accessDenied) return;
+    if (!isAuthenticated || !user || isOffline || accessDenied || !selectedDocId) return;
     
     const s = io(getSocketUrl());
     setSocket(s);
@@ -549,9 +549,9 @@ function EditorComponent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: newDocTitle.trim(),
-          owner: user.username,
-          ownerName: user.name,
-          studentId: user.studentId,
+          owner: user.username || user.studentId || 'student',
+          ownerName: user.name || user.username || 'Student',
+          studentId: user.studentId || '',
           members: selectedMembersForCreate
         })
       });
@@ -561,8 +561,11 @@ function EditorComponent() {
       setCreateModalOpen(false);
       setNewDocTitle('');
       setSelectedMembersForCreate([]);
-      fetchDocs();
+      setAccessDenied(false);
+      setAccessDeniedInfo(null);
+      setDocDetails(data.document);
       setSelectedDocId(data.document._id);
+      fetchDocs();
     } catch (err: any) {
       alert(`Error creating document: ${err.message}`);
     }
@@ -635,12 +638,189 @@ function EditorComponent() {
       if (updated.length > 0) {
         setSelectedDocId(updated[0]._id);
       } else {
-        setSelectedDocId('doc_collaborative_1');
+        setSelectedDocId('');
       }
     } catch (err: any) {
       alert(`Error deleting document: ${err.message}`);
     }
   };
+
+  const renderModals = () => (
+    <>
+      {/* All Reports & Document Repository Modal */}
+      <ReportsManagerModal
+        isOpen={reportsModalOpen}
+        onClose={() => setReportsModalOpen(false)}
+        onSelectDocument={(id: string) => {
+          setSelectedDocId(id);
+          setAccessDenied(false);
+        }}
+        onShareDocument={(doc: any) => {
+          setSelectedDocId(doc._id);
+          setShareModalOpen(true);
+        }}
+        onDocumentDeleted={(deletedId: string) => {
+          setAvailableDocs((prev: any[]) => prev.filter((d: any) => d._id !== deletedId));
+          if (selectedDocId === deletedId) {
+            fetchDocs();
+          }
+        }}
+      />
+
+      {/* Sharing & Permissions Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        documentId={selectedDocId}
+        docDetails={docDetails}
+        onShareUpdated={(updatedDoc: any) => {
+          setDocDetails(updatedDoc);
+          fetchDocs();
+        }}
+      />
+
+      {/* Create New Group Document Modal */}
+      {createModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1100, backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary, #1e293b)',
+            border: '1px solid var(--border-color, #334155)',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '440px',
+            width: '90%',
+            color: '#f8fafc'
+          }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', color: '#38bdf8' }}>📄 Create New Group Document</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+              You will be set as the Document Owner. You can then grant sharing permission to your group members.
+            </p>
+
+            <form onSubmit={handleCreateDocument}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.35rem' }}>
+                  Document Title:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Group 4 - System Architecture Report"
+                  value={newDocTitle}
+                  onChange={e => setNewDocTitle(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #475569',
+                    background: '#0f172a',
+                    color: '#fff',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Optional Group Member Selection during Creation */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.5rem' }}>
+                  <span>👥 Select Initial Group Members (Optional):</span>
+                  <span style={{ fontSize: '0.75rem', color: '#38bdf8' }}>{selectedMembersForCreate.length} Selected</span>
+                </label>
+
+                <div style={{
+                  maxHeight: '150px',
+                  overflowY: 'auto',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  background: '#0f172a',
+                  padding: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem'
+                }}>
+                  {registeredUsersForCreate.length === 0 ? (
+                    <div style={{ color: '#64748b', fontSize: '0.8rem', padding: '0.5rem', textAlign: 'center' }}>
+                      No other registered members found. You can also share later using the Share button.
+                    </div>
+                  ) : (
+                    registeredUsersForCreate.map((u: any) => {
+                      const userIdentifier = u.username || u.studentId || u.email;
+                      const displayName = u.name ? `${u.name} (${userIdentifier})` : userIdentifier;
+                      const isSelected = selectedMembersForCreate.includes(userIdentifier);
+
+                      const toggleMember = () => {
+                        if (isSelected) {
+                          setSelectedMembersForCreate((prev: string[]) => prev.filter(id => id !== userIdentifier));
+                        } else {
+                          setSelectedMembersForCreate((prev: string[]) => [...prev, userIdentifier]);
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={u._id || userIdentifier}
+                          onClick={toggleMember}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            padding: '0.4rem 0.6rem',
+                            borderRadius: '6px',
+                            background: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                            border: `1px solid ${isSelected ? '#38bdf8' : 'transparent'}`,
+                            cursor: 'pointer',
+                            fontSize: '0.82rem',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}} // Handled by div click
+                            style={{ cursor: 'pointer', accentColor: '#38bdf8' }}
+                          />
+                          <div style={{ flex: 1, color: isSelected ? '#f8fafc' : '#cbd5e1' }}>
+                            <strong>{displayName}</strong>
+                            <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '0.4rem' }}>
+                              ({u.role || 'student'})
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateModalOpen(false);
+                    setSelectedMembersForCreate([]);
+                  }}
+                  style={{ background: '#334155', border: 'none', color: '#cbd5e1', padding: '0.6rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', fontWeight: 'bold', padding: '0.6rem 1.25rem', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  Create Document
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   // Require Authentication Screen
   if (!isAuthenticated) {
@@ -721,6 +901,7 @@ function EditorComponent() {
             + Create My First Group Document
           </button>
         </div>
+        {renderModals()}
       </div>
     );
   }
@@ -770,11 +951,15 @@ function EditorComponent() {
                 outline: 'none'
               }}
             >
-              {availableDocs.map(doc => (
-                <option key={doc._id} value={doc._id}>
-                  {doc.title || doc._id}
-                </option>
-              ))}
+              {availableDocs.length === 0 ? (
+                <option value="">No other authorized documents found</option>
+              ) : (
+                availableDocs.map(doc => (
+                  <option key={doc._id} value={doc._id}>
+                    {doc.title || doc._id}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -812,6 +997,7 @@ function EditorComponent() {
             </button>
           </div>
         </div>
+        {renderModals()}
       </div>
     );
   }
@@ -1330,175 +1516,8 @@ function EditorComponent() {
         </div>
       )}
 
-      {/* All Reports & Document Repository Modal */}
-      <ReportsManagerModal
-        isOpen={reportsModalOpen}
-        onClose={() => setReportsModalOpen(false)}
-        onSelectDocument={(id: string) => setSelectedDocId(id)}
-        onShareDocument={(doc: any) => {
-          setSelectedDocId(doc._id);
-          setShareModalOpen(true);
-        }}
-        onDocumentDeleted={(deletedId: string) => {
-          setAvailableDocs((prev: any[]) => prev.filter((d: any) => d._id !== deletedId));
-          if (selectedDocId === deletedId) {
-            fetchDocs();
-          }
-        }}
-      />
-
-      {/* Sharing & Permissions Modal */}
-      <ShareModal
-        isOpen={shareModalOpen}
-        onClose={() => setShareModalOpen(false)}
-        documentId={selectedDocId}
-        docDetails={docDetails}
-        onShareUpdated={(updatedDoc: any) => {
-          setDocDetails(updatedDoc);
-          fetchDocs();
-        }}
-      />
-
-      {/* Create New Group Document Modal */}
-      {createModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1100, backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: 'var(--bg-secondary, #1e293b)',
-            border: '1px solid var(--border-color, #334155)',
-            borderRadius: '12px',
-            padding: '2rem',
-            maxWidth: '440px',
-            width: '90%',
-            color: '#f8fafc'
-          }}>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#38bdf8' }}>📄 Create New Group Document</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-              You will be set as the Document Owner. You can then grant sharing permission to your group members.
-            </p>
-
-            <form onSubmit={handleCreateDocument}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.35rem' }}>
-                  Document Title:
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Group 4 - System Architecture Report"
-                  value={newDocTitle}
-                  onChange={e => setNewDocTitle(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid #475569',
-                    background: '#0f172a',
-                    color: '#fff',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              {/* Optional Group Member Selection during Creation */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.5rem' }}>
-                  <span>👥 Select Initial Group Members (Optional):</span>
-                  <span style={{ fontSize: '0.75rem', color: '#38bdf8' }}>{selectedMembersForCreate.length} Selected</span>
-                </label>
-
-                <div style={{
-                  maxHeight: '150px',
-                  overflowY: 'auto',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  background: '#0f172a',
-                  padding: '0.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.35rem'
-                }}>
-                  {registeredUsersForCreate.length === 0 ? (
-                    <div style={{ color: '#64748b', fontSize: '0.8rem', padding: '0.5rem', textAlign: 'center' }}>
-                      No other registered members found. You can also share later using the Share button.
-                    </div>
-                  ) : (
-                    registeredUsersForCreate.map((u: any) => {
-                      const userIdentifier = u.username || u.studentId || u.email;
-                      const displayName = u.name ? `${u.name} (${userIdentifier})` : userIdentifier;
-                      const isSelected = selectedMembersForCreate.includes(userIdentifier);
-
-                      const toggleMember = () => {
-                        if (isSelected) {
-                          setSelectedMembersForCreate((prev: string[]) => prev.filter(id => id !== userIdentifier));
-                        } else {
-                          setSelectedMembersForCreate((prev: string[]) => [...prev, userIdentifier]);
-                        }
-                      };
-
-                      return (
-                        <div
-                          key={u._id || userIdentifier}
-                          onClick={toggleMember}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            padding: '0.4rem 0.6rem',
-                            borderRadius: '6px',
-                            background: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                            border: `1px solid ${isSelected ? '#38bdf8' : 'transparent'}`,
-                            cursor: 'pointer',
-                            fontSize: '0.82rem',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}} // Handled by div click
-                            style={{ cursor: 'pointer', accentColor: '#38bdf8' }}
-                          />
-                          <div style={{ flex: 1, color: isSelected ? '#f8fafc' : '#cbd5e1' }}>
-                            <strong>{displayName}</strong>
-                            <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '0.4rem' }}>
-                              ({u.role || 'student'})
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCreateModalOpen(false);
-                    setSelectedMembersForCreate([]);
-                  }}
-                  style={{ background: '#334155', border: 'none', color: '#cbd5e1', padding: '0.6rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', fontWeight: 'bold', padding: '0.6rem 1.25rem', borderRadius: '6px', cursor: 'pointer' }}
-                >
-                  Create Document
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modals: Reports Manager, Share & Create Document */}
+      {renderModals()}
     </div>
   );
 }
