@@ -36,30 +36,12 @@ export default function LecturerDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    setMounted(true);
-    const currentUser = getUser();
-    if (!currentUser || currentUser.role !== 'lecturer') {
-      router.push('/login?role=lecturer');
-      return;
-    }
-    setUser(currentUser);
-    fetchInitialData();
-  }, [router]);
-
-  const fetchInitialData = async () => {
-    setLoading(true);
+  const loadTeamAnalytics = async (teamId: string) => {
     try {
-      const data = await api.assignments.getAll();
-      setAssignments(data.assignments || []);
-      if (data.assignments && data.assignments.length > 0) {
-        setSelectedAssignment(data.assignments[0]);
-        await loadAssignmentReports(data.assignments[0]._id);
-      }
-    } catch {
-      setError('Could not load assignments data. Ensure backend is running.');
-    } finally {
-      setLoading(false);
+      const data = await api.analytics.getTeamAnalytics(teamId);
+      setTeamAnalytics(data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -80,14 +62,32 @@ export default function LecturerDashboard() {
     }
   };
 
-  const loadTeamAnalytics = async (teamId: string) => {
+  const fetchInitialData = async () => {
+    setLoading(true);
     try {
-      const data = await api.analytics.getTeamAnalytics(teamId);
-      setTeamAnalytics(data);
-    } catch (err) {
-      console.error(err);
+      const data = await api.assignments.getAll();
+      setAssignments(data.assignments || []);
+      if (data.assignments && data.assignments.length > 0) {
+        setSelectedAssignment(data.assignments[0]);
+        await loadAssignmentReports(data.assignments[0]._id);
+      }
+    } catch {
+      setError('Could not load assignments data. Ensure backend is running.');
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setMounted(true);
+    const currentUser = getUser();
+    if (!currentUser || currentUser.role !== 'lecturer') {
+      router.push('/login?role=lecturer');
+      return;
+    }
+    setUser(currentUser);
+    fetchInitialData();
+  }, [router]);
 
   const handleAssignmentChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = assignments.find((a) => a._id === e.target.value);

@@ -127,7 +127,7 @@ export const CommitsTab: React.FC<CommitsTabProps> = ({
             ))
           ) : (
             <div className="text-center text-xs text-slate-400 py-12">
-              No commit logs recorded yet. Push commits to GitHub and click "Sync Git".
+              No commit logs recorded yet. Push commits to GitHub and click &quot;Sync Git&quot;.
             </div>
           )}
         </div>

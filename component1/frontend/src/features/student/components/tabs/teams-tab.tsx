@@ -133,7 +133,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
         </div>
       ) : (
         <div className="bg-white border border-slate-200/80 p-12 rounded-3xl text-center text-xs text-slate-500">
-          You are not a member of any teams yet. Click "Form General Team" to create one.
+          You are not a member of any teams yet. Click &quot;Form General Team&quot; to create one.
         </div>
       )}
     </div>

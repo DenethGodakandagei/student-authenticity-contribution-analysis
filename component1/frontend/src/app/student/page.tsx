@@ -91,34 +91,28 @@ export default function StudentDashboard() {
   const [studentBreakdown, setStudentBreakdown] = useState<any[]>([]);
   const [commitsList, setCommitsList] = useState<any[]>([]);
 
-  useEffect(() => {
-    setMounted(true);
-    const currentUser = getUser();
-    if (!currentUser || currentUser.role !== 'student') {
-      router.push('/login?role=student');
-      return;
-    }
-    setStudent(currentUser);
-    fetchData();
-  }, [router]);
-
-  const fetchData = async () => {
+  const checkAndRestoreWorkspace = async (assignmentId: string, teamObj?: any) => {
     try {
-      const data = await api.assignments.getAll();
-      setAssignments(data.assignments || []);
-
-      const directoryRes = await api.users.getStudents().catch(() => ({ students: [] }));
-      setStudentsList(directoryRes.students || []);
-
-      const teamsRes = await api.teams.getMyTeams().catch(() => ({ teams: [] }));
-      setMyTeams(teamsRes.teams || []);
-
-      if (data.assignments && data.assignments.length > 0) {
-        setSelectedAssignment(data.assignments[0]);
-        await loadStudentContext(data.assignments[0]._id);
+      const snapshot = getWorkspaceSnapshot(assignmentId);
+      if (snapshot) {
+        if (snapshot.folderName) setLocalDirName(snapshot.folderName);
+        if (snapshot.scannedFiles) setScannedFiles(snapshot.scannedFiles);
+        if (snapshot.offlineEdits) setOfflineEdits(snapshot.offlineEdits);
+        if (snapshot.gitVerification) setGitVerification(snapshot.gitVerification);
       }
-    } catch {
-      setError('Could not fetch student profiles. Ensure backend server is active.');
+
+      const saved = await getWorkspaceHandle(assignmentId);
+      if (saved && saved.handle) {
+        setLocalDirName(saved.folderName);
+        const hasPermission = await verifyHandlePermission(saved.handle, false);
+        if (hasPermission) {
+          setLocalDirHandle(saved.handle);
+          const check = await verifyLocalGitRepository(saved.handle, teamObj?.repositoryUrl || repoUrl);
+          setGitVerification(check);
+        }
+      }
+    } catch (err) {
+      console.warn('Workspace restore error:', err);
     }
   };
 
@@ -159,30 +153,36 @@ export default function StudentDashboard() {
     }
   };
 
-  const checkAndRestoreWorkspace = async (assignmentId: string, teamObj?: any) => {
+  const fetchData = async () => {
     try {
-      const snapshot = getWorkspaceSnapshot(assignmentId);
-      if (snapshot) {
-        if (snapshot.folderName) setLocalDirName(snapshot.folderName);
-        if (snapshot.scannedFiles) setScannedFiles(snapshot.scannedFiles);
-        if (snapshot.offlineEdits) setOfflineEdits(snapshot.offlineEdits);
-        if (snapshot.gitVerification) setGitVerification(snapshot.gitVerification);
-      }
+      const data = await api.assignments.getAll();
+      setAssignments(data.assignments || []);
 
-      const saved = await getWorkspaceHandle(assignmentId);
-      if (saved && saved.handle) {
-        setLocalDirName(saved.folderName);
-        const hasPermission = await verifyHandlePermission(saved.handle, false);
-        if (hasPermission) {
-          setLocalDirHandle(saved.handle);
-          const check = await verifyLocalGitRepository(saved.handle, teamObj?.repositoryUrl || repoUrl);
-          setGitVerification(check);
-        }
+      const directoryRes = await api.users.getStudents().catch(() => ({ students: [] }));
+      setStudentsList(directoryRes.students || []);
+
+      const teamsRes = await api.teams.getMyTeams().catch(() => ({ teams: [] }));
+      setMyTeams(teamsRes.teams || []);
+
+      if (data.assignments && data.assignments.length > 0) {
+        setSelectedAssignment(data.assignments[0]);
+        await loadStudentContext(data.assignments[0]._id);
       }
-    } catch (err) {
-      console.warn('Workspace restore error:', err);
+    } catch {
+      setError('Could not fetch student profiles. Ensure backend server is active.');
     }
   };
+
+  useEffect(() => {
+    setMounted(true);
+    const currentUser = getUser();
+    if (!currentUser || currentUser.role !== 'student') {
+      router.push('/login?role=student');
+      return;
+    }
+    setStudent(currentUser);
+    fetchData();
+  }, [router]);
 
   const handleAssignmentChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = assignments.find((a) => a._id === e.target.value);
