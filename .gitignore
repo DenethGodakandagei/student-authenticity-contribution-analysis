@@ -83,11 +83,7 @@ collabintel_telemetry.db
 # ------------------------------------------
 # IDEs & Editors
 # ------------------------------------------
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
 .idea/
 *.suo
 *.ntvs*
