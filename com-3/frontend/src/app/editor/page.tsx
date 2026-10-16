@@ -19,6 +19,7 @@ import { io } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 import ShareModal from '../../components/ShareModal';
 import ReportsManagerModal from '../../components/ReportsManagerModal';
+import { ToastContainer, CustomPromptDialog, CustomConfirmDialog, ToastItem } from '../../components/CustomDialog';
 import { getBackendUrl } from '../../utils/apiConfig';
 
 const getSocketUrl = () => getBackendUrl();
@@ -84,23 +85,19 @@ const clearPendingEdit = async (docId: string) => {
   }
 };
 
-const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSaveAndRename }: any) => {
+const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink }: any) => {
   if (!editor) return null;
   
   const addImage = () => {
-    const url = window.prompt('URL of the image:');
-    if (url) editor.chain().focus().setImage({ src: url }).run();
+    if (onPromptImage) {
+      onPromptImage();
+    }
   };
 
   const setLink = () => {
-    const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('URL of the link:', previousUrl);
-    if (url === null) return;
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
+    if (onPromptLink) {
+      onPromptLink();
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
   return (
@@ -190,21 +187,44 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSaveAndRename
           onClick={toggleOffline}
           className="toolbar-btn"
           style={{
-            background: isOffline ? '#10b981' : '#f59e0b',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '0.85rem'
+            background: isOffline ? '#0D9488' : '#F8FAFC',
+            borderColor: isOffline ? '#0D9488' : '#CBD5E1',
+            color: isOffline ? '#FFFFFF' : '#334155',
+            fontWeight: 700,
+            fontSize: '0.82rem'
           }}
         >
-          {isOffline ? 'Go Online & Sync' : 'Go Offline'}
+          {isOffline ? '🟢 Go Online & Sync' : '⚡ Go Offline'}
+        </button>
+
+        <button 
+          onClick={onSave} 
+          className="toolbar-btn" 
+          title="Save Document"
+          style={{ 
+            background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)', 
+            border: 'none',
+            color: '#FFFFFF', 
+            fontWeight: 700,
+            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
+          }}
+        >
+          💾 Save
         </button>
 
         <button 
           onClick={onSaveAndRename} 
           className="toolbar-btn" 
-          style={{ background: '#10b981', color: 'white', fontWeight: 'bold' }}
+          title="Save & Rename Document"
+          style={{ 
+            background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)', 
+            border: 'none',
+            color: '#FFFFFF', 
+            fontWeight: 700,
+            boxShadow: '0 2px 8px rgba(13, 148, 136, 0.3)'
+          }}
         >
-          💾 Save & Rename
+          ✏️ Save & Rename
         </button>
       </div>
     </div>
@@ -232,6 +252,50 @@ function EditorComponent() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [registeredUsersForCreate, setRegisteredUsersForCreate] = useState<any[]>([]);
   const [selectedMembersForCreate, setSelectedMembersForCreate] = useState<string[]>([]);
+
+  // Professional Toast & Custom Dialog State
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [promptDialog, setPromptDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    defaultValue?: string;
+    placeholder?: string;
+    confirmLabel?: string;
+    onConfirm: (val: string) => void;
+  }>({
+    isOpen: false,
+    title: '',
+    defaultValue: '',
+    onConfirm: () => {}
+  });
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    isDanger?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', title?: string) => {
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
+    setToasts(prev => [...prev, { id, message, type, title }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3500);
+  };
+
+  const dismissToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
 
   // Fetch users when create modal opens
   useEffect(() => {
@@ -341,6 +405,7 @@ function EditorComponent() {
   const isExternalDoc = isGoogleDoc || isMSWord;
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
@@ -525,9 +590,9 @@ function EditorComponent() {
           if (response.ok) {
             await clearPendingEdit(selectedDocId);
             setOfflineRevisions([]);
-            alert("Offline changes synced to server successfully!");
+            showToast("Offline changes synced to server successfully!", "success", "Synced to Cloud");
           } else {
-            alert("Warning: Failed to sync offline edits with server.");
+            showToast("Failed to sync offline edits with server.", "error", "Sync Warning");
           }
         }
       } catch (err) {
@@ -566,28 +631,22 @@ function EditorComponent() {
       setDocDetails(data.document);
       setSelectedDocId(data.document._id);
       fetchDocs();
+      showToast(`Document "${data.document.title}" created successfully!`, 'success', 'Document Created');
     } catch (err: any) {
-      alert(`Error creating document: ${err.message}`);
+      showToast(err.message, 'error', 'Creation Error');
     }
   };
 
-  const handleRenameDocument = async (customTitle: string | null = null) => {
-    if (!selectedDocId || !user) return;
-    const currentTitle = docDetails?.title || selectedDocId;
-    const newTitle = customTitle !== null ? customTitle : window.prompt("Rename Document Title:", currentTitle);
-
-    if (newTitle === null || !newTitle.trim()) return;
-    if (newTitle.trim() === currentTitle && customTitle === null) return;
-
+  const executeRename = async (newTitle: string) => {
     try {
       const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/rename`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: newTitle.trim(),
-          username: user.username,
-          studentId: user.studentId,
-          role: user.role
+          username: user?.username,
+          studentId: user?.studentId,
+          role: user?.role
         })
       });
 
@@ -596,53 +655,151 @@ function EditorComponent() {
 
       setDocDetails((prev: any) => prev ? { ...prev, title: data.title } : null);
       fetchDocs();
-      alert(`Document renamed successfully to "${data.title}"!`);
+      showToast(`Document renamed to "${data.title}"`, 'success', 'Title Updated');
     } catch (err: any) {
-      alert(`Error renaming document: ${err.message}`);
+      showToast(err.message, 'error', 'Rename Error');
     }
+  };
+
+  const handleRenameDocument = (customTitle: string | null = null) => {
+    if (!selectedDocId || !user) return;
+    const currentTitle = docDetails?.title || selectedDocId;
+
+    if (customTitle !== null) {
+      if (!customTitle.trim() || customTitle.trim() === currentTitle) return;
+      executeRename(customTitle.trim());
+      return;
+    }
+
+    setPromptDialog({
+      isOpen: true,
+      title: "Rename Document",
+      subtitle: `Currently named: "${currentTitle}"`,
+      defaultValue: currentTitle,
+      placeholder: "e.g. Group 4 - System Architecture Report",
+      confirmLabel: "Update Title",
+      onConfirm: async (newVal: string) => {
+        setPromptDialog((prev: any) => ({ ...prev, isOpen: false }));
+        if (newVal.trim() && newVal.trim() !== currentTitle) {
+          await executeRename(newVal.trim());
+        }
+      }
+    });
+  };
+
+  // Track documents where title was already confirmed/named during save
+  const [hasSavedOnce, setHasSavedOnce] = useState<Record<string, boolean>>({});
+
+  const saveContentAndNotify = () => {
+    if (editor) {
+      const html = editor.getHTML();
+      if (isOffline) {
+        savePendingEdit(selectedDocId, html, effectiveAuthor, offlineRevisions);
+        showToast("Offline changes saved locally in browser cache", "info", "Offline Saved");
+      } else {
+        if (socket) {
+          socket.emit('send-changes', {
+            documentId: selectedDocId,
+            content: html,
+            author: effectiveAuthor,
+            studentId: user?.studentId || user?.username
+          });
+        }
+        showToast(`Document "${docDetails?.title || selectedDocId}" saved to cloud database!`, "success", "Saved Successfully");
+      }
+    }
+  };
+
+  const handleSave = () => {
+    if (!selectedDocId || !user) return;
+    const currentTitle = docDetails?.title || '';
+
+    // Only prompt for title on first save if document has a generic ID or default title
+    const isFirstTimeOrUntitled = !hasSavedOnce[selectedDocId] && (
+      !currentTitle || 
+      currentTitle.startsWith('doc_') || 
+      currentTitle.toLowerCase().includes('untitled')
+    );
+
+    if (isFirstTimeOrUntitled) {
+      setPromptDialog({
+        isOpen: true,
+        title: "Name Your Document",
+        subtitle: "First-time save — Assign a recognizable title for your team report.",
+        defaultValue: currentTitle || "My Group Report",
+        placeholder: "e.g. Group 4 - System Architecture Report",
+        confirmLabel: "Save & Set Title",
+        onConfirm: async (val: string) => {
+          setPromptDialog((prev: any) => ({ ...prev, isOpen: false }));
+          if (val.trim()) {
+            await executeRename(val.trim());
+          }
+          setHasSavedOnce(prev => ({ ...prev, [selectedDocId]: true }));
+          saveContentAndNotify();
+        }
+      });
+      return;
+    }
+
+    saveContentAndNotify();
   };
 
   const handleSaveAndRename = () => {
+    if (!selectedDocId || !user) return;
     const currentTitle = docDetails?.title || selectedDocId;
-    const promptTitle = window.prompt("Save Document - Enter or update document title:", currentTitle);
-    
-    if (promptTitle === null) return;
 
-    if (promptTitle.trim() && promptTitle.trim() !== currentTitle) {
-      handleRenameDocument(promptTitle.trim());
-    } else {
-      alert(`Document "${currentTitle}" saved successfully!`);
-    }
+    setPromptDialog({
+      isOpen: true,
+      title: "Save & Rename Document",
+      subtitle: "Enter a new document title to update across your group and save.",
+      defaultValue: currentTitle,
+      placeholder: "e.g. Final Group Submission Report",
+      confirmLabel: "Save & Rename",
+      onConfirm: async (val: string) => {
+        setPromptDialog((prev: any) => ({ ...prev, isOpen: false }));
+        if (val.trim() && val.trim() !== currentTitle) {
+          await executeRename(val.trim());
+          setHasSavedOnce(prev => ({ ...prev, [selectedDocId]: true }));
+        }
+        saveContentAndNotify();
+      }
+    });
   };
 
-  const handleDeleteActiveDocument = async () => {
+  const handleDeleteActiveDocument = () => {
     if (!selectedDocId || !user) return;
     const title = docDetails?.title || selectedDocId;
 
-    const confirmDelete = window.confirm(
-      `Are you sure you want to permanently delete "${title}"?\n\nThis will purge all content and revision history. This action cannot be undone.`
-    );
-    if (!confirmDelete) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: "Permanently Delete Document?",
+      message: `Are you sure you want to delete "${title}"?\n\nThis will permanently purge all content and revision history for all group collaborators. This action cannot be undone.`,
+      confirmLabel: "Delete Document",
+      cancelLabel: "Keep Document",
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmDialog((prev: any) => ({ ...prev, isOpen: false }));
+        try {
+          const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+          const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`, {
+            method: 'DELETE'
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to delete document');
 
-    try {
-      const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
-      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`, {
-        method: 'DELETE'
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete document');
-
-      alert("Document deleted successfully!");
-      const updated = availableDocs.filter((d: any) => d._id !== selectedDocId);
-      setAvailableDocs(updated);
-      if (updated.length > 0) {
-        setSelectedDocId(updated[0]._id);
-      } else {
-        setSelectedDocId('');
+          showToast(`Document "${title}" was permanently deleted.`, 'info', 'Document Deleted');
+          const updated = availableDocs.filter((d: any) => d._id !== selectedDocId);
+          setAvailableDocs(updated);
+          if (updated.length > 0) {
+            setSelectedDocId(updated[0]._id);
+          } else {
+            setSelectedDocId('');
+          }
+        } catch (err: any) {
+          showToast(err.message, 'error', 'Delete Error');
+        }
       }
-    } catch (err: any) {
-      alert(`Error deleting document: ${err.message}`);
-    }
+    });
   };
 
   const renderModals = () => (
@@ -684,27 +841,64 @@ function EditorComponent() {
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1100, backdropFilter: 'blur(4px)'
+          zIndex: 1100, backdropFilter: 'blur(6px)',
+          animation: 'fadeIn 0.2s ease-out'
         }}>
           <div style={{
-            background: 'var(--bg-secondary, #1e293b)',
-            border: '1px solid var(--border-color, #334155)',
-            borderRadius: '12px',
-            padding: '2rem',
-            maxWidth: '440px',
-            width: '90%',
-            color: '#f8fafc'
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '14px',
+            maxWidth: '480px',
+            width: '92%',
+            boxShadow: '0 25px 50px -12px rgba(30, 58, 138, 0.25)',
+            overflow: 'hidden'
           }}>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#38bdf8' }}>📄 Create New Group Document</h3>
-            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-              You will be set as the Document Owner. You can then grant sharing permission to your group members.
-            </p>
+            {/* Deep Navy Institutional Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%)',
+              padding: '1.25rem 1.5rem',
+              color: '#FFFFFF',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
+                  📄 Create New Group Document
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: '#93C5FD' }}>
+                  Institutional Collaborative Workspace
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateModalOpen(false);
+                  setSelectedMembersForCreate([]);
+                }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.1rem'
+                }}
+              >
+                &times;
+              </button>
+            </div>
 
-            <form onSubmit={handleCreateDocument}>
+            <form onSubmit={handleCreateDocument} style={{ padding: '1.5rem' }}>
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.35rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.45rem' }}>
                   Document Title:
                 </label>
                 <input
@@ -715,37 +909,45 @@ function EditorComponent() {
                   onChange={e => setNewDocTitle(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid #475569',
-                    background: '#0f172a',
-                    color: '#fff',
-                    outline: 'none'
+                    padding: '0.75rem 0.9rem',
+                    borderRadius: '8px',
+                    border: '1.5px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#0F172A',
+                    fontSize: '0.92rem',
+                    outline: 'none',
+                    boxSizing: 'border-box'
                   }}
+                  onFocus={e => (e.target.style.borderColor = '#4F46E5')}
+                  onBlur={e => (e.target.style.borderColor = '#CBD5E1')}
                 />
               </div>
 
               {/* Optional Group Member Selection during Creation */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '0.5rem' }}>
-                  <span>👥 Select Initial Group Members (Optional):</span>
-                  <span style={{ fontSize: '0.75rem', color: '#38bdf8' }}>{selectedMembersForCreate.length} Selected</span>
-                </label>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
+                    👥 Initial Group Members (Optional):
+                  </label>
+                  <span style={{ fontSize: '0.75rem', background: '#CCFBF1', color: '#0F766E', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
+                    {selectedMembersForCreate.length} Selected
+                  </span>
+                </div>
 
                 <div style={{
-                  maxHeight: '150px',
+                  maxHeight: '160px',
                   overflowY: 'auto',
-                  border: '1px solid #334155',
+                  border: '1px solid #E2E8F0',
                   borderRadius: '8px',
-                  background: '#0f172a',
+                  background: '#F8FAFC',
                   padding: '0.5rem',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.35rem'
                 }}>
                   {registeredUsersForCreate.length === 0 ? (
-                    <div style={{ color: '#64748b', fontSize: '0.8rem', padding: '0.5rem', textAlign: 'center' }}>
-                      No other registered members found. You can also share later using the Share button.
+                    <div style={{ color: '#64748B', fontSize: '0.8rem', padding: '0.75rem', textAlign: 'center' }}>
+                      No other registered members found. You can also grant permissions later using the Share button.
                     </div>
                   ) : (
                     registeredUsersForCreate.map((u: any) => {
@@ -769,24 +971,24 @@ function EditorComponent() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.6rem',
-                            padding: '0.4rem 0.6rem',
+                            padding: '0.5rem 0.65rem',
                             borderRadius: '6px',
-                            background: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                            border: `1px solid ${isSelected ? '#38bdf8' : 'transparent'}`,
+                            background: isSelected ? '#EEF2FF' : '#FFFFFF',
+                            border: `1px solid ${isSelected ? '#818CF8' : '#E2E8F0'}`,
                             cursor: 'pointer',
-                            fontSize: '0.82rem',
+                            fontSize: '0.83rem',
                             transition: 'all 0.15s ease'
                           }}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => {}} // Handled by div click
-                            style={{ cursor: 'pointer', accentColor: '#38bdf8' }}
+                            onChange={() => {}}
+                            style={{ cursor: 'pointer', accentColor: '#4F46E5' }}
                           />
-                          <div style={{ flex: 1, color: isSelected ? '#f8fafc' : '#cbd5e1' }}>
+                          <div style={{ flex: 1, color: isSelected ? '#1E3A8A' : '#334155' }}>
                             <strong>{displayName}</strong>
-                            <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '0.4rem' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#64748B', marginLeft: '0.4rem' }}>
                               ({u.role || 'student'})
                             </span>
                           </div>
@@ -797,20 +999,39 @@ function EditorComponent() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => {
                     setCreateModalOpen(false);
                     setSelectedMembersForCreate([]);
                   }}
-                  style={{ background: '#334155', border: 'none', color: '#cbd5e1', padding: '0.6rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{
+                    background: '#F8FAFC',
+                    border: '1px solid #CBD5E1',
+                    color: '#475569',
+                    padding: '0.65rem 1.15rem',
+                    borderRadius: '8px',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', fontWeight: 'bold', padding: '0.6rem 1.25rem', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{
+                    background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    padding: '0.65rem 1.35rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)'
+                  }}
                 >
                   Create Document
                 </button>
@@ -819,6 +1040,33 @@ function EditorComponent() {
           </div>
         </div>
       )}
+
+      {/* Professional Toast Notification Container */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {/* Interactive Custom Prompt Dialog (replaces window.prompt) */}
+      <CustomPromptDialog
+        isOpen={promptDialog.isOpen}
+        title={promptDialog.title}
+        subtitle={promptDialog.subtitle}
+        defaultValue={promptDialog.defaultValue}
+        placeholder={promptDialog.placeholder}
+        confirmLabel={promptDialog.confirmLabel}
+        onConfirm={promptDialog.onConfirm}
+        onCancel={() => setPromptDialog(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Interactive Custom Confirmation Dialog (replaces window.confirm) */}
+      <CustomConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        cancelLabel={confirmDialog.cancelLabel}
+        isDanger={confirmDialog.isDanger}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
     </>
   );
 
@@ -832,37 +1080,50 @@ function EditorComponent() {
         justifyContent: 'center',
         padding: '2rem'
       }}>
-        <div className="login-box" style={{
-          maxWidth: '520px',
+        <div style={{
+          maxWidth: '480px',
           width: '100%',
           padding: '2.5rem',
-          borderRadius: '12px',
-          background: 'var(--bg-secondary, #1e293b)',
-          border: '1px solid var(--border-color, #334155)',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
+          borderRadius: '16px',
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 25px 50px -12px rgba(30, 58, 138, 0.15)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🔐</div>
-          <h2 style={{ color: 'var(--text-primary, #f8fafc)', marginBottom: '0.5rem', fontSize: '1.5rem', fontWeight: 600 }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: '#EEF2FF',
+            color: '#4F46E5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.75rem',
+            margin: '0 auto 1.25rem auto'
+          }}>
+            🔐
+          </div>
+          <h2 style={{ color: '#1E3A8A', marginBottom: '0.5rem', fontSize: '1.4rem', fontWeight: 800 }}>
             Student Authentication Required
           </h2>
-          <p style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+          <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
             To accurately recognize who is working on the document and enforce group security permissions, please log in or create a student account.
           </p>
           
           <button 
             onClick={openAuthModal}
             style={{ 
-              background: 'linear-gradient(135deg, #3b82f6, #6366f1)', 
+              background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)', 
               color: 'white', 
               width: '100%', 
-              padding: '0.9rem', 
+              padding: '0.85rem', 
               borderRadius: '8px', 
               border: 'none', 
-              fontWeight: 600, 
-              fontSize: '1rem',
+              fontWeight: 700, 
+              fontSize: '0.95rem',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
             }}
           >
             Sign In / Register Account
@@ -876,26 +1137,48 @@ function EditorComponent() {
   if (!selectedDocId && availableDocs.length === 0) {
     return (
       <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-        <div style={{ maxWidth: '520px', width: '100%', padding: '2.5rem', borderRadius: '12px', background: 'var(--bg-secondary, #1e293b)', border: '1px solid var(--border-color, #334155)', textAlign: 'center' }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>📄</div>
-          <h2 style={{ color: '#f8fafc', fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+        <div style={{
+          maxWidth: '520px',
+          width: '100%',
+          padding: '2.5rem',
+          borderRadius: '16px',
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 20px 25px -5px rgba(30, 58, 138, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: '#CCFBF1',
+            color: '#0D9488',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.75rem',
+            margin: '0 auto 1.25rem auto'
+          }}>
+            📄
+          </div>
+          <h2 style={{ color: '#1E3A8A', fontSize: '1.45rem', fontWeight: 800, marginBottom: '0.5rem' }}>
             Welcome, {user?.name || 'Student'}!
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
+          <p style={{ color: '#475569', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
             You do not have any collaborative group reports yet. Create your first document to start writing with your team!
           </p>
           <button
             onClick={() => setCreateModalOpen(true)}
             style={{
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
               color: 'white',
-              padding: '0.85rem 1.5rem',
+              padding: '0.85rem 1.6rem',
               borderRadius: '8px',
               border: 'none',
-              fontWeight: 600,
-              fontSize: '1rem',
+              fontWeight: 700,
+              fontSize: '0.95rem',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
             }}
           >
             + Create My First Group Document
@@ -920,22 +1203,35 @@ function EditorComponent() {
           maxWidth: '540px',
           width: '100%',
           padding: '2.5rem',
-          borderRadius: '12px',
-          background: 'var(--bg-secondary, #1e293b)',
-          border: '1px solid #ef4444',
-          boxShadow: '0 20px 25px -5px rgba(239, 68, 68, 0.2)',
+          borderRadius: '16px',
+          background: '#FFFFFF',
+          border: '1px solid #FEE2E2',
+          boxShadow: '0 20px 25px -5px rgba(239, 68, 68, 0.1)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🚫</div>
-          <h2 style={{ color: '#fca5a5', margin: '0 0 0.5rem 0', fontSize: '1.6rem', fontWeight: 600 }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: '#FEE2E2',
+            color: '#EF4444',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.75rem',
+            margin: '0 auto 1rem auto'
+          }}>
+            🚫
+          </div>
+          <h2 style={{ color: '#1E3A8A', margin: '0 0 0.5rem 0', fontSize: '1.45rem', fontWeight: 800 }}>
             Access Denied &mdash; Restricted Document
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.92rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+          <p style={{ color: '#475569', fontSize: '0.92rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
             You do not have permission to view or edit this document. Only members explicitly granted permission by the group leader (<strong>{accessDeniedInfo?.ownerName || 'Group Leader'}</strong>) can access it.
           </p>
 
-          <div style={{ background: '#0f172a', padding: '1.25rem', borderRadius: '8px', border: '1px solid #334155', textAlign: 'left', marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '0.5rem' }}>
+          <div style={{ background: '#F8FAFC', padding: '1.25rem', borderRadius: '10px', border: '1px solid #E2E8F0', textAlign: 'left', marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.5rem' }}>
               Switch to an Authorized Document:
             </label>
             <select
@@ -944,11 +1240,12 @@ function EditorComponent() {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                borderRadius: '6px',
-                border: '1px solid #475569',
-                background: '#1e293b',
-                color: '#fff',
-                outline: 'none'
+                borderRadius: '8px',
+                border: '1.5px solid #CBD5E1',
+                background: '#FFFFFF',
+                color: '#0F172A',
+                outline: 'none',
+                fontSize: '0.9rem'
               }}
             >
               {availableDocs.length === 0 ? (
@@ -970,10 +1267,11 @@ function EditorComponent() {
                 flex: 1,
                 padding: '0.75rem',
                 borderRadius: '8px',
-                border: '1px solid #38bdf8',
-                background: 'rgba(56, 189, 248, 0.1)',
-                color: '#38bdf8',
-                fontWeight: 600,
+                border: '1px solid #CBD5E1',
+                background: '#F8FAFC',
+                color: '#334155',
+                fontWeight: 700,
+                fontSize: '0.85rem',
                 cursor: 'pointer'
               }}
             >
@@ -987,10 +1285,12 @@ function EditorComponent() {
                 padding: '0.75rem',
                 borderRadius: '8px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
                 color: '#fff',
-                fontWeight: 600,
-                cursor: 'pointer'
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
               }}
             >
               + Create My Own Group Document
@@ -1251,54 +1551,82 @@ function EditorComponent() {
       {/* Default Header Banner for Built-in Mode */}
       {!isExternalDoc && (
         <div style={{
-          background: 'var(--bg-secondary)',
-          padding: '0.75rem 1.5rem',
-          borderBottom: '1px solid var(--border-color)',
+          background: '#FFFFFF',
+          padding: '0.85rem 1.75rem',
+          borderBottom: '1px solid #E2E8F0',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
               <h3 
                 onClick={() => handleRenameDocument()}
                 title="Click to rename document"
-                style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)', cursor: 'pointer' }}
+                style={{
+                  margin: 0,
+                  fontSize: '1.15rem',
+                  fontWeight: 700,
+                  color: '#1E3A8A',
+                  cursor: 'pointer',
+                  letterSpacing: '-0.01em'
+                }}
               >
                 {docDetails?.title || selectedDocId}
               </h3>
               <button
                 onClick={() => handleRenameDocument()}
                 style={{
-                  background: 'transparent',
-                  border: '1px solid var(--border-color)',
-                  color: '#38bdf8',
-                  padding: '0.1rem 0.4rem',
-                  borderRadius: '4px',
+                  background: '#F8FAFC',
+                  border: '1px solid #CBD5E1',
+                  color: '#475569',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '6px',
                   fontSize: '0.75rem',
-                  cursor: 'pointer'
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
                 }}
               >
                 ✏️ Rename
               </button>
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Owner: {docDetails?.ownerName || docDetails?.owner || 'Group Leader'} &bull; In-Built Collaborative Workspace
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
+              <span style={{
+                fontSize: '0.72rem',
+                background: '#F0FDFA',
+                border: '1px solid #CCFBF1',
+                color: '#0D9488',
+                padding: '0.15rem 0.55rem',
+                borderRadius: '12px',
+                fontWeight: 700
+              }}>
+                👑 Owner: {docDetails?.ownerName || docDetails?.owner || 'Group Leader'}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                &bull; In-Built Collaborative Workspace
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <button
               onClick={() => setReportsModalOpen(true)}
               style={{
-                background: 'rgba(56, 189, 248, 0.1)',
-                color: '#38bdf8',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                padding: '0.4rem 0.8rem',
-                borderRadius: '6px',
-                fontWeight: 'bold',
+                background: '#F1F5F9',
+                color: '#334155',
+                border: '1px solid #CBD5E1',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                fontWeight: 600,
                 fontSize: '0.85rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem'
               }}
             >
               📁 All Reports
@@ -1307,14 +1635,15 @@ function EditorComponent() {
             <button
               onClick={() => setCreateModalOpen(true)}
               style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                color: 'white',
+                background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)',
+                color: '#FFFFFF',
                 border: 'none',
-                padding: '0.4rem 0.8rem',
-                borderRadius: '6px',
-                fontWeight: 'bold',
+                padding: '0.45rem 0.95rem',
+                borderRadius: '8px',
+                fontWeight: 600,
                 fontSize: '0.85rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(13, 148, 136, 0.3)'
               }}
             >
               + Create Group Doc
@@ -1323,14 +1652,18 @@ function EditorComponent() {
             <button
               onClick={() => setShareModalOpen(true)}
               style={{
-                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                color: 'white',
+                background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                color: '#FFFFFF',
                 border: 'none',
-                padding: '0.4rem 0.85rem',
-                borderRadius: '6px',
-                fontWeight: 'bold',
+                padding: '0.45rem 1rem',
+                borderRadius: '8px',
+                fontWeight: 600,
                 fontSize: '0.85rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
               }}
             >
               🔒 Share
@@ -1339,12 +1672,12 @@ function EditorComponent() {
             <button
               onClick={handleDeleteActiveDocument}
               style={{
-                background: 'rgba(239, 68, 68, 0.2)',
-                color: '#fca5a5',
-                border: '1px solid #ef4444',
-                padding: '0.4rem 0.75rem',
-                borderRadius: '6px',
-                fontWeight: 'bold',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                border: '1px solid #FECACA',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                fontWeight: 600,
                 fontSize: '0.85rem',
                 cursor: 'pointer'
               }}
@@ -1361,7 +1694,50 @@ function EditorComponent() {
         isOffline={isOffline} 
         syncStatus={syncStatus} 
         toggleOffline={toggleOffline} 
+        onSave={handleSave}
         onSaveAndRename={handleSaveAndRename}
+        onPromptImage={() => {
+          setPromptDialog({
+            isOpen: true,
+            title: 'Insert Image URL',
+            subtitle: 'Embed an image link directly into the document',
+            defaultValue: '',
+            placeholder: 'https://example.com/figure.png',
+            confirmLabel: 'Insert Image',
+            onConfirm: (url: string) => {
+              if (url && url.trim()) {
+                editor?.chain().focus().setImage({ src: url.trim() }).run();
+                showToast('Image inserted successfully', 'success', 'Image Added');
+              }
+              setPromptDialog(prev => ({ ...prev, isOpen: false }));
+            }
+          });
+        }}
+        onPromptLink={() => {
+          const previousUrl = editor?.getAttributes('link').href || '';
+          setPromptDialog({
+            isOpen: true,
+            title: 'Insert / Edit Hyperlink',
+            subtitle: 'Attach a web URL to the highlighted text',
+            defaultValue: previousUrl,
+            placeholder: 'https://example.com',
+            confirmLabel: 'Set Link',
+            onConfirm: (url: string) => {
+              if (url === null) {
+                setPromptDialog(prev => ({ ...prev, isOpen: false }));
+                return;
+              }
+              if (url === '') {
+                editor?.chain().focus().extendMarkRange('link').unsetLink().run();
+                showToast('Link removed', 'info', 'Link Removed');
+              } else {
+                editor?.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
+                showToast('Link attached successfully', 'success', 'Link Updated');
+              }
+              setPromptDialog(prev => ({ ...prev, isOpen: false }));
+            }
+          });
+        }}
       />
 
       {/* Editor Page Area & Collaborators Panel */}
@@ -1436,16 +1812,16 @@ function EditorComponent() {
         <div style={{
           flex: 1,
           maxWidth: '350px',
-          background: 'var(--bg-secondary)',
-          borderLeft: '1px solid var(--border-color)',
+          background: '#FFFFFF',
+          borderLeft: '1px solid #E2E8F0',
           padding: '1.5rem',
           overflowY: 'auto'
         }}>
-          <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h3 style={{ margin: '0 0 0.4rem 0', color: '#1E3A8A', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', fontWeight: 700 }}>
             👥 Collaborators
           </h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-            Click a contributor's name to isolate and highlight their specific contributions to the document.
+          <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+            Click an author to isolate and highlight their authentic contributions across the document revisions.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1465,33 +1841,35 @@ function EditorComponent() {
                       }
                     }}
                     style={{
-                      background: isActive ? a.bgColor : 'rgba(255, 255, 255, 0.05)',
-                      border: `1px solid ${isActive ? (a.borderColor || a.color) : 'var(--border-color)'}`,
+                      background: isActive ? '#F0FDFA' : '#F8FAFC',
+                      border: `1.5px solid ${isActive ? '#0D9488' : '#E2E8F0'}`,
                       padding: '1rem',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: isActive ? `0 4px 12px ${(a.borderColor || a.color)}33` : 'none'
+                      boxShadow: isActive ? '0 4px 12px rgba(13, 148, 136, 0.15)' : 'none'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: a.color || '#3b82f6', boxShadow: `0 0 8px ${a.color || '#3b82f6'}` }}></span>
-                      <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{a.author}</strong>
+                      <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: a.color || '#4F46E5', boxShadow: `0 0 6px ${a.color || '#4F46E5'}` }}></span>
+                      <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>{a.author}</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748B' }}>
                       <span>{a.totalWordsAdded} words</span>
-                      <strong style={{ color: a.color || '#3b82f6' }}>{a.percentage}%</strong>
+                      <strong style={{ color: a.color || '#0D9488' }}>{a.percentage}%</strong>
                     </div>
                     {/* Progress Bar */}
-                    <div style={{ width: '100%', height: '5px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px', marginTop: '0.5rem' }}>
-                      <div style={{ width: `${a.percentage}%`, height: '100%', background: a.color || '#3b82f6', borderRadius: '3px' }}></div>
+                    <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '4px', marginTop: '0.55rem', overflow: 'hidden' }}>
+                      <div style={{ width: `${a.percentage}%`, height: '100%', background: a.color || '#0D9488', borderRadius: '4px', transition: 'width 0.4s ease' }}></div>
                     </div>
                   </div>
                 )
               })
             ) : (
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', padding: '2rem 0', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
-                No contribution data found yet.<br/>Wait for ML analysis to run.
+              <div style={{ color: '#64748B', fontSize: '0.82rem', textAlign: 'center', padding: '2.5rem 1rem', background: '#F8FAFC', borderRadius: '10px', border: '1px dashed #CBD5E1' }}>
+                <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>👥</div>
+                <div style={{ fontWeight: 600, color: '#334155', marginBottom: '0.2rem' }}>No contribution data yet</div>
+                Type in the document to initiate AI & authenticity tracking.
               </div>
             )}
           </div>
