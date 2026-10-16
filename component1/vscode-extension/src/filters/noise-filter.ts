@@ -1,0 +1,176 @@
+import * as vscode from 'vscode';
+import * as path from 'path';
+import { EventCategory } from '../types';
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  NOISE & DEPENDENCY FILTERING ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Directory Blacklist ──────────────────────────────────────────────────────
+// Discard all file events from these directories (normalized to forward slashes)
+const BLACKLISTED_DIRS = [
+  '/node_modules/',
+  '/.git/',
+  '/dist/',
+  '/build/',
+  '/.next/',
+  '/coverage/',
+  '/.vscode/',
+  '/__pycache__/',
+  '/.cache/',
+  '/out/',           // common TS output dir
+  '/.turbo/',
+  '/vendor/',        // Go/PHP dependencies
+];
+
+// ── Lockfile Suppression ─────────────────────────────────────────────────────
+// These files generate massive diffs from package installs — not real coding
+const SUPPRESSED_LOCKFILES = new Set([
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lockb',
+  'composer.lock',
+  'Gemfile.lock',
+  'Cargo.lock',
+  'poetry.lock',
+  'pnpm-lock.json',
+]);
+
+// ── Source Code Extensions ───────────────────────────────────────────────────
+const SOURCE_CODE_EXTENSIONS = new Set([
+  '.js', '.ts', '.jsx', '.tsx', '.mjs', '.cjs',
+  '.py', '.pyw',
+  '.java', '.kt', '.kts',
+  '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp',
+  '.cs',
+  '.go',
+  '.rs',
+  '.rb',
+  '.php',
+  '.swift',
+  '.dart',
+  '.lua',
+  '.r', '.R',
+  '.scala',
+  '.vue', '.svelte',
+  '.html', '.htm', '.css', '.scss', '.sass', '.less',
+  '.sql',
+  '.sh', '.bash', '.zsh', '.ps1', '.bat', '.cmd',
+  '.md', '.mdx', '.txt', '.rst',
+  '.xml', '.yaml', '.yml', '.toml',
+]);
+
+// ── Config File Names ────────────────────────────────────────────────────────
+const CONFIG_FILE_NAMES = new Set([
+  'package.json',
+  'tsconfig.json',
+  'jsconfig.json',
+  '.eslintrc',
+  '.eslintrc.js',
+  '.eslintrc.json',
+  '.eslintrc.yml',
+  '.prettierrc',
+  '.prettierrc.js',
+  '.prettierrc.json',
+  'prettier.config.js',
+  '.babelrc',
+  'babel.config.js',
+  'webpack.config.js',
+  'vite.config.ts',
+  'vite.config.js',
+  'rollup.config.js',
+  'next.config.js',
+  'next.config.mjs',
+  'jest.config.js',
+  'jest.config.ts',
+  '.env',
+  '.env.local',
+  '.env.development',
+  '.env.production',
+  'Dockerfile',
+  'docker-compose.yml',
+  'docker-compose.yaml',
+  '.dockerignore',
+  '.gitignore',
+  '.gitattributes',
+  'Makefile',
+  'CMakeLists.txt',
+  'Cargo.toml',
+  'go.mod',
+  'go.sum',
+  'Gemfile',
+  'requirements.txt',
+  'setup.py',
+  'pyproject.toml',
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PUBLIC API
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check if a URI is inside the current workspace.
+ */
+export function isInsideWorkspace(uri: vscode.Uri): boolean {
+  const folders = vscode.workspace.workspaceFolders;
+  if (!folders || folders.length === 0) return false;
+  return folders.some(f => uri.fsPath.startsWith(f.uri.fsPath));
+}
+
+/**
+ * Determine if a file should be tracked for telemetry.
+ * Enforces: workspace check, directory blacklist, lockfile suppression.
+ */
+export function shouldTrackFile(uri: vscode.Uri): boolean {
+  if (!isInsideWorkspace(uri)) return false;
+
+  // Normalize path for consistent matching
+  const normalized = uri.fsPath.replace(/\\/g, '/');
+
+  // Directory blacklist check
+  for (const dir of BLACKLISTED_DIRS) {
+    if (normalized.includes(dir)) return false;
+  }
+
+  // Lockfile suppression
+  const basename = path.basename(normalized);
+  if (SUPPRESSED_LOCKFILES.has(basename)) return false;
+
+  return true;
+}
+
+/**
+ * Verify that the document being edited matches the active text editor.
+ * Discards background writes from terminal, external linters, or formatters.
+ */
+export function isActiveDocument(uri: vscode.Uri): boolean {
+  const activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) return false;
+  return activeEditor.document.uri.toString() === uri.toString();
+}
+
+/**
+ * Categorize a file by its type for metrics separation.
+ */
+export function categorizeFile(uri: vscode.Uri): EventCategory {
+  const basename = path.basename(uri.fsPath);
+  const ext = path.extname(uri.fsPath).toLowerCase();
+
+  // Check config files first (by full filename)
+  if (CONFIG_FILE_NAMES.has(basename)) return 'CONFIG_EDIT';
+
+  // Check source code by extension
+  if (SOURCE_CODE_EXTENSIONS.has(ext)) return 'SOURCE_CODE_EDIT';
+
+  // Default: treat as system/other
+  return 'SYSTEM';
+}
+
+/**
+ * Full filtering pipeline: should track + is active editor.
+ * Use this for keystroke/edit events where background writes should be discarded.
+ */
+export function shouldTrackEdit(uri: vscode.Uri): boolean {
+  return shouldTrackFile(uri) && isActiveDocument(uri);
+}
