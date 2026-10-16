@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CollabIntel Sidebar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      padding: 12px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #e8eaed;
+      background: #0a0a0f;
+      font-size: 12px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Liquid Animated Background Blobs ── */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      z-index: 0;
+      pointer-events: none;
+    }
+    body::before {
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, #6366f1, #a855f7, transparent 70%);
+      top: -40px; left: -40px;
+      animation: blobFloat1 12s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 180px; height: 180px;
+      background: radial-gradient(circle, #06b6d4, #3b82f6, transparent 70%);
+      bottom: -30px; right: -30px;
+      animation: blobFloat2 14s ease-in-out infinite alternate;
+    }
+    @keyframes blobFloat1 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, 40px) scale(1.15); }
+      100% { transform: translate(-10px, 60px) scale(0.95); }
+    }
+    @keyframes blobFloat2 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-20px, -30px) scale(1.1); }
+      100% { transform: translate(15px, -50px) scale(0.9); }
+    }
+
+    /* All content above the blobs */
+    body > * { position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #a78bfa 0%, #6366f1 30%, #06b6d4 60%, #a78bfa 100%);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 6s ease infinite;
+    }
+    .brand svg { width: 16px; height: 16px; color: #818cf8; }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ── Status Pills with Glow ── */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .status-tracking { background: rgba(52, 211, 153, 0.12); color: #34d399; box-shadow: 0 0 12px rgba(52, 211, 153, 0.25), inset 0 0 8px rgba(52, 211, 153, 0.08); }
+    .status-idle { background: rgba(251, 191, 36, 0.12); color: #fbbf24; box-shadow: 0 0 12px rgba(251, 191, 36, 0.2); }
+    .status-syncing { background: rgba(99, 102, 241, 0.15); color: #818cf8; box-shadow: 0 0 12px rgba(99, 102, 241, 0.25); }
+    .status-error { background: rgba(248, 113, 113, 0.12); color: #f87171; box-shadow: 0 0 12px rgba(248, 113, 113, 0.2); }
+    .status-unconfigured { background: rgba(251, 146, 60, 0.12); color: #fb923c; box-shadow: 0 0 12px rgba(251, 146, 60, 0.2); }
+
+    .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
+    .pulse-dot.anim { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.8); box-shadow: 0 0 0 0 currentColor; }
+      50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px currentColor; }
+    }
+
+    /* ── Glass Card (Liquid) ── */
+    .glass-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 10px 11px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .glass-card:hover {
+      border-color: rgba(139, 92, 246, 0.3);
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    /* Liquid shimmer line on glass cards */
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), rgba(6, 182, 212, 0.5), transparent);
+      animation: shimmer 4s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    /* ── Stats Grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.45);
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      margin-bottom: 2px;
+    }
+    .stat-value {
+      font-size: 18px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #e8eaed 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .val-green { background: linear-gradient(135deg, #34d399, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .val-red { background: linear-gradient(135deg, #f87171, #fca5a5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .val-amber { color: #fbbf24; background: none; -webkit-text-fill-color: #fbbf24; }
+    .val-blue { color: #67e8f9; background: none; -webkit-text-fill-color: #67e8f9; }
+
+    /* ── Metrics Panel ── */
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-size: 11px;
+    }
+    .metric-row + .metric-row { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+    .metric-name { color: rgba(255,255,255,0.45); font-weight: 500; }
+    .metric-val { font-weight: 600; font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; color: #c4b5fd; }
+
+    /* ── Liquid Buttons ── */
+    .btn {
+      width: 100%;
+      padding: 9px 12px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+      background-size: 200% 200%;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -0.1px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      margin-bottom: 6px;
+      transition: all 0.3s ease;
+      animation: btnGradient 5s ease infinite;
+      box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
+    }
+    @keyframes btnGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .btn:hover {
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
+      transform: translateY(-1px);
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      box-shadow: none;
+      animation: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(139, 92, 246, 0.12);
+      border-color: rgba(139, 92, 246, 0.4);
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+    }
+
+    /* ── Provenance ── */
+    .prov-bar {
+      display: flex;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 6px 0;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .prov-seg-manual { background: linear-gradient(90deg, #6366f1, #818cf8); border-radius: 3px; transition: width 0.5s ease; }
+    .prov-seg-ai { background: linear-gradient(90deg, #a855f7, #c084fc); transition: width 0.5s ease; }
+    .prov-seg-paste { background: linear-gradient(90deg, #f43f5e, #fb7185); transition: width 0.5s ease; }
+    .prov-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: rgba(255,255,255,0.45);
+      margin-top: 6px;
+    }
+    .prov-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+    .prov-legend-item svg { width: 10px; height: 10px; }
+    .prov-legend-item span span { font-weight: 700; color: #e8eaed; font-family: 'SF Mono','Menlo',monospace; font-size: 10px; }
+
+    /* ── Section Titles ── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.45);
+      margin: 14px 0 6px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── File Items ── */
+    .file-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 6px 9px;
+      margin-bottom: 4px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.2s ease;
+    }
+    .file-item:hover { border-color: rgba(139, 92, 246, 0.25); }
+    .file-path { font-family: 'SF Mono','Menlo',monospace; font-size: 10px; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+    .prov-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 9px; padding: 2px 6px; border-radius: 5px; font-weight: 600;
+    }
+    .prov-badge svg { width: 9px; height: 9px; }
+    .prov-badge-manual { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+    .prov-badge-ai_assisted { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .prov-badge-copy_paste { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+    .prov-badge-mixed { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+
+    /* ── Commits ── */
+    .commit-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px; padding: 7px 9px; margin-bottom: 4px; font-size: 11px;
+    }
+    .commit-msg { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e8eaed; }
+    .commit-meta { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; font-family: 'SF Mono','Menlo',monospace; }
+    .badge-offline { background: rgba(248, 113, 113, 0.15); color: #f87171; font-size: 9px; padding: 1px 6px; border-radius: 100px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <span>CollabIntel</span>
+    </div>
+    <div id="statusPill" class="status-pill status-unconfigured">
+      <div id="pulseDot" class="pulse-dot"></div>
+      <span id="statusText">Checking</span>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="glass-card"><div class="stat-label">Active Time</div><div class="stat-value" id="statTime">0m</div></div>
+    <div class="glass-card"><div class="stat-label">Keystrokes</div><div class="stat-value" id="statKeys">0</div></div>
+    <div class="glass-card"><div class="stat-label">Lines Added</div><div class="stat-value val-green" id="statAdded">+0</div></div>
+    <div class="glass-card"><div class="stat-label">Lines Removed</div><div class="stat-value val-red" id="statRemoved">-0</div></div>
+  </div>
+
+  <div class="glass-card" style="margin-bottom:10px;">
+    <div class="stat-label" style="margin-bottom:4px; color:#c4b5fd; font-weight:600;">Live Sensor Metrics</div>
+    <div class="metric-row"><span class="metric-name">Active / Idle Split</span><span class="metric-val val-blue" id="statActiveIdleSplit">0m / 0m</span></div>
+    <div class="metric-row"><span class="metric-name">Active Typing Time</span><span class="metric-val" id="statTypingTime">0s</span></div>
+    <div class="metric-row"><span class="metric-name">Syntax Errors</span><span class="metric-val val-amber" id="statSyntaxErrors">0 active</span></div>
+    <div class="metric-row"><span class="metric-name">Focus Transitions</span><span class="metric-val" id="statFocusTransitions">0 (0 tabs)</span></div>
+    <div class="metric-row"><span class="metric-name">Local SQLite Queue</span><span class="metric-val" id="statQueuePending">0 pending</span></div>
+  </div>
+
+  <div class="glass-card" style="margin-bottom:10px;">
+    <div class="stat-label" style="display:flex; justify-content:space-between;">
+      <span>Coding Provenance</span>
+      <span id="provStyleText" style="color:#818cf8; text-transform:none; font-weight:600;">Manual Typing</span>
+    </div>
+    <div class="prov-bar">
+      <div id="provBarManual" class="prov-seg-manual" style="width: 100%;"></div>
+      <div id="provBarAi" class="prov-seg-ai" style="width: 0%;"></div>
+      <div id="provBarPaste" class="prov-seg-paste" style="width: 0%;"></div>
+    </div>
+    <div class="prov-legend">
+      <span class="prov-legend-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span><span id="provManPct">100%</span> Manual</span>
+      </span>
+      <span class="prov-legend-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+        <span><span id="provAiPct">0%</span> AI</span>
+      </span>
+      <span class="prov-legend-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        <span><span id="provPastePct">0%</span> Paste</span>
+      </span>
+    </div>
+  </div>
+
+  <button class="btn" onclick="postCmd('syncNow')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+    Sync Telemetry Now
+  </button>
+  <button class="btn btn-secondary" onclick="postCmd('openDashboard')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+    Open Full Dashboard
+  </button>
+  <button class="btn btn-secondary" onclick="postCmd('viewQueueAudit')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    View Queue Status
+  </button>
+  <button class="btn btn-secondary" onclick="postCmd('testConnection')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Test Connection
+  </button>
+
+  <div class="section-title">
+    <span>Tracked Files</span>
+    <span id="filesCountBadge" style="color:#818cf8; font-size:10px; font-weight:600;">0 files</span>
+  </div>
+  <div id="fileActivitiesList">
+    <div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No modified files yet.</div>
+  </div>
+
+  <div class="section-title">
+    <span>Session Commits</span>
+    <span id="offlineBadge" class="badge-offline" style="display:none">0 queued</span>
+  </div>
+  <div id="commitsList">
+    <div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No commits recorded yet.</div>
+  </div>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+    function postCmd(command) { vscode.postMessage({ command }); }
+    window.addEventListener('message', event => { if (event.data.type === 'updateState') render(event.data.state); });
+    vscode.postMessage({ command: 'requestState' });
+
+    function render(s) {
+      if (!s) return;
+      const pill = document.getElementById('statusPill');
+      const pText = document.getElementById('statusText');
+      const dot = document.getElementById('pulseDot');
+      pill.className = 'status-pill status-' + (s.statusState || 'unconfigured');
+      pText.innerText = (s.statusState || 'CHECKING').toUpperCase();
+      dot.className = 'pulse-dot' + (s.statusState === 'tracking' || s.statusState === 'syncing' ? ' anim' : '');
+
+      document.getElementById('statTime').innerText = (s.durationMinutes || 0) + 'm';
+      document.getElementById('statKeys').innerText = s.keystrokes || 0;
+      document.getElementById('statAdded').innerText = '+' + (s.linesAdded || 0);
+      document.getElementById('statRemoved').innerText = '-' + (s.linesRemoved || 0);
+
+      const idleSec = s.idleSummary ? s.idleSummary.idleSeconds : 0;
+      const activeSec = s.idleSummary ? s.idleSummary.activeCodingSeconds : ((s.durationMinutes || 0) * 60);
+      document.getElementById('statActiveIdleSplit').innerText = Math.round(activeSec / 60) + 'm active / ' + Math.round(idleSec / 60) + 'm idle';
+      document.getElementById('statTypingTime').innerText = (s.idleSummary ? s.idleSummary.activeTypingSeconds : 0) + 's continuous';
+      const errCount = s.diagnosticSummary ? s.diagnosticSummary.currentErrorCount : 0;
+      document.getElementById('statSyntaxErrors').innerText = errCount + ' active (' + (s.diagnosticSummary ? s.diagnosticSummary.totalErrorsSeen : 0) + ' total)';
+      document.getElementById('statFocusTransitions').innerText = (s.focusSummary ? s.focusSummary.focusTransitions : 0) + ' focus (' + (s.focusSummary ? s.focusSummary.tabSwitches : 0) + ' tabs)';
+      document.getElementById('statQueuePending').innerText = (s.pendingEventCount !== undefined ? s.pendingEventCount : (s.queueStatus ? s.queueStatus.pendingCount : 0)) + ' pending';
+
+      if (s.provenance) {
+        document.getElementById('provStyleText').innerText = s.provenance.style || 'Manual Typing';
+        document.getElementById('provBarManual').style.width = (s.provenance.manualPercent || 0) + '%';
+        document.getElementById('provBarAi').style.width = (s.provenance.aiPercent || 0) + '%';
+        document.getElementById('provBarPaste').style.width = (s.provenance.pastePercent || 0) + '%';
+        document.getElementById('provManPct').innerText = (s.provenance.manualPercent || 0) + '%';
+        document.getElementById('provAiPct').innerText = (s.provenance.aiPercent || 0) + '%';
+        document.getElementById('provPastePct').innerText = (s.provenance.pastePercent || 0) + '%';
+      }
+
+      const filesListEl = document.getElementById('fileActivitiesList');
+      const filesCountEl = document.getElementById('filesCountBadge');
+      if (s.fileActivities && s.fileActivities.length > 0) {
+        filesCountEl.innerText = s.fileActivities.length + ' files';
+        filesListEl.innerHTML = s.fileActivities.slice(0, 6).map(fa => `
+          <div class="file-item">
+            <div class="file-path" title="${escapeHtml(fa.filePath)}">${escapeHtml(fa.filePath)}</div>
+            <span class="prov-badge prov-badge-${fa.typingProvenance || 'manual'}">
+              ${fa.typingProvenance === 'ai_assisted' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg> AI' : (fa.typingProvenance === 'copy_paste' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Paste' : (fa.typingProvenance === 'mixed' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Mixed' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Manual'))}
+            </span>
+          </div>
+        `).join('');
+      } else {
+        filesCountEl.innerText = '0 files';
+        filesListEl.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No active files tracked yet.</div>';
+      }
+
+      const offlineBadge = document.getElementById('offlineBadge');
+      if (s.offlineCount > 0) { offlineBadge.style.display = 'inline-block'; offlineBadge.innerText = s.offlineCount + ' offline'; }
+      else { offlineBadge.style.display = 'none'; }
+
+      const list = document.getElementById('commitsList');
+      if (!s.commits || s.commits.length === 0) {
+        list.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No commits recorded yet.</div>';
+      } else {
+        list.innerHTML = s.commits.slice(0, 5).map(c => `<div class="commit-item"><div class="commit-msg">${escapeHtml(c.message)}</div><div class="commit-meta"><span>${c.hash.slice(0,7)}</span><span>+${c.insertions} -${c.deletions}</span></div></div>`).join('');
+      }
+    }
+    function escapeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  </script>
+</body>
+</html>

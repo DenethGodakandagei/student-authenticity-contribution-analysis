@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CollabIntel Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0f;
+      color: #e8eaed;
+      padding: 28px 24px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* ── Liquid Animated Background Orbs ── */
+    .liquid-bg {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.12;
+    }
+    .orb-1 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, #6366f1, #a855f7, transparent 70%);
+      top: -100px; left: -100px;
+      animation: orbMove1 16s ease-in-out infinite alternate;
+    }
+    .orb-2 {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, #06b6d4, #3b82f6, transparent 70%);
+      bottom: -80px; right: -80px;
+      animation: orbMove2 18s ease-in-out infinite alternate;
+    }
+    .orb-3 {
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, #f43f5e, #a855f7, transparent 70%);
+      top: 50%; left: 60%;
+      animation: orbMove3 20s ease-in-out infinite alternate;
+    }
+    @keyframes orbMove1 {
+      0% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(80px, 60px) scale(1.15); }
+      66% { transform: translate(20px, 100px) scale(0.95); }
+      100% { transform: translate(-30px, 120px) scale(1.08); }
+    }
+    @keyframes orbMove2 {
+      0% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(-60px, -40px) scale(1.1); }
+      66% { transform: translate(-30px, -80px) scale(0.9); }
+      100% { transform: translate(30px, -60px) scale(1.05); }
+    }
+    @keyframes orbMove3 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-80px, -50px) scale(1.2); }
+      100% { transform: translate(40px, 30px) scale(0.85); }
+    }
+
+    .container { max-width: 1040px; margin: 0 auto; position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .brand-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #c4b5fd 0%, #818cf8 30%, #67e8f9 60%, #c4b5fd 100%);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 6s ease infinite;
+    }
+    .brand-title p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ── Tabs (Liquid Pill Switcher) ── */
+    .nav-tabs {
+      display: flex;
+      gap: 3px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.45);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      position: relative;
+    }
+    .tab-btn svg { width: 14px; height: 14px; opacity: 0.5; }
+    .tab-btn:hover { color: rgba(255,255,255,0.7); }
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.15) 100%);
+      color: #c4b5fd;
+      font-weight: 600;
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.12);
+    }
+    .tab-btn.active svg { opacity: 1; }
+
+    .tab-content { display: none; animation: fadeIn 0.35s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Glass Card ── */
+    .glass-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .glass-card:hover {
+      border-color: rgba(139, 92, 246, 0.3);
+      box-shadow: 0 4px 30px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), rgba(6, 182, 212, 0.5), transparent);
+      animation: shimmer 5s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 200%; }
+    }
+
+    /* ── Metrics ── */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 6px;
+    }
+    .card-value {
+      font-size: 26px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #e8eaed 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .val-green { background: linear-gradient(135deg, #34d399, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .val-red { background: linear-gradient(135deg, #f87171, #fca5a5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .val-amber { color: #fbbf24; background: none; -webkit-text-fill-color: #fbbf24; }
+    .val-blue { color: #67e8f9; background: none; -webkit-text-fill-color: #67e8f9; }
+
+    /* ── Status Banner ── */
+    .status-banner {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-left: 3px solid;
+      border-image: linear-gradient(180deg, #6366f1, #a855f7) 1;
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    /* ── ML Feature Cards ── */
+    .ml-features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .ml-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 100%);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .ml-card:hover {
+      border-color: rgba(139, 92, 246, 0.3);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
+    }
+    .ml-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), rgba(6, 182, 212, 0.3), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .ml-card:hover::after { opacity: 1; }
+    .ml-num { font-size: 10px; color: #818cf8; font-weight: 700; letter-spacing: 0.5px; }
+    .ml-title { font-size: 12px; font-weight: 600; color: #e8eaed; margin-top: 1px; }
+    .ml-desc { font-size: 10px; color: rgba(255,255,255,0.35); margin: 3px 0 8px 0; }
+    .ml-val {
+      font-size: 20px;
+      font-weight: 800;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      background: linear-gradient(135deg, #67e8f9, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #e8eaed; }
+    .hint { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    input[type="text"], input[type="password"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: #e8eaed;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    input:focus {
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.1);
+    }
+
+    /* ── Liquid Buttons ── */
+    .btn {
+      padding: 9px 18px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+      background-size: 200% 200%;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.3s ease;
+      animation: btnGlow 5s ease infinite;
+      box-shadow: 0 2px 14px rgba(99, 102, 241, 0.3);
+    }
+    @keyframes btnGlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .btn:hover { box-shadow: 0 4px 24px rgba(99, 102, 241, 0.45); transform: translateY(-1px); }
+    .btn:active { transform: scale(0.98); }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      box-shadow: none;
+      animation: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(139, 92, 246, 0.12);
+      border-color: rgba(139, 92, 246, 0.4);
+      box-shadow: 0 0 16px rgba(139, 92, 246, 0.15);
+    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    th { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); }
+    td:last-child { font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; }
+
+    .test-box { margin-top: 14px; padding: 12px; border-radius: 10px; font-size: 12px; display: none; font-weight: 600; }
+    .test-box.success { display: block; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.25); color: #34d399; }
+    .test-box.error { display: block; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.25); color: #f87171; }
+
+    /* ── Highlight stat boxes ── */
+    .highlight-stat {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: border-color 0.3s ease;
+    }
+    .highlight-stat:hover { border-color: rgba(139, 92, 246, 0.25); }
+    .highlight-stat .hl-label { font-size: 10px; color: rgba(255,255,255,0.4); }
+    .highlight-stat .hl-value { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+  </style>
+</head>
+<body>
+  <!-- Liquid Background Orbs -->
+  <div class="liquid-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <div class="brand-title">
+        <h1>CollabIntel Dashboard</h1>
+        <p>Student Repository Telemetry &amp; Contribution Analytics</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" onclick="postCmd('viewQueueAudit')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Audit Queue
+        </button>
+        <button class="btn" onclick="postCmd('syncNow')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          Sync Telemetry
+        </button>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tab-overview" onclick="switchTab('overview')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Overview
+      </button>
+      <button class="tab-btn" id="tab-ml" onclick="switchTab('ml')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/><circle cx="18" cy="7" r="2"/><circle cx="6" cy="11" r="2"/></svg>
+        ML Features
+      </button>
+      <button class="tab-btn" id="tab-commits" onclick="switchTab('commits')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Commits
+      </button>
+      <button class="tab-btn" id="tab-setup" onclick="switchTab('setup')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Setup
+      </button>
+      <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        Settings
+      </button>
+    </div>
+
+    <!-- TAB 1: OVERVIEW -->
+    <div id="content-overview" class="tab-content active">
+      <div class="status-banner">
+        <div>
+          <div style="font-weight:700; font-size:14px; color:#e8eaed;">Session Active</div>
+          <div style="font-size:12px; color:rgba(255,255,255,0.4);">Tracking local workspace edits and keystrokes</div>
+        </div>
+        <div style="padding:4px 12px; border-radius:100px; font-weight:600; font-size:11px; background:rgba(52,211,153,0.15); color:#34d399; box-shadow: 0 0 10px rgba(52,211,153,0.2);">Online</div>
+      </div>
+
+      <div class="metrics-row">
+        <div class="glass-card"><div class="card-title">Session Time</div><div class="card-value" id="cardTime">0m</div></div>
+        <div class="glass-card"><div class="card-title">Keystrokes</div><div class="card-value" id="cardKeys">0</div></div>
+        <div class="glass-card"><div class="card-title">Lines Added</div><div class="card-value val-green" id="cardAdded">+0</div></div>
+        <div class="glass-card"><div class="card-title">Lines Removed</div><div class="card-value val-red" id="cardRemoved">-0</div></div>
+        <div class="glass-card"><div class="card-title">Files Modified</div><div class="card-value" id="cardFiles">0</div></div>
+      </div>
+
+      <!-- Overview Highlights -->
+      <div class="glass-card" style="margin-bottom: 16px;">
+        <div class="card-title" style="margin-bottom:12px; color:#c4b5fd; font-weight:600;">Session Intelligence Highlights</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px;">
+          <div class="highlight-stat"><div class="hl-label">Active Typing</div><div class="hl-value" style="color:#67e8f9;" id="ovActiveTyping">0s</div></div>
+          <div class="highlight-stat"><div class="hl-label">Typing Velocity</div><div class="hl-value" style="color:#34d399;" id="ovTypingVelocity">0.00 c/s</div></div>
+          <div class="highlight-stat"><div class="hl-label">Paste Ratio</div><div class="hl-value" style="color:#fbbf24;" id="ovPasteRatio">0.00</div></div>
+          <div class="highlight-stat"><div class="hl-label">Code Churn</div><div class="hl-value" style="color:#c084fc;" id="ovChurn">0.00</div></div>
+          <div class="highlight-stat"><div class="hl-label">Syntax Errors</div><div class="hl-value" style="color:#f87171;" id="ovErrors">0</div></div>
+          <div class="highlight-stat"><div class="hl-label">Focus Switches</div><div class="hl-value" style="color:#34d399;" id="ovFocus">0</div></div>
+        </div>
+      </div>
+
+      <!-- Provenance -->
+      <div class="glass-card" style="margin-bottom: 20px;">
+        <div class="card-title">Coding Provenance</div>
+        <div style="font-size:18px; font-weight:800; margin:4px 0 10px 0;" id="cardStyle">
+          <span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Manual Typing</span>
+        </div>
+        <div style="height:8px; border-radius:4px; background:rgba(255,255,255,0.06); display:flex; overflow:hidden; margin-bottom:10px;">
+          <div id="barManual" style="width:100%; background:linear-gradient(90deg,#6366f1,#818cf8); border-radius:4px; transition:width 0.5s ease;"></div>
+          <div id="barAi" style="width:0%; background:linear-gradient(90deg,#a855f7,#c084fc); transition:width 0.5s ease;"></div>
+          <div id="barPaste" style="width:0%; background:linear-gradient(90deg,#f43f5e,#fb7185); transition:width 0.5s ease;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:rgba(255,255,255,0.4);">
+          <span style="display:inline-flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#818cf8" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Manual: <strong id="lblManual" style="color:#e8eaed; font-family:'SF Mono','Menlo',monospace;">100%</strong>
+          </span>
+          <span style="display:inline-flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c084fc" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+            AI: <strong id="lblAi" style="color:#e8eaed; font-family:'SF Mono','Menlo',monospace;">0%</strong>
+          </span>
+          <span style="display:inline-flex; align-items:center; gap:6px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fb7185" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+            Paste: <strong id="lblPaste" style="color:#e8eaed; font-family:'SF Mono','Menlo',monospace;">0%</strong>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ML FEATURES -->
+    <div id="content-ml" class="tab-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div>
+          <h2 style="font-size:18px; font-weight:800; display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+            Live Sliding Window ML Features
+          </h2>
+          <p style="font-size:12px; color:rgba(255,255,255,0.35); margin-top:2px;">
+            Features over the current 5-minute rolling window [window: 5 min, step: 2.5 min].
+          </p>
+        </div>
+        <button class="btn" onclick="postCmd('computeSlidingWindow')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          Recalculate
+        </button>
+      </div>
+
+      <div class="status-banner" style="padding:12px 16px; margin-bottom:16px;">
+        <span style="font-size:12px; color:#e8eaed;">Window Interval: <strong id="mlWindowInterval" style="color:#67e8f9;">Evaluating...</strong></span>
+        <span style="font-size:11px; color:rgba(255,255,255,0.4);" id="mlEventsInWindow">0 events in slice</span>
+      </div>
+
+      <div class="ml-features-grid">
+        <div class="ml-card"><div><div class="ml-num">#1 TEMPORAL</div><div class="ml-title">Active Coding Time</div><div class="ml-desc">Seconds with keystrokes/edits (&lt;60s gap)</div></div><div class="ml-val" id="feat_activeCodingTimeSec">0s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#2 TEMPORAL</div><div class="ml-title">Idle Time</div><div class="ml-desc">Seconds in inactive gaps (&ge;60s)</div></div><div class="ml-val" id="feat_idleTimeSec">0s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#3 TEMPORAL</div><div class="ml-title">Session Duration</div><div class="ml-desc">Total window timespan in seconds</div></div><div class="ml-val" id="feat_sessionDurationSec">300s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#4 TEMPORAL</div><div class="ml-title">Active Typing Duration</div><div class="ml-desc">Continuous keystroke clusters (&lt;5s gap)</div></div><div class="ml-val" id="feat_activeTypingDurationSec">0s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#5 KEYSTROKE</div><div class="ml-title">Keystroke Count</div><div class="ml-desc">Total raw keystroke events</div></div><div class="ml-val" id="feat_keystrokeCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#6 PASTE</div><div class="ml-title">Paste Burst Count</div><div class="ml-desc">Total copy-paste insertion events</div></div><div class="ml-val" id="feat_pasteCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#7 PASTE</div><div class="ml-title">Pasted Characters</div><div class="ml-desc">Sum of characters pasted in window</div></div><div class="ml-val" id="feat_pastedCharCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#8 PASTE</div><div class="ml-title">Paste-to-Keystroke Ratio</div><div class="ml-desc">Pasted chars / (manual keys + 1)</div></div><div class="ml-val" id="feat_pasteToKeystrokeRatio">0.00</div></div>
+        <div class="ml-card"><div><div class="ml-num">#9 VELOCITY</div><div class="ml-title">Typing Velocity</div><div class="ml-desc">Characters inserted per active second</div></div><div class="ml-val" id="feat_typingVelocity">0.00 c/s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#10 CHURN</div><div class="ml-title">Net Inserted Characters</div><div class="ml-desc">Total characters added in editor</div></div><div class="ml-val" id="feat_netInsertedChars">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#11 CHURN</div><div class="ml-title">Net Deleted Characters</div><div class="ml-desc">Total characters removed/replaced</div></div><div class="ml-val" id="feat_netDeletedChars">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#12 CHURN</div><div class="ml-title">Code Churn Ratio</div><div class="ml-desc">Deleted chars / (inserted chars + 1)</div></div><div class="ml-val" id="feat_codeChurnRatio">0.00</div></div>
+        <div class="ml-card"><div><div class="ml-num">#13 FILE DYNAMICS</div><div class="ml-title">File Mod Frequency</div><div class="ml-desc">Total file switch/edit transitions</div></div><div class="ml-val" id="feat_fileModificationFreq">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#14 FILE DYNAMICS</div><div class="ml-title">File Create/Delete Count</div><div class="ml-desc">Total files created or deleted</div></div><div class="ml-val" id="feat_fileCreateDeleteCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#15 FILE DYNAMICS</div><div class="ml-title">Explicit Save Count</div><div class="ml-desc">Ctrl+S / Save commands triggered</div></div><div class="ml-val" id="feat_explicitSaveCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#16 ERROR PATTERNS</div><div class="ml-title">Syntax Error Count</div><div class="ml-desc">Compiler / linter diagnostics raised</div></div><div class="ml-val" id="feat_syntaxErrorCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#17 ERROR PATTERNS</div><div class="ml-title">Error Resolution Duration</div><div class="ml-desc">Average seconds to fix syntax errors</div></div><div class="ml-val" id="feat_errorResolutionDurationSec">0s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#18 ATTENTION</div><div class="ml-title">Focus Transitions</div><div class="ml-desc">Window blur/focus attention shifts</div></div><div class="ml-val" id="feat_windowFocusTransitions">0</div></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: COMMITS -->
+    <div id="content-commits" class="tab-content">
+      <h2 style="font-size:18px; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Session Git Commits</h2>
+      <div id="commitsContainer">
+        <p style="color:rgba(255,255,255,0.35); font-style:italic;">No commits captured in current session.</p>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETUP -->
+    <div id="content-setup" class="tab-content">
+      <h2 style="font-size:18px; font-weight:800; margin-bottom:14px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Credentials &amp; Assignment Linking</h2>
+      <div class="form-group">
+        <label>CollabIntel Server URL</label>
+        <div class="hint">Use HTTPS for remote servers (e.g., https://collabintel.edu) or http://localhost:5000 for local dev.</div>
+        <input type="text" id="cfgServerUrl" value="http://localhost:5000">
+      </div>
+      <div class="form-group">
+        <label>Assignment ID</label>
+        <div class="hint">Assignment ID supplied by your course instructor.</div>
+        <input type="text" id="cfgAssignmentId" placeholder="e.g. comp3100-assignment-1">
+      </div>
+      <div class="form-group">
+        <label>Student Auth Token (JWT)</label>
+        <div class="hint">Secret token copied from the CollabIntel student portal.</div>
+        <input type="password" id="cfgAuthToken" placeholder="eyJhbGciOi...">
+      </div>
+      <div class="form-group">
+        <label>Auto-Sync Interval (Minutes)</label>
+        <input type="number" id="cfgInterval" min="1" max="60" value="5">
+      </div>
+      <button class="btn" onclick="saveConfiguration()">Save Configuration</button>
+      <button class="btn btn-secondary" onclick="testConnection()" style="margin-left:8px;">Test Connection</button>
+      <div id="testResultBox" class="test-box"></div>
+    </div>
+
+    <!-- TAB 5: SETTINGS -->
+    <div id="content-settings" class="tab-content">
+      <h2 style="font-size:18px; font-weight:800; margin-bottom:14px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Extension Settings &amp; Cache</h2>
+      <p style="font-size:12px; color:rgba(255,255,255,0.35); margin-bottom:16px;">Manage offline buffered events and diagnostics.</p>
+      <button class="btn btn-secondary" onclick="postCmd('clearOfflineCache')">Clear In-Memory Offline Cache</button>
+    </div>
+  </div>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+    function postCmd(command) { vscode.postMessage({ command }); }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      const btn = document.getElementById('tab-' + tabId);
+      const content = document.getElementById('content-' + tabId);
+      if (btn) btn.classList.add('active');
+      if (content) content.classList.add('active');
+    }
+
+    function saveConfiguration() {
+      vscode.postMessage({
+        command: 'saveConfig',
+        serverUrl: document.getElementById('cfgServerUrl').value.trim(),
+        assignmentId: document.getElementById('cfgAssignmentId').value.trim(),
+        authToken: document.getElementById('cfgAuthToken').value.trim(),
+        syncIntervalMinutes: document.getElementById('cfgInterval').value.trim()
+      });
+    }
+
+    function testConnection() {
+      const serverUrl = document.getElementById('cfgServerUrl').value.trim();
+      const authToken = document.getElementById('cfgAuthToken').value.trim();
+      const assignmentId = document.getElementById('cfgAssignmentId').value.trim();
+
+      const box = document.getElementById('testResultBox');
+      if (box) {
+        box.className = 'test-box';
+        box.style.display = 'block';
+        box.innerText = '⚡ Testing connection to ' + (serverUrl || 'backend') + '...';
+      }
+
+      vscode.postMessage({
+        command: 'testConnection',
+        serverUrl,
+        authToken,
+        assignmentId
+      });
+    }
+
+    window.addEventListener('message', event => {
+      const msg = event.data;
+      if (msg.type === 'updateState') renderState(msg.state);
+      else if (msg.type === 'switchTab') switchTab(msg.tab);
+      else if (msg.type === 'testResult') renderTestResult(msg.result);
+    });
+
+    vscode.postMessage({ command: 'requestState' });
+
+    function renderTestResult(res) {
+      const box = document.getElementById('testResultBox');
+      if (!box) return;
+      box.className = 'test-box ' + (res.success ? 'success' : 'error');
+      box.innerText = (res.success ? '✅ ' : '❌ ') + res.message;
+    }
+
+    function renderState(s) {
+      if (!s) return;
+      document.getElementById('cardTime').innerText = (s.durationMinutes || 0) + 'm';
+      document.getElementById('cardKeys').innerText = s.keystrokes || 0;
+      document.getElementById('cardAdded').innerText = '+' + (s.linesAdded || 0);
+      document.getElementById('cardRemoved').innerText = '-' + (s.linesRemoved || 0);
+
+      if (s.provenance) {
+        document.getElementById('cardStyle').innerHTML = '<span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">' + (s.provenance.style || 'Manual Typing') + '</span>';
+        document.getElementById('barManual').style.width = (s.provenance.manualPercent || 0) + '%';
+        document.getElementById('barAi').style.width = (s.provenance.aiPercent || 0) + '%';
+        document.getElementById('barPaste').style.width = (s.provenance.pastePercent || 0) + '%';
+        document.getElementById('lblManual').innerText = (s.provenance.manualPercent || 0) + '%';
+        document.getElementById('lblAi').innerText = (s.provenance.aiPercent || 0) + '%';
+        document.getElementById('lblPaste').innerText = (s.provenance.pastePercent || 0) + '%';
+      }
+
+      if (s.config) {
+        if (s.config.serverUrl) document.getElementById('cfgServerUrl').value = s.config.serverUrl;
+        if (s.config.assignmentId) document.getElementById('cfgAssignmentId').value = s.config.assignmentId;
+        if (s.config.authToken) document.getElementById('cfgAuthToken').value = s.config.authToken;
+        if (s.config.syncIntervalMinutes) document.getElementById('cfgInterval').value = s.config.syncIntervalMinutes;
+      }
+
+      const feats = s.latestWindow && s.latestWindow.features ? s.latestWindow.features : null;
+      if (feats) {
+        if (s.latestWindow.windowStart && s.latestWindow.windowEnd) {
+          document.getElementById('mlWindowInterval').innerText = '[' + new Date(s.latestWindow.windowStart).toLocaleTimeString() + ' \u2013 ' + new Date(s.latestWindow.windowEnd).toLocaleTimeString() + ']';
+        }
+        document.getElementById('ovActiveTyping').innerText = feats.activeTypingDurationSec + 's';
+        document.getElementById('ovTypingVelocity').innerText = feats.typingVelocity.toFixed(2) + ' c/s';
+        document.getElementById('ovPasteRatio').innerText = feats.pasteToKeystrokeRatio.toFixed(2);
+        document.getElementById('ovChurn').innerText = feats.codeChurnRatio.toFixed(2);
+        document.getElementById('ovErrors').innerText = feats.syntaxErrorCount;
+        document.getElementById('ovFocus').innerText = feats.windowFocusTransitions;
+        setVal('feat_activeCodingTimeSec', feats.activeCodingTimeSec + 's');
+        setVal('feat_idleTimeSec', feats.idleTimeSec + 's');
+        setVal('feat_sessionDurationSec', feats.sessionDurationSec + 's');
+        setVal('feat_activeTypingDurationSec', feats.activeTypingDurationSec + 's');
+        setVal('feat_keystrokeCount', feats.keystrokeCount);
+        setVal('feat_pasteCount', feats.pasteCount);
+        setVal('feat_pastedCharCount', feats.pastedCharCount);
+        setVal('feat_pasteToKeystrokeRatio', feats.pasteToKeystrokeRatio.toFixed(2));
+        setVal('feat_typingVelocity', feats.typingVelocity.toFixed(2) + ' c/s');
+        setVal('feat_netInsertedChars', feats.netInsertedChars);
+        setVal('feat_netDeletedChars', feats.netDeletedChars);
+        setVal('feat_codeChurnRatio', feats.codeChurnRatio.toFixed(2));
+        setVal('feat_fileModificationFreq', feats.fileModificationFreq);
+        setVal('feat_fileCreateDeleteCount', feats.fileCreateDeleteCount);
+        setVal('feat_explicitSaveCount', feats.explicitSaveCount);
+        setVal('feat_syntaxErrorCount', feats.syntaxErrorCount);
+        setVal('feat_errorResolutionDurationSec', feats.errorResolutionDurationSec + 's');
+        setVal('feat_windowFocusTransitions', feats.windowFocusTransitions);
+      } else {
+        document.getElementById('ovActiveTyping').innerText = (s.idleSummary ? s.idleSummary.activeTypingSeconds : 0) + 's';
+        document.getElementById('ovErrors').innerText = s.diagnosticSummary ? s.diagnosticSummary.currentErrorCount : 0;
+        document.getElementById('ovFocus').innerText = s.focusSummary ? s.focusSummary.focusTransitions : 0;
+      }
+    }
+    function setVal(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
+  </script>
+</body>
+</html>
