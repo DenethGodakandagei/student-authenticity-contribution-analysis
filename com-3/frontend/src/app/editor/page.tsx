@@ -21,7 +21,7 @@ import ShareModal from '../../components/ShareModal';
 import ReportsManagerModal from '../../components/ReportsManagerModal';
 import { getBackendUrl } from '../../utils/apiConfig';
 
-const SOCKET_URL = getBackendUrl();
+const getSocketUrl = () => getBackendUrl();
 
 // IndexedDB Helper Functions
 const openDB = (): Promise<IDBDatabase> => {
@@ -236,7 +236,7 @@ function EditorComponent() {
   // Fetch users when create modal opens
   useEffect(() => {
     if (createModalOpen) {
-      fetch(`${SOCKET_URL}/api/auth/users`)
+      fetch(`${getSocketUrl()}/api/auth/users`)
         .then(res => res.json())
         .then(data => {
           // Filter out current logged in user
@@ -264,7 +264,7 @@ function EditorComponent() {
 
   const fetchMarkupData = () => {
     if (!selectedDocId) return;
-    fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/author-markup`)
+    fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/author-markup`)
       .then(res => res.json())
       .then(data => setMarkupData(data))
       .catch(err => console.error("Failed to fetch markup data", err));
@@ -288,7 +288,7 @@ function EditorComponent() {
   const fetchDocs = () => {
     if (!user) return;
     const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
-    fetch(`${SOCKET_URL}/api/documents?${query}`)
+    fetch(`${getSocketUrl()}/api/documents?${query}`)
       .then(res => res.json())
       .then(data => setAvailableDocs(data || []))
       .catch(err => console.error("Failed to fetch documents", err));
@@ -305,7 +305,7 @@ function EditorComponent() {
     setAccessDenied(false);
 
     const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
-    fetch(`${SOCKET_URL}/api/documents/${selectedDocId}?${query}`)
+    fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`)
       .then(async res => {
         const data = await res.json();
         if (res.status === 403 || data.isAccessDenied) {
@@ -394,7 +394,7 @@ function EditorComponent() {
   useEffect(() => {
     if (!isAuthenticated || !user || isOffline || accessDenied) return;
     
-    const s = io(SOCKET_URL);
+    const s = io(getSocketUrl());
     setSocket(s);
 
     s.on('connect', () => {
@@ -440,7 +440,7 @@ function EditorComponent() {
       try {
         const pending = await getPendingEdit(selectedDocId);
         if (pending && pending.revisions && pending.revisions.length > 0) {
-          const response = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/sync-offline`, {
+          const response = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/sync-offline`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -495,7 +495,7 @@ function EditorComponent() {
         const pending = await getPendingEdit(selectedDocId);
         
         if (pending && pending.revisions && pending.revisions.length > 0) {
-          const response = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/sync-offline`, {
+          const response = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/sync-offline`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -526,7 +526,7 @@ function EditorComponent() {
     if (!newDocTitle.trim() || !user) return;
 
     try {
-      const res = await fetch(`${SOCKET_URL}/api/documents/create`, {
+      const res = await fetch(`${getSocketUrl()}/api/documents/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -559,7 +559,7 @@ function EditorComponent() {
     if (newTitle.trim() === currentTitle && customTitle === null) return;
 
     try {
-      const res = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}/rename`, {
+      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/rename`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -605,7 +605,7 @@ function EditorComponent() {
 
     try {
       const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
-      const res = await fetch(`${SOCKET_URL}/api/documents/${selectedDocId}?${query}`, {
+      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`, {
         method: 'DELETE'
       });
       const data = await res.json();
