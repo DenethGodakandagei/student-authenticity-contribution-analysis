@@ -21,7 +21,7 @@ const io = new Server(server, {
 const dmp = new DiffMatchPatch();
 
 // MongoDB Setup
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/document-evolution';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://docadmin:docadmin123@cluster0.p6utr.mongodb.net/document-evolution?retryWrites=true&w=majority';
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB:', MONGODB_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
