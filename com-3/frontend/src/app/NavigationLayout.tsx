@@ -14,36 +14,42 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
         <h2>DocAnalytics</h2>
 
         <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          padding: '0.85rem',
+          background: '#1E293B',
+          border: '1px solid #334155',
+          borderRadius: '10px',
+          padding: '1rem',
           margin: '0.5rem 0 1.5rem 0',
           textAlign: 'left'
         }}>
           {isAuthenticated ? (
             <div>
-              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 'bold', letterSpacing: '0.5px' }}>
-                Logged In As ({user?.role})
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Account
+                </span>
+                <span style={{ fontSize: '0.68rem', background: '#0D9488', color: '#FFFFFF', padding: '0.15rem 0.45rem', borderRadius: '10px', fontWeight: 700, textTransform: 'uppercase' }}>
+                  {user?.role || 'Student'}
+                </span>
               </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#f8fafc', marginTop: '0.2rem' }}>
-                {user?.name}
+              <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#FFFFFF' }}>
+                {user?.name || user?.username}
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#38bdf8', marginBottom: '0.6rem' }}>
-                ID: {user?.studentId}
+              <div style={{ fontSize: '0.8rem', color: '#38BDF8', marginBottom: '0.75rem' }}>
+                ID: {user?.studentId || 'N/A'}
               </div>
               <button
                 onClick={logout}
                 style={{
                   width: '100%',
-                  padding: '0.4rem 0.6rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 'bold',
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  border: '1px solid #ef4444',
-                  color: '#fca5a5',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
+                  padding: '0.45rem 0.6rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#FCA5A5',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
               >
                 Sign Out
@@ -51,21 +57,22 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.6rem' }}>
-                Not authenticated. Sign in to edit & track your document.
+              <div style={{ fontSize: '0.82rem', color: '#94A3B8', marginBottom: '0.75rem', lineHeight: 1.4 }}>
+                Sign in to verify student authorship & track group evolution.
               </div>
               <button
                 onClick={openAuthModal}
                 style={{
                   width: '100%',
-                  padding: '0.5rem',
+                  padding: '0.55rem',
                   fontSize: '0.85rem',
-                  fontWeight: 'bold',
-                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
                   border: 'none',
-                  color: '#fff',
+                  color: '#FFFFFF',
                   borderRadius: '6px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
                 }}
               >
                 Sign In / Register
