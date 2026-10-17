@@ -515,7 +515,7 @@ function activate(context) {
     if (dbInitialized) {
         (0, batch_sync_1.triggerBatchSync)({ onStatusUpdate: broadcastStateToWebviews });
     }
-    // ── Plan 5: Sliding Window Manager (every 2.5 min, 5 min window) ──────
+    // ── Plan 5: Sliding Window Manager (W=5 min, step=1 min sliding stride) ──
     sliding_window_1.defaultSlidingWindowManager.start();
     context.subscriptions.push({
         dispose: () => sliding_window_1.defaultSlidingWindowManager.stop()
@@ -791,6 +791,57 @@ function activate(context) {
         broadcastStateToWebviews();
         triggerDebouncedAutoSync(context, 1000);
     }));
+    // ── Background File Watcher (captures disk edits to closed files by external AI agents) ──
+    const bgWatcher = vscode.workspace.createFileSystemWatcher('**/*');
+    bgWatcher.onDidChange(async (uri) => {
+        if (uri.scheme !== 'file' || !(0, noise_filter_1.shouldTrackFile)(uri))
+            return;
+        const fsPath = uri.fsPath;
+        const isActivelyOpen = vscode.window.activeTextEditor?.document.uri.fsPath === fsPath;
+        if (!isActivelyOpen) {
+            try {
+                const stats = await fs.promises.stat(fsPath);
+                const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
+                editedFiles.add(rel);
+                const fileItem = getOrCreateFileActivity(rel, uri);
+                fileItem.action = 'edited';
+                storeEvent('BACKGROUND_MUTATION', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                    action: 'external_agent_file_mod',
+                    isExternalDiskWrite: true,
+                    isOpenInEditor: vscode.workspace.textDocuments.some(doc => doc.uri.fsPath === fsPath),
+                    sizeBytes: stats.size,
+                    mtimeMs: stats.mtimeMs,
+                    description: 'Background edit on disk made to closed file by external AI agent / tool'
+                });
+                broadcastStateToWebviews();
+            }
+            catch { }
+        }
+    });
+    bgWatcher.onDidCreate(async (uri) => {
+        if (uri.scheme !== 'file' || !(0, noise_filter_1.shouldTrackFile)(uri))
+            return;
+        const fsPath = uri.fsPath;
+        const isActivelyOpen = vscode.window.activeTextEditor?.document.uri.fsPath === fsPath;
+        if (!isActivelyOpen) {
+            try {
+                const stats = await fs.promises.stat(fsPath);
+                const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
+                createdFiles.add(rel);
+                const fileItem = getOrCreateFileActivity(rel, uri);
+                fileItem.action = 'created';
+                storeEvent('FILE_CREATE', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                    action: 'external_agent_file_create',
+                    isExternalDiskWrite: true,
+                    sizeBytes: stats.size,
+                    description: 'New file created on disk by external AI agent / tool'
+                });
+                broadcastStateToWebviews();
+            }
+            catch { }
+        }
+    });
+    context.subscriptions.push(bgWatcher);
     // ── Save Handler (enhanced with save count) ────────────────────────────
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(doc => {
         if (doc.uri.scheme !== 'file')
@@ -930,21 +981,6 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.switchTask', () => (0, onboarding_1.switchTaskCondition)(context)));
     // 1-Click offline failsafe exporter
     (0, export_bundle_1.registerExportCommand)(context, globalStoragePath);
-    // ── Closed-File Background Mutation Watcher (External Agent / Disk writes) ──
-    const diskMutationWatcher = vscode.workspace.createFileSystemWatcher('**/*');
-    diskMutationWatcher.onDidChange(uri => {
-        if (uri.scheme !== 'file' || !(0, noise_filter_1.shouldTrackFile)(uri))
-            return;
-        const isDocOpen = vscode.workspace.textDocuments.some(doc => !doc.isClosed && doc.uri.fsPath === uri.fsPath);
-        if (!isDocOpen) {
-            const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
-            storeEvent('BACKGROUND_MUTATION', (0, noise_filter_1.categorizeFile)(uri), rel, {
-                action: 'disk_mutation',
-                external: true
-            });
-        }
-    });
-    context.subscriptions.push(diskMutationWatcher);
     // ── Flush Offline Cache on Startup ─────────────────────────────────────
     flushOfflineCache(context);
     // ── Prune old synced records (7-day retention) ─────────────────────────

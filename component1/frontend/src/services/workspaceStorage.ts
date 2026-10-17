@@ -37,6 +37,19 @@ export async function saveWorkspaceHandle(
   handle: any, 
   folderName: string
 ): Promise<void> {
+  // Always persist metadata to localStorage for instant recovery
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(`offsync_folder_meta_${assignmentId}`, JSON.stringify({
+        assignmentId,
+        folderName,
+        lastConnected: new Date().toISOString()
+      }));
+    } catch (e) {
+      console.warn('Could not save folder meta to localStorage:', e);
+    }
+  }
+
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -60,24 +73,66 @@ export async function saveWorkspaceHandle(
 export async function getWorkspaceHandle(
   assignmentId: string
 ): Promise<{ handle: any; folderName: string; lastConnected: string } | null> {
+  let fallbackMeta: any = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(`offsync_folder_meta_${assignmentId}`);
+      if (raw) fallbackMeta = JSON.parse(raw);
+    } catch {}
+  }
+
   try {
     const db = await openDB();
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const req = store.get(assignmentId);
       req.onsuccess = (e: any) => {
-        resolve(e.target.result || null);
+        const result = e.target.result;
+        if (result && result.handle) {
+          resolve(result);
+        } else if (fallbackMeta) {
+          resolve({
+            handle: result?.handle || null,
+            folderName: fallbackMeta.folderName,
+            lastConnected: fallbackMeta.lastConnected
+          });
+        } else {
+          resolve(result || null);
+        }
       };
-      req.onerror = (e: any) => reject(e.target.error);
+      req.onerror = () => {
+        if (fallbackMeta) {
+          resolve({
+            handle: null,
+            folderName: fallbackMeta.folderName,
+            lastConnected: fallbackMeta.lastConnected
+          });
+        } else {
+          resolve(null);
+        }
+      };
     });
   } catch (err) {
     console.warn('Could not retrieve directory handle from IndexedDB:', err);
+    if (fallbackMeta) {
+      return {
+        handle: null,
+        folderName: fallbackMeta.folderName,
+        lastConnected: fallbackMeta.lastConnected
+      };
+    }
     return null;
   }
 }
 
 export async function deleteWorkspaceHandle(assignmentId: string): Promise<void> {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(`offsync_folder_meta_${assignmentId}`);
+    } catch {}
+  }
+
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {

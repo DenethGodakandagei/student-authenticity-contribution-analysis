@@ -14,7 +14,7 @@ export function getConfig(): ExtConfig {
   return {
     authToken: cfg.get<string>('authToken') || '',
     assignmentId: cfg.get<string>('assignmentId') || '',
-    serverUrl: (cfg.get<string>('serverUrl') || 'http://localhost:5000').replace(/\/+$/, ''),
+    serverUrl: (cfg.get<string>('serverUrl') || process.env.COLLABINTEL_SERVER_URL || 'https://student-authenticity-contribution-80jm.onrender.com').replace(/\/+$/, ''),
     syncIntervalMinutes: cfg.get<number>('syncIntervalMinutes') || 5,
     trackOnlyLinkedRepo: cfg.get<boolean>('trackOnlyLinkedRepo') ?? true,
   };

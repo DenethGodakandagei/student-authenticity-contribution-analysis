@@ -11,6 +11,8 @@ interface CreateGeneralTeamModalProps {
   setTeamName: (v: string) => void;
   gitUsername: string;
   setGitUsername: (v: string) => void;
+  repoUrl?: string;
+  setRepoUrl?: (v: string) => void;
   studentsList: any[];
   selectedMembers: string[];
   setSelectedMembers: React.Dispatch<React.SetStateAction<string[]>>;
@@ -24,6 +26,8 @@ export const CreateGeneralTeamModal: React.FC<CreateGeneralTeamModalProps> = ({
   setTeamName,
   gitUsername,
   setGitUsername,
+  repoUrl = '',
+  setRepoUrl,
   studentsList,
   selectedMembers,
   setSelectedMembers,
@@ -65,6 +69,19 @@ export const CreateGeneralTeamModal: React.FC<CreateGeneralTeamModalProps> = ({
             onChange={(e) => setGitUsername(e.target.value)}
             placeholder="e.g. octocat"
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            GitHub Repository URL <span className="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <input
+            type="url"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl && setRepoUrl(e.target.value)}
+            placeholder="e.g. https://github.com/organization/project"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900"
           />
         </div>
 

@@ -65,6 +65,11 @@
         "command": "telemetry.exportBundle",
         "title": "Experiment: 1-Click Export Local Telemetry Database (.sqlite)",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "collabintel.exportLocalData",
+        "title": "CollabIntel: 1-Click Export Local Telemetry Database (.sqlite / JSON)",
+        "icon": "$(cloud-download)"
       }
     ],
     "viewsContainers": {
@@ -100,7 +105,7 @@
         },
         "collabintel.serverUrl": {
           "type": "string",
-          "default": "http://localhost:5000",
+          "default": "https://student-authenticity-contribution-80jm.onrender.com",
           "description": "CollabIntel backend server URL."
         },
         "collabintel.syncIntervalMinutes": {

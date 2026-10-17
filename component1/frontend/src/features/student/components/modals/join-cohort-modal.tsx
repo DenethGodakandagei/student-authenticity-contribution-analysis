@@ -145,13 +145,36 @@ export const JoinCohortModal: React.FC<JoinCohortModalProps> = ({
             {teamFlow === 'join' && (
               <div className="space-y-3 pt-2 border-t border-slate-200">
                 <h5 className="text-xs font-bold text-slate-900">Select Team or Enter Invite Code</h5>
+                {searchedTeams && searchedTeams.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    <span className="text-[10px] uppercase font-mono text-slate-400 font-semibold block">
+                      Teams in this Assignment:
+                    </span>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {searchedTeams.map((t) => (
+                        <div
+                          key={t._id || t.inviteCode}
+                          onClick={() => setTeamInviteCode(t.inviteCode)}
+                          className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition ${
+                            teamInviteCode === t.inviteCode
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold'
+                              : 'border-slate-200 bg-white hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          <span>{t.name}</span>
+                          <span className="font-mono text-[10px] text-slate-500">{t.inviteCode}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <form onSubmit={onJoinTeam} className="space-y-2">
                   <input
                     type="text"
                     required
                     value={teamInviteCode}
                     onChange={(e) => setTeamInviteCode(e.target.value)}
-                    placeholder="Team Invite Code (e.g. TM-101)"
+                    placeholder="Team Invite Code (e.g. TEAM-101)"
                     className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs"
                   />
                   <input
