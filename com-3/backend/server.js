@@ -39,7 +39,7 @@ const UserSchema = new mongoose.Schema({
   studentId: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, enum: ['student', 'lecturer'], default: 'student' },
+  role: { type: String, enum: ['student', 'group_leader', 'lecturer'], default: 'student' },
   createdAt: { type: Date, default: Date.now }
 });
 const User = mongoose.model('User', UserSchema);
@@ -456,9 +456,18 @@ app.post('/api/auth/register', async (req, res) => {
       studentId: studentId.trim(),
       email: cleanEmail,
       passwordHash,
-      role: role === 'lecturer' ? 'lecturer' : 'student'
+    const validRoles = ['student', 'group_leader', 'lecturer'];
+    const assignedRole = validRoles.includes(role) ? role : 'student';
+    const newUser = await User.create({
+      username: cleanUsername,
+      name: name.trim(),
+      studentId: studentId.trim(),
+      email: cleanEmail,
+      passwordHash,
+      role: assignedRole
     });
 
+    const isLeader = newUser.role === 'group_leader' || newUser.role === 'lecturer';
     const userData = {
       id: newUser._id,
       username: newUser.username,
@@ -466,6 +475,7 @@ app.post('/api/auth/register', async (req, res) => {
       studentId: newUser.studentId,
       email: newUser.email,
       role: newUser.role,
+      isLeader,
       displayName: `${newUser.name} (${newUser.studentId})`
     };
 
@@ -496,6 +506,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid password.' });
     }
 
+    const isLeader = user.role === 'group_leader' || user.role === 'lecturer';
     const userData = {
       id: user._id,
       username: user.username,
@@ -503,6 +514,7 @@ app.post('/api/auth/login', async (req, res) => {
       studentId: user.studentId,
       email: user.email,
       role: user.role,
+      isLeader,
       displayName: `${user.name} (${user.studentId})`
     };
 

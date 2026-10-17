@@ -8,91 +8,68 @@ body {
 }
 /* Append to existing index.css or replace */
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
+  /* User-Defined Design System Tokens */
+  --primary-accent: #a3e635;
+  --accent-hover: #8ee01d;
+  --accent-light: rgba(163, 230, 53, 0.16);
+  --accent-dark: #275306;
+  --dark-accent: #121417;
+  --dark-hover: #1e2227;
+  --main-background: #f6f8fa;
+  --card-surface: #ffffff;
+  --secondary-surface: #f1f5f9;
+  --tertiary-surface: #e2e8f0;
+  --card-border: rgba(0, 0, 0, 0.06);
+  --primary-text: #0f172a;
+  --secondary-text: #64748b;
+  --tertiary-text: #94a3b8;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #0ea5e9;
+
+  /* Aliases & Semantic Fallbacks */
+  --bg-primary: #f6f8fa;
+  --bg-secondary: #ffffff;
   --bg-glass: rgba(255, 255, 255, 0.95);
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --deep-navy: #1E3A8A;
-  --navy-dark: #0F172A;
-  --tech-teal: #0D9488;
-  --slate-gray: #334155;
-  --primary-indigo: #4F46E5;
-  --indigo-hover: #4338CA;
-  --accent-rose: #dc2626;
+  --text-secondary: #64748b;
   --border-color: #e2e8f0;
-  --glass-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  --glass-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--main-background);
+  color: var(--primary-text);
   font-family: var(--font-family);
   min-height: 100vh;
 }
 
 .app-layout {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
-}
-
-.sidebar {
-  width: 250px;
-  background: #0F172A;
-  border-right: 1px solid #1E293B;
-  padding: 2rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  color: #F8FAFC;
-}
-
-.sidebar h2 {
-  color: #FFFFFF;
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background: none;
-  -webkit-text-fill-color: initial;
-}
-
-.nav-links {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.nav-link {
-  color: #94A3B8;
-  text-decoration: none;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.nav-link:hover, .nav-link:focus {
-  background: rgba(79, 70, 229, 0.15);
-  color: #818CF8;
+  background-color: var(--main-background);
 }
 
 .main-content {
   flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-  max-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-container {
-  max-width: 1600px;
+  max-width: 1440px;
+  width: 100%;
   margin: 0 auto;
+  padding: 1.5rem 2rem 3rem 2rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .glass-panel {

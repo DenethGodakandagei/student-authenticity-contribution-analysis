@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import ContributionHeatmap from '../../components/ContributionHeatmap';
@@ -6,21 +7,18 @@ import DocumentTimeline from '../../components/DocumentTimeline';
 import WordGrowthChart from '../../components/WordGrowthChart';
 import AuthorHighlightViewer from '../../components/AuthorHighlightViewer';
 import MLRevisionAnalytics from '../../components/MLRevisionAnalytics';
-import { getApiBase } from '../../utils/apiConfig';
+import ShareModal from '../../components/ShareModal';
+import { useAuth } from '../../context/AuthContext';
+import { getApiBase, getBackendUrl } from '../../utils/apiConfig';
 import { ToastContainer, ToastItem } from '../../components/CustomDialog';
 
 const API_BASE = getApiBase();
-
-const FileTextIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
-const UsersIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
-const ActivityIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
-const AlertTriangleIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
-const SparklesIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>;
 
 function DashboardComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const docIdQuery = searchParams ? searchParams.get('selectedDocId') : null;
+  const { user, isAuthenticated, openAuthModal } = useAuth();
 
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', title?: string) => {
@@ -31,47 +29,100 @@ function DashboardComponent() {
     }, 4000);
   };
 
-  const [activeTab, setActiveTab] = useState('individual');
+  // Navigation & View Tabs
+  const [activeTab, setActiveTab] = useState<'documents' | 'team' | 'create' | 'ml_analytics' | 'insights' | 'comparison'>('documents');
+  
+  // Documents state
+  const [availableDocs, setAvailableDocs] = useState<any[]>([]);
+  const [selectedDocId, setSelectedDocId] = useState<string>('doc_collaborative_1');
+  const [docSearchQuery, setDocSearchQuery] = useState('');
+  const [docFilter, setDocFilter] = useState<'all' | 'led' | 'shared'>('all');
+
+  // Analytics states for selected doc
   const [timeline, setTimeline] = useState<any[]>([]);
   const [heatmap, setHeatmap] = useState<any>(null);
   const [growth, setGrowth] = useState<any[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
   const [processSummary, setProcessSummary] = useState<any>(null);
   const [authorMarkup, setAuthorMarkup] = useState<any>(null);
-  const [markupLoading, setMarkupLoading] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [availableDocs, setAvailableDocs] = useState<any[]>([]);
-  const [selectedDocId, setSelectedDocId] = useState<string>('doc_collaborative_1');
+
+  // Student Directory & Team states
+  const [registeredStudents, setRegisteredStudents] = useState<any[]>([]);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [teamTargetDocId, setTeamTargetDocId] = useState<string>('');
+  const [selectedStudentForAdd, setSelectedStudentForAdd] = useState<string>('');
+
+  // Create Assignment / Document states
+  const [newDocTitle, setNewDocTitle] = useState('');
+  const [newDocPrompt, setNewDocPrompt] = useState('');
+  const [newDocSource, setNewDocSource] = useState('in_built');
+  const [selectedNewMembers, setSelectedNewMembers] = useState<string[]>([]);
+  const [createLoading, setCreateLoading] = useState(false);
+
+  // Share Modal State
+  const [shareModalDoc, setShareModalDoc] = useState<any>(null);
 
   // Cross Group Compare States
   const [compareDocIds, setCompareDocIds] = useState<string[]>([]);
   const [comparisonResult, setComparisonResult] = useState<any>(null);
   const [compareLoading, setCompareLoading] = useState(false);
 
-  useEffect(() => {
-    fetch(API_BASE)
-      .then(res => res.json())
-      .then(data => {
-        const docs = data || [];
-        setAvailableDocs(docs);
-        
-        // Handle router search parameter
-        if (docIdQuery) {
-          setSelectedDocId(docIdQuery);
-        } else if (docs.length > 0) {
-          setSelectedDocId(prev => (docs.some((d: any) => d._id === prev) ? prev : docs[0]._id));
-        }
-      })
-      .catch(err => console.error("Failed to fetch documents list", err));
-  }, [docIdQuery]);
+  const isUserLeader = user?.role === 'group_leader' || user?.role === 'lecturer' || user?.isLeader || false;
 
-  const fetchData = async (isInitial = false) => {
+  // Load registered students
+  const loadStudents = async () => {
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/auth/users`);
+      const data = await res.json();
+      setRegisteredStudents(data || []);
+    } catch (err) {
+      console.error("Failed to fetch registered students", err);
+    }
+  };
+
+  // Load documents accessible to user
+  const loadDocuments = async () => {
+    try {
+      let url = API_BASE;
+      if (user) {
+        const params = new URLSearchParams();
+        if (user.username) params.append('username', user.username);
+        if (user.studentId) params.append('studentId', user.studentId);
+        if (user.role) params.append('role', user.role);
+        url += `?${params.toString()}`;
+      }
+      const res = await fetch(url);
+      const docs = await res.json();
+      const list = Array.isArray(docs) ? docs : [];
+      setAvailableDocs(list);
+
+      if (docIdQuery) {
+        setSelectedDocId(docIdQuery);
+      } else if (list.length > 0 && !list.some((d: any) => d._id === selectedDocId)) {
+        setSelectedDocId(list[0]._id);
+      }
+      if (!teamTargetDocId && list.length > 0) {
+        setTeamTargetDocId(list[0]._id);
+      }
+    } catch (err) {
+      console.error("Failed to fetch documents", err);
+    }
+  };
+
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [user, docIdQuery]);
+
+  // Fetch document analytics when selectedDocId changes
+  const fetchDocAnalytics = async (isInitial = false) => {
     if (!selectedDocId) return;
     try {
-      if (isInitial) {
-        setLoading(true);
-        setMarkupLoading(true);
-      }
+      if (isInitial) setLoading(true);
 
       const fetchJson = async (url: string) => {
         try {
@@ -96,26 +147,111 @@ function DashboardComponent() {
       if (heatmapRes !== null) setHeatmap(heatmapRes);
       if (growthRes !== null) setGrowth(growthRes || []);
       if (anomaliesRes !== null) setAnomalies(anomaliesRes || []);
-      if (summaryRes !== null) setProcessSummary(summaryRes);
+      if (processSummary !== null) setProcessSummary(summaryRes);
       if (markupRes !== null) setAuthorMarkup(markupRes);
-    } catch (error) {
-      console.error("Failed to fetch document analytics", error);
+    } catch (err) {
+      console.error("Failed to load document analytics", err);
     } finally {
       setLoading(false);
-      setMarkupLoading(false);
     }
   };
 
   useEffect(() => {
     if (!selectedDocId) return;
-    
-    fetchData(true);
-    const interval = setInterval(() => fetchData(false), 5000);
+    fetchDocAnalytics(true);
+    const interval = setInterval(() => fetchDocAnalytics(false), 5000);
     return () => clearInterval(interval);
   }, [selectedDocId]);
 
+  // Handle adding student to document
+  const handleAddStudentToDoc = async (targetId: string, identifier: string) => {
+    if (!identifier || !targetId) {
+      showToast("Please select both a document and a student.", "error", "Selection Required");
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/${targetId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentUsername: user?.username || user?.studentId || '',
+          targetUserIdentifier: identifier.trim(),
+          action: 'add'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to add student");
+      showToast(`Student "${identifier}" successfully added to document!`, "success", "Student Added");
+      setSelectedStudentForAdd('');
+      await loadDocuments();
+    } catch (err: any) {
+      showToast(err.message, "error", "Failed to Add Student");
+    }
+  };
+
+  // Handle removing student from document
+  const handleRemoveStudentFromDoc = async (targetId: string, identifier: string) => {
+    if (!identifier || !targetId) return;
+    try {
+      const res = await fetch(`${API_BASE}/${targetId}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentUsername: user?.username || user?.studentId || '',
+          targetUserIdentifier: identifier.trim(),
+          action: 'remove'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove student");
+      showToast(`Student removed from document.`, "info", "Access Revoked");
+      await loadDocuments();
+    } catch (err: any) {
+      showToast(err.message, "error", "Revocation Error");
+    }
+  };
+
+  // Handle create assignment / document
+  const handleCreateAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocTitle.trim()) {
+      showToast("Please enter a title for the assignment or document.", "error", "Title Required");
+      return;
+    }
+    setCreateLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newDocTitle.trim(),
+          content: newDocPrompt.trim()
+            ? `<h2>${newDocTitle.trim()}</h2><p>${newDocPrompt.trim()}</p>`
+            : undefined,
+          owner: user?.username || 'student',
+          ownerName: user?.name || user?.username || 'Student Leader',
+          studentId: user?.studentId || '',
+          source: newDocSource,
+          members: selectedNewMembers
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create assignment");
+      showToast("Assignment created! Launching editor...", "success", "Assignment Created");
+      setNewDocTitle('');
+      setNewDocPrompt('');
+      setSelectedNewMembers([]);
+      await loadDocuments();
+      router.push(`/editor?docId=${data.document._id}`);
+    } catch (err: any) {
+      showToast(err.message, "error", "Creation Failed");
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const handleCompareSelect = (docId: string) => {
-    setCompareDocIds((prev: string[]) => 
+    setCompareDocIds(prev =>
       prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]
     );
   };
@@ -137,426 +273,1323 @@ function DashboardComponent() {
     }
   };
 
-  const getSourceBadge = (source?: string) => {
-    switch (source) {
-      case 'google_docs':
-        return <span style={{ padding: '0.25rem 0.6rem', borderRadius: '4px', background: '#4285F4', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>Google Docs</span>;
-      case 'microsoft_365':
-        return <span style={{ padding: '0.25rem 0.6rem', borderRadius: '4px', background: '#0078d4', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>Microsoft 365</span>;
-      default:
-        return <span style={{ padding: '0.25rem 0.6rem', borderRadius: '4px', background: '#10b981', color: 'white', fontSize: '0.8rem', fontWeight: 'bold' }}>In-Built Editor</span>;
-    }
-  };
+  const selectedDocObj = availableDocs.find((d: any) => d._id === selectedDocId) || availableDocs[0];
+  const targetDocForTeam = availableDocs.find((d: any) => d._id === teamTargetDocId) || selectedDocObj;
 
-  const selectedDocObj = availableDocs.find((d: any) => d._id === selectedDocId);
+  // Filtered documents list
+  const filteredDocs = availableDocs.filter((d: any) => {
+    const matchesSearch = !docSearchQuery ||
+      (d.title || '').toLowerCase().includes(docSearchQuery.toLowerCase()) ||
+      (d._id || '').toLowerCase().includes(docSearchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    const isOwner = user && (
+      (d.owner && d.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
+      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+    );
+
+    if (docFilter === 'led') return isOwner;
+    if (docFilter === 'shared') return !isOwner;
+    return true;
+  });
+
+  // Calculate dynamic stats
+  const totalWords = authorMarkup?.segments?.reduce((sum: number, s: any) => sum + (s.words || 0), 0) || 0;
+  const authenticityScore = processSummary?.authenticityScore || 30;
 
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={id => setToasts(prev => prev.filter(t => t.id !== id))} />
+
       <div className="dashboard-container">
-      {/* Navigation Headers and Tabs */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: '1rem 2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.3rem' }}>Lecturer Dashboard</h2>
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.05)', padding: '0.25rem', borderRadius: '8px' }}>
-            <button
-              onClick={() => setActiveTab('individual')}
+        
+        {/* 1. Top Success Notification Banner */}
+        <div style={{
+          background: 'rgba(163, 230, 53, 0.16)',
+          border: '1px solid rgba(163, 230, 53, 0.35)',
+          color: '#275306',
+          padding: '0.8rem 1.4rem',
+          borderRadius: '12px',
+          fontSize: '0.86rem',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <span>Workspace sync complete: Real-time document revisions & typing provenance tracked to DB (off-git).</span>
+          <span style={{ fontSize: '0.78rem', background: '#275306', color: '#ffffff', padding: '0.15rem 0.6rem', borderRadius: '9999px', fontWeight: 700 }}>
+            Active
+          </span>
+        </div>
+
+        {/* 2. Cohort Selector & Quick Action Bar */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          padding: '0.5rem 0'
+        }}>
+          {/* Left: Cohort Selector & Action Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#64748b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              COHORT:
+            </span>
+
+            <select
+              value={selectedDocId}
+              onChange={e => setSelectedDocId(e.target.value)}
               style={{
-                border: 'none',
-                background: activeTab === 'individual' ? 'white' : 'transparent',
-                color: activeTab === 'individual' ? 'black' : 'var(--text-secondary)',
-                padding: '0.5rem 1rem',
-                borderRadius: '6px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '9999px',
+                padding: '0.45rem 1.25rem',
+                fontSize: '0.84rem',
+                fontWeight: 600,
+                color: '#0f172a',
+                outline: 'none',
                 cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '0.85rem',
-                transition: 'all 0.2s'
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
-              Document Insights
-            </button>
+              {availableDocs.map((doc: any) => (
+                <option key={doc._id} value={doc._id}>
+                  {doc.title || doc._id}
+                </option>
+              ))}
+            </select>
+
             <button
-              onClick={() => setActiveTab('ml_analytics')}
+              onClick={() => setActiveTab('create')}
               style={{
+                background: '#121417',
+                color: '#ffffff',
                 border: 'none',
-                background: activeTab === 'ml_analytics' ? 'white' : 'transparent',
-                color: activeTab === 'ml_analytics' ? 'black' : 'var(--text-secondary)',
-                padding: '0.5rem 1rem',
-                borderRadius: '6px',
+                borderRadius: '9999px',
+                padding: '0.45rem 1.15rem',
+                fontSize: '0.82rem',
+                fontWeight: 700,
                 cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '0.85rem',
-                transition: 'all 0.2s',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem'
+                gap: '0.4rem',
+                transition: 'all 0.15s ease'
               }}
+              onMouseOver={e => e.currentTarget.style.background = '#1e2227'}
+              onMouseOut={e => e.currentTarget.style.background = '#121417'}
             >
-              ML Revision Analytics
+              <span>+</span> Create Assignment
             </button>
-            <button
-              onClick={() => setActiveTab('comparison')}
-              style={{
-                border: 'none',
-                background: activeTab === 'comparison' ? 'white' : 'transparent',
-                color: activeTab === 'comparison' ? 'black' : 'var(--text-secondary)',
-                padding: '0.5rem 1rem',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: '0.85rem',
-                transition: 'all 0.2s'
-              }}
-            >
-              Cross-Group Comparison
-            </button>
+
+            {isUserLeader && (
+              <button
+                onClick={() => setActiveTab('team')}
+                style={{
+                  background: '#a3e635',
+                  color: '#121417',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.45rem 1.15rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: '0 2px 6px rgba(163, 230, 53, 0.35)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
+                onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+              >
+                <span>+</span> Add Student to Group
+              </button>
+            )}
+          </div>
+
+          {/* Right: Sync Documents Button */}
+          <button
+            onClick={() => {
+              loadDocuments();
+              fetchDocAnalytics(true);
+              showToast("Documents and telemetry refreshed", "info", "Synced");
+            }}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '9999px',
+              padding: '0.45rem 1.1rem',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              color: '#0f172a',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            }}
+          >
+            <span>↻</span> Sync: Documents
+          </button>
+        </div>
+
+        {/* 3. Two Cards Grid: Component 1 Style */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
+          gap: '1.5rem'
+        }}>
+          {/* Card 1: Integrity & Coding Authenticity */}
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '16px',
+            padding: '1.75rem',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '1.25rem'
+          }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                    Integrity & Document Authenticity
+                  </h3>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                    Biometric typing telemetry & multi-author revision provenance analysis
+                  </p>
+                </div>
+                <span style={{
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  color: '#16a34a',
+                  border: '1px solid rgba(34, 197, 94, 0.25)',
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
+                  Verified Authentic
+                </span>
+              </div>
+
+              {/* Big Score Display */}
+              <div style={{ margin: '1.25rem 0' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
+                    {authenticityScore}%
+                  </span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    AUTHENTICITY SCORE
+                  </span>
+                </div>
+                <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.4 }}>
+                  Genuine human keystroke rhythm verified against local & remote collaborative revision history.
+                </p>
+              </div>
+
+              {/* Three Mini Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 0.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Manual</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>88%</div>
+                </div>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 0.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>AI Assist</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>8%</div>
+                </div>
+                <div style={{ background: 'rgba(239, 68, 68, 0.04)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '10px', padding: '0.85rem 0.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#ef4444', fontWeight: 600 }}>External Paste</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ef4444', marginTop: '0.2rem' }}>4%</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.65rem', marginTop: '0.5rem' }}>
+              <button
+                onClick={() => router.push(`/editor?docId=${selectedDocId}`)}
+                style={{
+                  background: '#a3e635',
+                  color: '#121417',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.65rem 1rem',
+                  fontSize: '0.84rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  boxShadow: '0 2px 8px rgba(163, 230, 53, 0.35)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
+                onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+              >
+                Open In Editor
+              </button>
+
+              <button
+                onClick={() => setActiveTab('insights')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
+                  borderRadius: '9999px',
+                  padding: '0.65rem 1rem',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                Audit Report
+              </button>
+
+              <button
+                onClick={() => {
+                  const blob = new Blob([JSON.stringify(timeline, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${selectedDocId}_telemetry.json`;
+                  a.click();
+                  showToast("Telemetry export downloaded", "success", "Export Complete");
+                }}
+                style={{
+                  background: '#121417',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.65rem 1rem',
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#1e2227'}
+                onMouseOut={e => e.currentTarget.style.background = '#121417'}
+              >
+                Dataset CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Workspace Standing */}
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '16px',
+            padding: '1.75rem',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '1.25rem'
+          }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Workspace Standing
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                  Total {totalWords} words
+                </span>
+              </div>
+
+              {/* Blue Weighted Score Box */}
+              <div style={{
+                background: 'rgba(14, 165, 233, 0.08)',
+                border: '1px solid rgba(14, 165, 233, 0.2)',
+                borderRadius: '12px',
+                padding: '1rem 1.25rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.25rem'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    WEIGHTED SCORE
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, marginTop: '0.15rem' }}>
+                    Calculated Authenticity
+                  </div>
+                </div>
+                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0ea5e9' }}>
+                  {authenticityScore}%
+                </div>
+              </div>
+
+              {/* Progress Bars Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                    <span>Document Mining (40%)</span>
+                    <span>0%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: '0%', height: '100%', background: '#64748b' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                    <span>Editor Telemetry (30%)</span>
+                    <span>0%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: '0%', height: '100%', background: '#64748b' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                    <span>Keystroke Cadence (20%)</span>
+                    <span style={{ color: '#22c55e', fontWeight: 700 }}>90%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: '90%', height: '100%', background: '#22c55e', borderRadius: '9999px' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                    <span>Provenance Attestation (10%)</span>
+                    <span style={{ color: '#0ea5e9', fontWeight: 700 }}>98%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: '98%', height: '100%', background: '#0ea5e9', borderRadius: '9999px' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {(activeTab === 'individual' || activeTab === 'ml_analytics') && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <label style={{ color: 'var(--text-secondary)' }}>Select Document:</label>
-            <select 
-              value={selectedDocId} 
-              onChange={e => setSelectedDocId(e.target.value)}
-              style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontWeight: '600' }}
-            >
-              {availableDocs.length === 0 && <option value="doc_collaborative_1">doc_collaborative_1</option>}
-              {availableDocs.map((doc: any) => (
-                <option key={doc._id} value={doc._id}>{doc.title || doc._id}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => router.push(`/editor?docId=${selectedDocId}`)}
-              style={{
-                background: selectedDocObj?.source === 'google_docs' || selectedDocId.startsWith('google_docs_') ? '#4285F4' : selectedDocObj?.source === 'microsoft_365' || selectedDocId.startsWith('microsoft_365_') ? '#0078d4' : 'var(--accent-blue)',
-                color: 'white',
-                border: 'none',
-                padding: '0.5rem 0.9rem',
-                borderRadius: '6px',
-                fontWeight: 'bold',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem'
-              }}
-            >
-              Work Collaboratively
-            </button>
-          </div>
-        )}
-      </div>
+        {/* 4. Tab Navigation Bar matching Component 1 in photo */}
+        <div style={{
+          borderBottom: '2px solid #e2e8f0',
+          display: 'flex',
+          gap: '2rem',
+          marginTop: '0.5rem',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}>
+          {[
+            { id: 'documents', label: 'My Documents & Assignments' },
+            { id: 'team', label: 'Student Directory & Team Manager' },
+            { id: 'create', label: 'Create Assignment / Document' },
+            { id: 'ml_analytics', label: 'ML Revision Analytics' },
+            { id: 'insights', label: 'Document Insights' },
+            { id: 'comparison', label: 'Cross-Group Comparison' },
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? '3px solid #121417' : '3px solid transparent',
+                  padding: '0.75rem 0.25rem',
+                  fontSize: '0.88rem',
+                  fontWeight: isActive ? 800 : 600,
+                  color: isActive ? '#0f172a' : '#64748b',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-      {activeTab === 'individual' ? (
-        loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px', color: 'var(--text-primary)' }}>Loading Live Document Analytics...</div>
-        ) : (
-          <>
-            {/* Top Stats and Info */}
-            <div className="glass-panel">
-              <div className="panel-header" style={{ color: 'var(--accent-blue)', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <FileTextIcon />
-                  <span style={{ color: 'var(--text-primary)' }}>Live Analytics: {selectedDocObj?.title || selectedDocId}</span>
-                </div>
-                {getSourceBadge(selectedDocObj?.source)}
-              </div>
-              <div className="header-stats">
-                <div className="stat-box">
-                  <span className="stat-value">{heatmap?.authors?.length || 0}</span>
-                  <span className="stat-label">Active Collaborators</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-value">{timeline.length}</span>
-                  <span className="stat-label">Total Revisions</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-value">{processSummary?.stats?.activeDays || 1}</span>
-                  <span className="stat-label">Days Active</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-value" style={{ fontSize: '1.25rem', padding: '0.5rem 0' }}>{processSummary?.stats?.collaborationRating || 'Calculating...'}</span>
-                  <span className="stat-label">Collaboration Quality</span>
-                </div>
-              </div>
-            </div>
+        {/* 5. Tab Content Sections */}
 
-            {/* Process Summarization Block */}
-            <div className="glass-panel" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(139, 92, 246, 0.03))' }}>
-              <div className="panel-header" style={{ color: '#8b5cf6' }}>
-                <SparklesIcon />
-                <span style={{ color: 'var(--text-primary)' }}>Process-Aware Evolution Summary (AI Reconstructed)</span>
-              </div>
-              <div style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.4)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.7' }}>
-                  {processSummary?.summary ? (
-                    processSummary.summary.split('\n').map((line: string, idx: number) => {
-                      if (line.startsWith('- **')) {
-                        const match = line.match(/- \*\*(.*?)\*\*(.*)/);
-                        if (match) {
-                          return (
-                            <div key={idx} style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', position: 'relative' }}>
-                              <span style={{ position: 'absolute', left: '0.25rem', color: '#8b5cf6' }}>•</span>
-                              <strong>{match[1]}</strong>{match[2]}
-                            </div>
-                          );
-                        }
-                      }
-                      return <p key={idx} style={{ margin: '0.75rem 0' }}>{line}</p>;
-                    })
-                  ) : (
-                    "Analyzing evolution history lifecycle..."
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Multi-Author Color-Coded Highlighted Text Attribution Panel */}
-            <div className="glass-panel">
-              <div className="panel-header" style={{ color: '#38bdf8' }}>
-                <SparklesIcon />
-                <span style={{ color: 'var(--text-primary)' }}>Multi-Author Highlighted Text Attribution (Student Contributions)</span>
-              </div>
-              <AuthorHighlightViewer markupData={authorMarkup} loading={markupLoading} />
-            </div>
-
-            {/* Visual Analytics Grid */}
-            <div className="dashboard-grid">
-              <div className="glass-panel">
-                <div className="panel-header" style={{ color: 'var(--accent-purple)' }}>
-                  <UsersIcon />
-                  <span style={{ color: 'var(--text-primary)' }}>Active Editing Days (Heatmap)</span>
-                </div>
-                <ContributionHeatmap data={heatmap} />
+        {/* TAB 1: My Documents & Assignments */}
+        {activeTab === 'documents' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                  My Documents & Assignments
+                </h3>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                  Documents you have created as group leader or have been invited to collaborate on.
+                </p>
               </div>
 
-              <div className="glass-panel">
-                <div className="panel-header" style={{ color: 'var(--accent-teal)' }}>
-                  <ActivityIcon />
-                  <span style={{ color: 'var(--text-primary)' }}>Word Growth Speed</span>
-                </div>
-                <WordGrowthChart data={growth} />
-              </div>
-            </div>
-
-            {/* Revision Flow */}
-            <div className="glass-panel" style={{ overflowX: 'auto' }}>
-              <div className="panel-header" style={{ color: 'var(--text-secondary)' }}>
-                <FileTextIcon />
-                <span style={{ color: 'var(--text-primary)' }}>Revision Flow History</span>
-              </div>
-              <DocumentTimeline data={timeline} />
-            </div>
-
-            {/* Sudden Growth paste detection notifications */}
-            {anomalies.length > 0 && (
-              <div style={{ marginTop: '1rem' }}>
-                {anomalies.map((anomaly: any) => (
-                  <div className="anomaly-alert" key={anomaly.id}>
-                    <div className="anomaly-icon"><AlertTriangleIcon /></div>
-                    <div className="anomaly-content">
-                      <h4>{anomaly.flag || "Suspicious Growth"} Detected</h4>
-                      <p>
-                        {anomaly.author} added {anomaly.words_added} words on {new Date(anomaly.timestamp).toLocaleString()}. 
-                        This fast addition represents typing speeds above common physiological limits, signaling copy-pasting from external documents or generative tools.
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )
-      ) : activeTab === 'ml_analytics' ? (
-        <MLRevisionAnalytics
-          documentId={selectedDocId}
-          docTitle={selectedDocObj?.title || selectedDocId}
-        />
-      ) : (
-        /* Cross Group Comparison Tab View */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Select Student Submissions to Compare</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              Select two or more assignments or document revisions below. The platform will execute high-performance originality analysis to search for structural copy-pasting and shared sections.
-            </p>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
-              {availableDocs.map((doc: any) => (
-                <label
-                  key={doc._id}
+              {/* Search & Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Search documents..."
+                  value={docSearchQuery}
+                  onChange={e => setDocSearchQuery(e.target.value)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem 1rem',
-                    border: '1px solid var(--border-color)',
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
                     borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: compareDocIds.includes(doc._id) ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
-                    borderColor: compareDocIds.includes(doc._id) ? 'var(--accent-blue)' : 'var(--border-color)',
-                    transition: 'all 0.2s',
-                    fontWeight: 'bold'
+                    padding: '0.45rem 0.85rem',
+                    fontSize: '0.84rem',
+                    color: '#0f172a',
+                    width: '200px',
+                    outline: 'none'
+                  }}
+                />
+
+                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '0.2rem' }}>
+                  <button
+                    onClick={() => setDocFilter('all')}
+                    style={{
+                      border: 'none',
+                      background: docFilter === 'all' ? '#ffffff' : 'transparent',
+                      color: docFilter === 'all' ? '#0f172a' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setDocFilter('led')}
+                    style={{
+                      border: 'none',
+                      background: docFilter === 'led' ? '#ffffff' : 'transparent',
+                      color: docFilter === 'led' ? '#0f172a' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    My Assignments (Leader)
+                  </button>
+                  <button
+                    onClick={() => setDocFilter('shared')}
+                    style={{
+                      border: 'none',
+                      background: docFilter === 'shared' ? '#ffffff' : 'transparent',
+                      color: docFilter === 'shared' ? '#0f172a' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Shared With Me
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Document Cards Grid */}
+            {filteredDocs.length === 0 ? (
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '3rem 2rem',
+                textAlign: 'center',
+                color: '#64748b'
+              }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
+                  No documents found
+                </div>
+                <p style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
+                  You have not created any documents or joined any collaborative group assignments yet.
+                </p>
+                <button
+                  onClick={() => setActiveTab('create')}
+                  style={{
+                    background: '#a3e635',
+                    color: '#121417',
+                    border: 'none',
+                    padding: '0.5rem 1.25rem',
+                    borderRadius: '9999px',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={compareDocIds.includes(doc._id)}
-                    onChange={() => handleCompareSelect(doc._id)}
-                    style={{ cursor: 'pointer' }}
-                  />
-                  {doc.title || doc._id}
-                </label>
-              ))}
-            </div>
+                  Create Your First Assignment
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
+                {filteredDocs.map((doc: any) => {
+                  const isOwner = user && (
+                    (doc.owner && doc.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
+                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+                  );
 
-            <button
-              onClick={runCrossGroupAnalysis}
-              disabled={compareDocIds.length < 2 || compareLoading}
-              style={{
-                background: 'var(--accent-teal)',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '6px',
-                fontWeight: 'bold',
-                cursor: compareDocIds.length < 2 ? 'not-allowed' : 'pointer',
-                opacity: compareDocIds.length < 2 ? 0.6 : 1,
-                transition: 'background 0.2s'
-              }}
-            >
-              {compareLoading ? "Running Cross-Group Overlap Analysis..." : "Execute Cross-Group Originality Engine"}
-            </button>
-          </div>
+                  return (
+                    <div
+                      key={doc._id}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid rgba(0, 0, 0, 0.08)',
+                        borderRadius: '14px',
+                        padding: '1.5rem',
+                        boxShadow: '0 2px 6px rgba(15, 23, 42, 0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                      }}
+                    >
+                      <div>
+                        {/* Header Badges */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <span style={{
+                            background: doc.source === 'google_docs' ? '#e8f0fe' : doc.source === 'microsoft_365' ? '#deecf9' : 'rgba(163, 230, 53, 0.16)',
+                            color: doc.source === 'google_docs' ? '#1a73e8' : doc.source === 'microsoft_365' ? '#0078d4' : '#275306',
+                            padding: '0.2rem 0.65rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.74rem',
+                            fontWeight: 700
+                          }}>
+                            {doc.source === 'google_docs' ? 'Google Docs' : doc.source === 'microsoft_365' ? 'Microsoft 365' : 'In-Built Editor'}
+                          </span>
 
-          {comparisonResult && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              {/* Overlap Similarity Matrix */}
-              <div className="glass-panel">
-                <h3 style={{ color: 'var(--text-primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  Originality Similarity Matrix (%)
-                </h3>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                        <th style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Document Submission</th>
-                        {comparisonResult.documents?.map((d: any) => (
-                          <th key={d.id} style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{d.title}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparisonResult.documents?.map((rowDoc: any) => (
-                        <tr key={rowDoc.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
-                          <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{rowDoc.title}</td>
-                          {comparisonResult.documents?.map((colDoc: any) => {
-                            const val = comparisonResult.similarityMatrix?.[rowDoc.id]?.[colDoc.id] || 0;
-                            const isSelf = rowDoc.id === colDoc.id;
-                            
-                            // Color code background based on value
-                            let cellBg = 'transparent';
-                            let cellColor = 'var(--text-primary)';
-                            if (!isSelf && val > 50) {
-                              cellBg = 'rgba(239, 68, 68, 0.15)';
-                              cellColor = '#ef4444';
-                            } else if (!isSelf && val > 20) {
-                              cellBg = 'rgba(245, 158, 11, 0.15)';
-                              cellColor = '#d97706';
-                            } else if (!isSelf) {
-                              cellBg = 'rgba(16, 185, 129, 0.08)';
-                              cellColor = '#10b981';
-                            }
+                          <span style={{
+                            background: isOwner ? 'rgba(163, 230, 53, 0.16)' : '#f1f5f9',
+                            color: isOwner ? '#275306' : '#64748b',
+                            padding: '0.2rem 0.65rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.74rem',
+                            fontWeight: 700
+                          }}>
+                            {isOwner ? 'Group Leader (You)' : `Leader: ${doc.ownerName || doc.owner || 'System'}`}
+                          </span>
+                        </div>
 
-                            return (
-                              <td
-                                key={colDoc.id}
+                        {/* Title */}
+                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                          {doc.title || doc._id}
+                        </h4>
+
+                        {/* Collaborators */}
+                        <div style={{ marginTop: '0.75rem' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
+                            Group Members ({doc.collaborators?.length || 1}):
+                          </span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
+                            {(doc.collaborators || [doc.ownerName || 'Author']).slice(0, 4).map((c: string, idx: number) => (
+                              <span
+                                key={idx}
                                 style={{
-                                  padding: '1rem',
-                                  background: cellBg,
-                                  color: cellColor,
-                                  fontWeight: 'bold',
-                                  textAlign: 'center'
+                                  background: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '6px',
+                                  padding: '0.15rem 0.45rem',
+                                  fontSize: '0.72rem',
+                                  color: '#0f172a',
+                                  fontWeight: 500
                                 }}
                               >
-                                {isSelf ? '-' : `${val}%`}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                                {c}
+                              </span>
+                            ))}
+                            {(doc.collaborators?.length || 0) > 4 && (
+                              <span style={{ fontSize: '0.72rem', color: '#64748b', alignSelf: 'center' }}>
+                                +{doc.collaborators.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
-              {/* Duplicate Alerts */}
-              {comparisonResult.alerts && comparisonResult.alerts.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h3 style={{ color: 'var(--text-primary)', margin: 0 }}>Active Plagiarism Warnings</h3>
-                  {comparisonResult.alerts.map((alert: any, idx: number) => (
-                    <div key={idx} className="anomaly-alert" style={{ background: alert.severity === 'High' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)', borderColor: alert.severity === 'High' ? '#ef4444' : '#f59e0b' }}>
-                      <div className="anomaly-icon" style={{ color: alert.severity === 'High' ? '#ef4444' : '#f59e0b' }}><AlertTriangleIcon /></div>
-                      <div className="anomaly-content" style={{ flex: 1 }}>
-                        <h4 style={{ color: alert.severity === 'High' ? '#ef4444' : '#d97706' }}>{alert.severity} Similarity Warning ({alert.similarity}%)</h4>
-                        <p style={{ margin: '0.25rem 0 0.5rem 0' }}>{alert.message}</p>
-                        {alert.duplicatePhrases && alert.duplicatePhrases.length > 0 && (
-                          <div style={{ fontSize: '0.8rem', background: 'rgba(0,0,0,0.03)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                            <strong>Overlapping segments detected:</strong>
-                            <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0 }}>
-                              {alert.duplicatePhrases.map((phrase: any, pIdx: number) => (
-                                <li key={pIdx} style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>"... {phrase} ..."</li>
-                              ))}
-                            </ul>
+                      {/* Card Action Buttons */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => router.push(`/editor?docId=${doc._id}`)}
+                            style={{
+                              background: '#a3e635',
+                              color: '#121417',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '0.55rem 0.75rem',
+                              fontSize: '0.82rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              boxShadow: '0 2px 6px rgba(163, 230, 53, 0.35)'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
+                            onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+                          >
+                            Open in Editor
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedDocId(doc._id);
+                              setActiveTab('ml_analytics');
+                            }}
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              color: '#0f172a',
+                              borderRadius: '8px',
+                              padding: '0.55rem 0.75rem',
+                              fontSize: '0.82rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              textAlign: 'center'
+                            }}
+                          >
+                            ML Analytics
+                          </button>
+                        </div>
+
+                        {/* Leader Quick Share / Add Member */}
+                        {isOwner && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => {
+                                setTeamTargetDocId(doc._id);
+                                setActiveTab('team');
+                              }}
+                              style={{
+                                background: '#f1f5f9',
+                                border: '1px solid #e2e8f0',
+                                color: '#0f172a',
+                                borderRadius: '8px',
+                                padding: '0.45rem',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              + Add Teammate
+                            </button>
+
+                            <button
+                              onClick={() => setShareModalDoc(doc)}
+                              style={{
+                                background: '#121417',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                padding: '0.45rem',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Manage Access
+                            </button>
                           </div>
                         )}
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: Student Directory & Team Manager */}
+        {activeTab === 'team' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                Student Directory & Team Management
+              </h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.84rem', color: '#64748b' }}>
+                Search classmates registered in the contribution tracking platform & assign members to your group document.
+              </p>
+            </div>
+
+            {/* Leader Console Box */}
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
+              borderRadius: '14px',
+              padding: '1.5rem',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.02)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <span style={{ background: '#a3e635', color: '#121417', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
+                  LEADER ACTION
+                </span>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Assign Student to Group Document
+                </h4>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr auto', gap: '0.75rem', alignItems: 'center' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
+                    1. Select Target Document
+                  </label>
+                  <select
+                    value={teamTargetDocId}
+                    onChange={e => setTeamTargetDocId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '0.6rem 0.85rem',
+                      fontSize: '0.85rem',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    {availableDocs.map((d: any) => (
+                      <option key={d._id} value={d._id}>
+                        {d.title || d._id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
+                    2. Select Registered Student / Classmate
+                  </label>
+                  <select
+                    value={selectedStudentForAdd}
+                    onChange={e => setSelectedStudentForAdd(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '0.6rem 0.85rem',
+                      fontSize: '0.85rem',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <option value="">-- Choose a student to add --</option>
+                    {registeredStudents.map((st: any) => (
+                      <option key={st._id} value={st.username || st.studentId}>
+                        {st.name} ({st.studentId}) &bull; {st.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ paddingTop: '1.35rem' }}>
+                  <button
+                    onClick={() => handleAddStudentToDoc(teamTargetDocId, selectedStudentForAdd)}
+                    disabled={!selectedStudentForAdd}
+                    style={{
+                      background: selectedStudentForAdd ? '#a3e635' : '#e2e8f0',
+                      color: selectedStudentForAdd ? '#121417' : '#94a3b8',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.6rem 1.25rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      cursor: selectedStudentForAdd ? 'pointer' : 'not-allowed',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    Add to Group
+                  </button>
+                </div>
+              </div>
+
+              {/* Members currently on this target document */}
+              {targetDocForTeam && (
+                <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
+                    Members with access to &quot;{targetDocForTeam.title}&quot;:
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {(targetDocForTeam.allowedUsers || [targetDocForTeam.owner || 'student']).map((u: string) => (
+                      <span
+                        key={u}
+                        style={{
+                          background: '#f1f5f9',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          padding: '0.3rem 0.65rem',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          color: '#0f172a',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem'
+                        }}
+                      >
+                        <span>{u}</span>
+                        {u !== targetDocForTeam.owner && (
+                          <button
+                            onClick={() => handleRemoveStudentFromDoc(targetDocForTeam._id, u)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              fontWeight: 800,
+                              fontSize: '0.85rem',
+                              padding: 0
+                            }}
+                            title="Remove student from document"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
+            </div>
 
-              {/* Cross Group Collaboration Indices */}
-              <div className="glass-panel">
-                <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Submission & Contributor Comparison Index</h3>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                        <th style={{ padding: '0.75rem', color: 'var(--text-secondary)' }}>Submission Group</th>
-                        <th style={{ padding: '0.75rem', color: 'var(--text-secondary)' }}>Source Env</th>
-                        <th style={{ padding: '0.75rem', color: 'var(--text-secondary)' }}>Word Count</th>
-                        <th style={{ padding: '0.75rem', color: 'var(--text-secondary)' }}>Active Contributors</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {comparisonResult.documents?.map((doc: any) => (
-                        <tr key={doc.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '0.75rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{doc.title}</td>
-                          <td style={{ padding: '0.75rem' }}>{getSourceBadge(doc.source)}</td>
-                          <td style={{ padding: '0.75rem', color: 'var(--text-primary)' }}>{doc.wordCount} words</td>
-                          <td style={{ padding: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                            {doc.collaborators?.join(', ')}
+            {/* Student Directory Table */}
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
+              borderRadius: '14px',
+              padding: '1.5rem',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.02)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Registered Classmates Directory ({registeredStudents.length})
+                </h4>
+
+                <input
+                  type="text"
+                  placeholder="Filter by name, ID, or email..."
+                  value={studentSearch}
+                  onChange={e => setStudentSearch(e.target.value)}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.45rem 0.85rem',
+                    fontSize: '0.84rem',
+                    color: '#0f172a',
+                    width: '260px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <th style={{ padding: '0.75rem 0.5rem' }}>Student Name</th>
+                      <th style={{ padding: '0.75rem 0.5rem' }}>Student ID</th>
+                      <th style={{ padding: '0.75rem 0.5rem' }}>Email Address</th>
+                      <th style={{ padding: '0.75rem 0.5rem' }}>Platform Role</th>
+                      <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Quick Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registeredStudents
+                      .filter(s =>
+                        !studentSearch ||
+                        (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        (s.studentId || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        (s.email || '').toLowerCase().includes(studentSearch.toLowerCase())
+                      )
+                      .map((st: any) => (
+                        <tr key={st._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '0.85rem 0.5rem', fontWeight: 700, color: '#0f172a' }}>
+                            {st.name}
+                          </td>
+                          <td style={{ padding: '0.85rem 0.5rem', color: '#0ea5e9', fontWeight: 600 }}>
+                            {st.studentId}
+                          </td>
+                          <td style={{ padding: '0.85rem 0.5rem', color: '#64748b' }}>
+                            {st.email}
+                          </td>
+                          <td style={{ padding: '0.85rem 0.5rem' }}>
+                            <span style={{
+                              background: st.role === 'group_leader' ? 'rgba(163, 230, 53, 0.16)' : st.role === 'lecturer' ? '#e8f0fe' : '#f1f5f9',
+                              color: st.role === 'group_leader' ? '#275306' : st.role === 'lecturer' ? '#1a73e8' : '#64748b',
+                              padding: '0.15rem 0.55rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700
+                            }}>
+                              {st.role === 'group_leader' ? 'Group Leader' : st.role === 'lecturer' ? 'Lecturer' : 'Student Member'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
+                            <button
+                              onClick={() => handleAddStudentToDoc(teamTargetDocId, st.username || st.studentId)}
+                              style={{
+                                background: '#121417',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.35rem 0.75rem',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Add to Document
+                            </button>
                           </td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                  </tbody>
+                </table>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* TAB 3: Create Assignment / Document */}
+        {activeTab === 'create' && (
+          <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+            <div style={{
+              background: '#ffffff',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
+              borderRadius: '16px',
+              padding: '2rem',
+              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)'
+            }}>
+              <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.35rem', fontWeight: 800, color: '#0f172a' }}>
+                Create New Collaborative Assignment / Document
+              </h3>
+              <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.85rem', color: '#64748b' }}>
+                As group leader, initiate a new project, invite initial classmates, and launch directly into the real-time editor.
+              </p>
+
+              <form onSubmit={handleCreateAssignment} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                    Assignment / Document Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Distributed Systems Assignment 2 - Real-Time Analysis"
+                    value={newDocTitle}
+                    onChange={e => setNewDocTitle(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 0.9rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      fontSize: '0.9rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                      Document Source / Platform
+                    </label>
+                    <select
+                      value={newDocSource}
+                      onChange={e => setNewDocSource(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 0.9rem',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        background: '#f8fafc',
+                        color: '#0f172a',
+                        fontSize: '0.9rem',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="in_built">In-Built Collaborative Canvas</option>
+                      <option value="google_docs">Google Docs Synchronized</option>
+                      <option value="microsoft_365">Microsoft 365 Synchronized</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                      Group Leader
+                    </label>
+                    <input
+                      type="text"
+                      disabled
+                      value={user ? `${user.name || user.username} (${user.studentId || 'Leader'})` : 'Guest / System'}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 0.9rem',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        background: '#f1f5f9',
+                        color: '#64748b',
+                        fontSize: '0.9rem',
+                        fontWeight: 600
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                    Initial Outline / Instructions (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter project requirements, section outlines, or research instructions..."
+                    value={newDocPrompt}
+                    onChange={e => setNewDocPrompt(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 0.9rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                {/* Team member selection chips */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                    Select Initial Teammates to Invite ({selectedNewMembers.length} selected)
+                  </label>
+                  <div style={{
+                    maxHeight: '160px',
+                    overflowY: 'auto',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.4rem'
+                  }}>
+                    {registeredStudents.map((st: any) => {
+                      const isSelected = selectedNewMembers.includes(st.username || st.studentId);
+                      return (
+                        <label
+                          key={st._id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            fontSize: '0.82rem',
+                            cursor: 'pointer',
+                            color: isSelected ? '#0f172a' : '#64748b',
+                            fontWeight: isSelected ? 700 : 500
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              const key = st.username || st.studentId;
+                              setSelectedNewMembers(prev =>
+                                prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+                              );
+                            }}
+                          />
+                          <span>{st.name} ({st.studentId}) &bull; {st.email}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={createLoading}
+                  style={{
+                    background: '#a3e635',
+                    color: '#121417',
+                    border: 'none',
+                    borderRadius: '9999px',
+                    padding: '0.85rem',
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    cursor: createLoading ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 12px rgba(163, 230, 53, 0.4)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseOver={e => {
+                    if (!createLoading) e.currentTarget.style.background = '#8ee01d';
+                  }}
+                  onMouseOut={e => {
+                    if (!createLoading) e.currentTarget.style.background = '#a3e635';
+                  }}
+                >
+                  {createLoading ? 'Creating Assignment...' : 'Create & Launch in Editor'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: ML Revision Analytics */}
+        {activeTab === 'ml_analytics' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <MLRevisionAnalytics documentId={selectedDocId} />
+            <AuthorHighlightViewer markupData={authorMarkup} />
+          </div>
+        )}
+
+        {/* TAB 5: Document Insights (Timeline, Heatmap, Growth) */}
+        {activeTab === 'insights' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Document Evolution Timeline
+                </h4>
+                <DocumentTimeline data={timeline} />
+              </div>
+
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Cumulative Word Growth Chart
+                </h4>
+                <WordGrowthChart data={growth} />
+              </div>
+            </div>
+
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                Contribution Heatmap Matrix
+              </h4>
+              <ContributionHeatmap data={heatmap} />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: Cross-Group Comparison */}
+        {activeTab === 'comparison' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                Cross-Group Document Comparison
+              </h3>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.84rem', color: '#64748b' }}>
+                Select 2 or more student documents to benchmark contribution velocity and authenticity across cohorts.
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                {availableDocs.map((doc: any) => {
+                  const isChecked = compareDocIds.includes(doc._id);
+                  return (
+                    <button
+                      key={doc._id}
+                      onClick={() => handleCompareSelect(doc._id)}
+                      style={{
+                        background: isChecked ? '#121417' : '#f8fafc',
+                        color: isChecked ? '#ffffff' : '#0f172a',
+                        border: `1px solid ${isChecked ? '#121417' : '#e2e8f0'}`,
+                        borderRadius: '9999px',
+                        padding: '0.45rem 1rem',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isChecked ? '✓ ' : '+ '} {doc.title || doc._id}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={runCrossGroupAnalysis}
+                disabled={compareLoading || compareDocIds.length < 2}
+                style={{
+                  background: '#a3e635',
+                  color: '#121417',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.65rem 1.4rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  cursor: compareLoading || compareDocIds.length < 2 ? 'not-allowed' : 'pointer',
+                  opacity: compareDocIds.length < 2 ? 0.6 : 1
+                }}
+              >
+                {compareLoading ? 'Comparing Cohorts...' : `Benchmark Selected Documents (${compareDocIds.length})`}
+              </button>
+            </div>
+
+            {comparisonResult && (
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Cross-Group Benchmark Results
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {comparisonResult.groups?.map((grp: any) => (
+                    <div key={grp.documentId} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>
+                        {grp.title || grp.documentId}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        Revisions: <strong style={{ color: '#0f172a' }}>{grp.totalRevisions}</strong>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        Words: <strong style={{ color: '#0f172a' }}>{grp.totalWords}</strong>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        Authenticity Score: <strong style={{ color: '#16a34a' }}>{grp.authenticityScore || 30}%</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+
+      {/* Share Modal */}
+      {shareModalDoc && (
+        <ShareModal
+          isOpen={Boolean(shareModalDoc)}
+          onClose={() => setShareModalDoc(null)}
+          documentId={shareModalDoc._id}
+          docDetails={shareModalDoc}
+          onShareUpdated={() => loadDocuments()}
+        />
       )}
-    </div>
     </>
   );
 }
 
-export default function Dashboard() {
+export default function DashboardPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>Loading Dashboard...</div>}>
+    <Suspense fallback={
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+        Loading student dashboard...
+      </div>
+    }>
       <DashboardComponent />
     </Suspense>
   );

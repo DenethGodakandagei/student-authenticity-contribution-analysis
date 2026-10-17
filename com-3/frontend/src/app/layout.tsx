@@ -4,7 +4,7 @@ import './globals.css';
 import NavigationLayout from './NavigationLayout'; // Client wrapper for the sidebar layout
 
 export const metadata = {
-  title: 'DocAnalytics',
+  title: 'DocuTrace',
   description: 'Document Revision Analytics Platform',
 };
 

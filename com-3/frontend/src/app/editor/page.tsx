@@ -1400,7 +1400,7 @@ function EditorComponent() {
                     {docDetails?.title || selectedDocId}
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#70757a', background: '#e8f0fe', padding: '0.1rem 0.4rem', borderRadius: '12px' }}>
-                    Saved to Drive & DocAnalytics
+                    Saved to Drive & DocuTrace
                   </span>
                 </div>
                 <div className="google-docs-menubar">
