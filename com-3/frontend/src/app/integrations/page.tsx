@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
 import { getApiBase } from '../../utils/apiConfig';
+import { ToastContainer, ToastItem } from '../../components/CustomDialog';
 
 const API_BASE = getApiBase();
 
@@ -14,6 +15,15 @@ export default function Integrations() {
   const [importStep, setImportStep] = useState(0);
   const [linkedDocs, setLinkedDocs] = useState<any[]>([]);
   const [error, setError] = useState('');
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', title?: string) => {
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
+    setToasts(prev => [...prev, { id, message, type, title }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
 
   const fetchLinkedDocs = () => {
     fetch(API_BASE)
@@ -69,12 +79,14 @@ export default function Integrations() {
         fetchLinkedDocs();
         setDocUrl('');
         setDocTitle('');
-        alert(`Successfully imported: "${result.title}"!`);
+        showToast(`Successfully connected and imported: "${result.title}"`, 'success', 'Import Complete');
       } else {
         setError(result.error || 'Failed to import document.');
+        showToast(result.error || 'Failed to import document', 'error', 'Import Failed');
       }
     } catch (err) {
       setError('Network error connecting to backend.');
+      showToast('Network error connecting to backend', 'error', 'Connection Error');
     } finally {
       setImporting(false);
       setImportStep(0);
@@ -82,13 +94,15 @@ export default function Integrations() {
   };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div style={{ background: 'var(--bg-secondary)', padding: '1.5rem 2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-        <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Cloud Document Integrations</h2>
-        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          Connect third-party collaborative document environments to reconstruct their evolution history, analyze team authorship, and evaluate collaboration behavior.
-        </p>
-      </div>
+    <>
+      <ToastContainer toasts={toasts} onDismiss={id => setToasts(prev => prev.filter(t => t.id !== id))} />
+      <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div style={{ background: '#FFFFFF', padding: '1.75rem 2rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+          <h2 style={{ margin: 0, color: '#1E3A8A', fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>Cloud Document Integrations</h2>
+          <p style={{ margin: 0, color: '#64748B', fontSize: '0.92rem' }}>
+            Connect third-party collaborative document environments to reconstruct their evolution history, analyze team authorship, and evaluate collaboration behavior.
+          </p>
+        </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'start' }}>
         {/* Import Panel */}
@@ -334,6 +348,7 @@ export default function Integrations() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -7,6 +7,7 @@ import WordGrowthChart from '../../components/WordGrowthChart';
 import AuthorHighlightViewer from '../../components/AuthorHighlightViewer';
 import MLRevisionAnalytics from '../../components/MLRevisionAnalytics';
 import { getApiBase } from '../../utils/apiConfig';
+import { ToastContainer, ToastItem } from '../../components/CustomDialog';
 
 const API_BASE = getApiBase();
 
@@ -20,6 +21,15 @@ function DashboardComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const docIdQuery = searchParams ? searchParams.get('selectedDocId') : null;
+
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', title?: string) => {
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
+    setToasts(prev => [...prev, { id, message, type, title }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
 
   const [activeTab, setActiveTab] = useState('individual');
   const [timeline, setTimeline] = useState<any[]>([]);
@@ -112,7 +122,7 @@ function DashboardComponent() {
 
   const runCrossGroupAnalysis = async () => {
     if (compareDocIds.length < 2) {
-      alert("Please select at least 2 documents to compare.");
+      showToast("Please select at least 2 documents to compare cross-group authenticity.", "error", "Comparison Required");
       return;
     }
     setCompareLoading(true);
@@ -141,7 +151,9 @@ function DashboardComponent() {
   const selectedDocObj = availableDocs.find((d: any) => d._id === selectedDocId);
 
   return (
-    <div className="dashboard-container">
+    <>
+      <ToastContainer toasts={toasts} onDismiss={id => setToasts(prev => prev.filter(t => t.id !== id))} />
+      <div className="dashboard-container">
       {/* Navigation Headers and Tabs */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', padding: '1rem 2rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
@@ -538,6 +550,7 @@ function DashboardComponent() {
         </div>
       )}
     </div>
+    </>
   );
 }
 

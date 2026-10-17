@@ -21,7 +21,7 @@ const io = new Server(server, {
 const dmp = new DiffMatchPatch();
 
 // MongoDB Setup
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/document-evolution';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://docadmin:docadmin123@cluster0.p6utr.mongodb.net/document-evolution?retryWrites=true&w=majority';
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB:', MONGODB_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
@@ -133,7 +133,9 @@ const RevisionSchema = new mongoose.Schema({
   confidence: { type: Number, default: 0 },
   modelVersion: { type: String, default: 'v1.0-rules-ml-ensemble' },
   explanation: { type: String, default: '' },
-  features: { type: mongoose.Schema.Types.Mixed, default: {} }
+  features: { type: mongoose.Schema.Types.Mixed, default: {} },
+  isBulkInsertion: { type: Boolean, default: false },
+  anomalyFlag: { type: String, default: null } // e.g. 'High-Volume Paste Event Detected' (FR 07)
 });
 const Revision = mongoose.model('Revision', RevisionSchema);
 
@@ -295,13 +297,31 @@ io.on('connection', (socket) => {
     socket.emit('load-document', doc.content);
   });
 
-  socket.on('send-changes', async ({ documentId, content, author }) => {
-    // Broadcast changes to others
-    socket.broadcast.to(documentId).emit('receive-changes', content);
+  socket.on('send-changes', async ({ documentId, content, author, studentId }) => {
+    if (!documentId) return;
+
+    // Strict Security Guard 1: Verify socket is currently joined in this document's room
+    const rooms = Array.from(socket.rooms || []);
+    if (!rooms.includes(documentId)) {
+      socket.emit('access-denied', { error: 'Security Violation: Unauthorized socket attempting to modify document.' });
+      return;
+    }
 
     // Calculate diffs and track evolution
     const doc = await Document.findOne({ _id: documentId });
     if (doc) {
+      // Strict Security Guard 2: Verify author access permissions
+      if (author && author !== 'Anonymous') {
+        const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student');
+        if (!isPermitted) {
+          socket.emit('access-denied', { error: 'Security Violation: You do not have permission to modify this document.' });
+          return;
+        }
+      }
+
+      // Broadcast changes to peers only after security verification
+      socket.broadcast.to(documentId).emit('receive-changes', content);
+
       const oldText = stripHtml(doc.content);
       const newText = stripHtml(content);
 
@@ -325,8 +345,18 @@ io.on('connection', (socket) => {
       });
 
       if (wordsAdded > 0 || wordsDeleted > 0) {
+        // Strict Security Guard 3: Bulk Paste / Insertion Anomaly Detection (FR 07)
+        const now = new Date();
+        const timeSinceLastEditSec = doc.updatedAt ? Math.max(1, (now.getTime() - new Date(doc.updatedAt).getTime()) / 1000) : 5;
+        const isBulk = wordsAdded >= 80 && (wordsAdded / timeSinceLastEditSec) > 15;
+        const anomaly = isBulk ? 'High-Volume Paste Event Detected' : null;
+
         // Run ML Classification on Before/After Pair
         const mlRes = await classifyRevisionWithML(oldText, newText, "General");
+
+        const explanationText = isBulk
+          ? `[Heuristic Flag] High-volume bulk insertion: +${wordsAdded} words in ${Math.round(timeSinceLastEditSec)}s. Flagged for reviewer inspection; does not constitute automated proof of misconduct.`
+          : (mlRes.explanation || '');
 
         await Revision.create({
           documentId,
@@ -342,13 +372,15 @@ io.on('connection', (socket) => {
           wordCountDeleted: wordsDeleted,
           sourcePlatform: doc.source || 'in_built',
           syncStatus: 'synced',
-          predictedIntent: mlRes.predicted_intent || 'Unclassified',
-          predictedSignificance: mlRes.predicted_significance || 'Unclassified',
+          predictedIntent: isBulk ? 'Content Addition' : (mlRes.predicted_intent || 'Unclassified'),
+          predictedSignificance: isBulk ? 'Major' : (mlRes.predicted_significance || 'Unclassified'),
           semanticDistance: mlRes.semantic_distance || 0.0,
           confidence: mlRes.confidence || 0.0,
           modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
-          explanation: mlRes.explanation || '',
-          features: mlRes.features || {}
+          explanation: explanationText,
+          features: mlRes.features || {},
+          isBulkInsertion: isBulk,
+          anomalyFlag: anomaly
         });
       }
 

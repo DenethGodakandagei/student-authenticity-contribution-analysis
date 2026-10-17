@@ -26,9 +26,12 @@ import urllib.request
 import os
 from ml_engine import extract_features, classify_intent_and_significance
 
-def fetch_revisions_from_api(base_url="http://localhost:8001"):
-    """Fetches real live revisions recorded by the editor from MongoDB via the backend API."""
+def fetch_revisions_from_api(base_url=None):
+    """Fetches real live revisions recorded by the editor from MongoDB Atlas via the backend API."""
+    if not base_url:
+        base_url = os.environ.get("BACKEND_URL", "https://student-authenticity-contribution-80jm.onrender.com")
     revisions = []
+    print(f"Connecting to Backend API: {base_url}")
     try:
         docs_url = f"{base_url}/api/documents"
         req = urllib.request.Request(docs_url, headers={'User-Agent': 'DatasetBuilder/1.0'})
