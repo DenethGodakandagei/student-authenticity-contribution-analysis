@@ -7,6 +7,11 @@ import AuthModal from '../components/AuthModal';
 
 export default function NavigationLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout, openAuthModal, authModalOpen, closeAuthModal } = useAuth();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="app-layout">
@@ -19,9 +24,14 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
           borderRadius: '10px',
           padding: '1rem',
           margin: '0.5rem 0 1.5rem 0',
-          textAlign: 'left'
+          textAlign: 'left',
+          minHeight: '120px'
         }}>
-          {isAuthenticated ? (
+          {!mounted ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '85px' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Loading...</span>
+            </div>
+          ) : isAuthenticated ? (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                 <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700, letterSpacing: '0.5px' }}>

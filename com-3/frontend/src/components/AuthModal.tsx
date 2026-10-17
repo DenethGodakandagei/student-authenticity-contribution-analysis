@@ -118,7 +118,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             fontSize: '0.875rem',
             marginBottom: '1.25rem'
           }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 

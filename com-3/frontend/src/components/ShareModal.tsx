@@ -104,7 +104,6 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <span style={{ fontSize: '1.2rem' }}>🔒</span>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.01em', color: '#FFFFFF' }}>
                 Document Access & Security
               </h3>
@@ -153,7 +152,7 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
                 Group Leader / Document Owner
               </div>
               <div style={{ fontSize: '1rem', fontWeight: 700, color: '#1E3A8A', marginTop: '0.15rem' }}>
-                👑 {ownerName}
+                {ownerName}
               </div>
             </div>
             <span style={{
@@ -179,7 +178,7 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
               fontSize: '0.85rem',
               marginBottom: '1rem'
             }}>
-              ⚠️ {error}
+              {error}
             </div>
           )}
           {successMsg && (
@@ -192,7 +191,7 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
               fontSize: '0.85rem',
               marginBottom: '1rem'
             }}>
-              ✅ {successMsg}
+              {successMsg}
             </div>
           )}
 
@@ -315,7 +314,6 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.95rem' }}>👤</span>
                       <span style={{ fontSize: '0.85rem', color: '#1E293B', fontWeight: 600 }}>
                         {collab}
                       </span>

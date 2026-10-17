@@ -271,12 +271,16 @@ io.on('connection', (socket) => {
 
     let doc = await Document.findOne({ _id: documentId });
     if (!doc) {
+      const displayName = (name && studentId)
+        ? `${name} (${studentId})`
+        : (username && studentId ? `${username} (${studentId})` : (name || username || 'Group Leader'));
       doc = await Document.create({
         _id: documentId,
         title: "Untitled Group Document",
         content: "<p>Start writing here...</p>",
         owner: username ? username.toLowerCase().trim() : 'system',
-        ownerName: username || 'Group Leader',
+        ownerName: displayName,
+        collaborators: [displayName],
         allowedUsers: username ? [username.toLowerCase().trim()] : []
       });
     }
@@ -384,13 +388,36 @@ io.on('connection', (socket) => {
         });
       }
 
-      if (author && !doc.collaborators.includes(author)) {
-        doc.collaborators.push(author);
+      if (author) {
+        const authorTrimmed = author.trim();
+        const authorBase = authorTrimmed.includes('(') ? authorTrimmed.split('(')[0].trim().toLowerCase() : authorTrimmed.toLowerCase();
+
+        doc.collaborators = (doc.collaborators || []).filter(c => {
+          if (!c) return false;
+          const cTrimmed = c.trim();
+          const cBase = cTrimmed.includes('(') ? cTrimmed.split('(')[0].trim().toLowerCase() : cTrimmed.toLowerCase();
+          return cTrimmed === authorTrimmed || cBase !== authorBase;
+        });
+
+        if (!doc.collaborators.includes(authorTrimmed)) {
+          doc.collaborators.push(authorTrimmed);
+        }
+
+        if (doc.ownerName) {
+          const ownerBase = doc.ownerName.includes('(') ? doc.ownerName.split('(')[0].trim().toLowerCase() : doc.ownerName.trim().toLowerCase();
+          if (ownerBase === authorBase && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
+            doc.ownerName = authorTrimmed;
+          }
+        }
       }
 
       doc.content = content;
       doc.updatedAt = Date.now();
       await doc.save();
+
+      if (wordsAdded > 0 || wordsDeleted > 0) {
+        io.to(documentId).emit('markup-updated');
+      }
     }
   });
 
@@ -506,9 +533,14 @@ app.post('/api/documents/create', async (req, res) => {
     const cleanOwner = owner.toLowerCase().trim();
     const cleanStudentId = studentId ? studentId.toLowerCase().trim() : '';
 
+    let formattedOwnerName = ownerName || owner || 'Student';
+    if (studentId && cleanStudentId && !formattedOwnerName.toLowerCase().includes(cleanStudentId)) {
+      formattedOwnerName = `${formattedOwnerName} (${studentId.trim()})`;
+    }
+
     // Process initial group members
     const initialAllowed = [cleanOwner, cleanStudentId].filter(Boolean);
-    const initialCollabs = [ownerName || owner];
+    const initialCollabs = [formattedOwnerName];
 
     if (Array.isArray(members) && members.length > 0) {
       members.forEach(m => {
@@ -524,9 +556,9 @@ app.post('/api/documents/create', async (req, res) => {
     const newDoc = await Document.create({
       _id: docId,
       title: title.trim(),
-      content: content || `<h2>${title.trim()}</h2><p>Document created by group leader ${ownerName || owner}. Start writing report here...</p>`,
+      content: content || `<h2>${title.trim()}</h2><p>Document created by group leader ${formattedOwnerName}. Start writing report here...</p>`,
       owner: cleanOwner,
-      ownerName: ownerName || owner,
+      ownerName: formattedOwnerName,
       allowedUsers: initialAllowed,
       collaborators: initialCollabs,
       source: source || 'in_built',
@@ -739,13 +771,50 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
       { color: '#5c6bc0', bgColor: 'rgba(92, 107, 192, 0.22)', borderColor: '#5c6bc0', badgeBg: '#3f51b5', textColor: '#818cf8' }, // Google Indigo
     ];
 
-    // Collect all unique student authors
-    const authorsSet = new Set();
-    if (doc.ownerName) authorsSet.add(doc.ownerName);
-    if (doc.collaborators) doc.collaborators.forEach(c => authorsSet.add(c));
-    revisions.forEach(r => { if (r.author) authorsSet.add(r.author); });
+    // Collect all candidate student authors
+    const rawAuthors = [];
+    if (doc.ownerName) rawAuthors.push(doc.ownerName.trim());
+    if (doc.collaborators) {
+      doc.collaborators.forEach(c => {
+        if (c && typeof c === 'string' && c.trim()) rawAuthors.push(c.trim());
+      });
+    }
+    revisions.forEach(r => {
+      if (r.author && typeof r.author === 'string' && r.author.trim()) {
+        rawAuthors.push(r.author.trim());
+      }
+    });
 
-    const authorList = Array.from(authorsSet);
+    const parseAuthor = (str) => {
+      if (!str) return { base: '', id: '' };
+      const match = str.match(/^(.*?)\s*\((.*?)\)$/);
+      if (match) {
+        return { base: match[1].trim().toLowerCase(), id: match[2].trim().toLowerCase() };
+      }
+      return { base: str.trim().toLowerCase(), id: '' };
+    };
+
+    const detailedAuthors = Array.from(new Set(rawAuthors.filter(a => a.includes('(') && a.includes(')'))));
+
+    const canonicalMap = {};
+    rawAuthors.forEach(raw => {
+      const parsed = parseAuthor(raw);
+      const match = detailedAuthors.find(det => {
+        const detParsed = parseAuthor(det);
+        if (parsed.id && detParsed.id === parsed.id) return true;
+        if (!parsed.id && parsed.base && detParsed.base === parsed.base) return true;
+        return false;
+      });
+
+      if (match) {
+        canonicalMap[raw] = match;
+      } else {
+        const existing = Object.values(canonicalMap).find(c => c.toLowerCase() === raw.toLowerCase());
+        canonicalMap[raw] = existing || raw;
+      }
+    });
+
+    const authorList = Array.from(new Set(rawAuthors.map(a => canonicalMap[a] || a)));
     const authorColorMap = {};
     const authorStats = {};
 
@@ -762,10 +831,11 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
     });
 
     revisions.forEach(r => {
-      if (authorStats[r.author]) {
-        authorStats[r.author].totalWordsAdded += (r.wordCountAdded || 0);
-        authorStats[r.author].totalWordsDeleted += (r.wordCountDeleted || 0);
-        authorStats[r.author].revisionCount += 1;
+      const canonical = canonicalMap[r.author] || r.author;
+      if (authorStats[canonical]) {
+        authorStats[canonical].totalWordsAdded += (r.wordCountAdded || 0);
+        authorStats[canonical].totalWordsDeleted += (r.wordCountDeleted || 0);
+        authorStats[canonical].revisionCount += 1;
       }
     });
 
@@ -789,12 +859,14 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
       
       const matchingRev = revisions.find(r => r.addedText && plainText.toLowerCase().includes(r.addedText.toLowerCase().substring(0, 12)));
       if (matchingRev) {
-        blockAuthor = matchingRev.author;
+        blockAuthor = canonicalMap[matchingRev.author] || matchingRev.author;
         blockTimestamp = matchingRev.timestamp;
       } else if (revisions.length > 0) {
         const revForBlock = revisions[currentSegmentIndex % revisions.length];
-        blockAuthor = revForBlock.author;
+        blockAuthor = canonicalMap[revForBlock.author] || revForBlock.author;
         blockTimestamp = revForBlock.timestamp;
+      } else {
+        blockAuthor = canonicalMap[blockAuthor] || blockAuthor;
       }
 
       const palette = authorColorMap[blockAuthor] || PALETTES[0];
@@ -1174,6 +1246,7 @@ app.post('/api/documents/:id/sync-offline', async (req, res) => {
     }
 
     await doc.save();
+    io.to(documentId).emit('markup-updated');
     res.json({ success: true, syncedCount: offlineRevisions?.length || 0 });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1215,6 +1288,7 @@ app.post('/api/documents/:id/track-external-edit', async (req, res) => {
       section: section || "General"
     });
 
+    io.to(documentId).emit('markup-updated');
     res.json({ success: true, revisionId: revision._id, docTitle: doc.title });
   } catch (err) {
     res.status(500).json({ error: err.message });

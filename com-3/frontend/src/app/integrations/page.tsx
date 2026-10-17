@@ -320,7 +320,7 @@ export default function Integrations() {
                           gap: '0.3rem'
                         }}
                       >
-                        ⚡ Work Collaboratively ({isGoogle ? 'Google Docs' : 'MS Word'})
+                        Work Collaboratively ({isGoogle ? 'Google Docs' : 'MS Word'})
                       </button>
                       <button
                         onClick={() => router.push(`/dashboard?selectedDocId=${doc._id}`)}

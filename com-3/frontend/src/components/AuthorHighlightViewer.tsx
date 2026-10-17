@@ -50,7 +50,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
         border: '1px solid var(--border-color, #334155)',
         color: 'var(--text-secondary, #94a3b8)'
       }}>
-        📄 No multi-author text attribution data available for this document revision history.
+        No multi-author text attribution data available for this document revision history.
       </div>
     );
   }
@@ -126,7 +126,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
                 gap: '0.35rem'
               }}
             >
-              📄 Google Doc Canvas
+              Google Doc Canvas
             </button>
             <button
               onClick={() => setViewMode('cards')}
@@ -145,7 +145,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
                 gap: '0.35rem'
               }}
             >
-              🗂️ Segment Cards
+              Segment Cards
             </button>
           </div>
         </div>
@@ -169,9 +169,9 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
                   fontWeight: 500
                 }}
               >
-                <option value="background">🎨 Full Color Fill (Google Doc Style)</option>
+                <option value="background">Full Color Fill (Google Doc Style)</option>
                 <option value="border">▌ Left Color Accent Bar</option>
-                <option value="underline">✍️ Underline Accent</option>
+                <option value="underline">Underline Accent</option>
               </select>
             </div>
           )}
@@ -193,13 +193,13 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
               gap: '0.35rem'
             }}
           >
-            🏷️ {showInlineChips ? 'Hide Author Chips' : 'Show Author Chips'}
+            {showInlineChips ? 'Hide Author Chips' : 'Show Author Chips'}
           </button>
 
           {/* Search Filter */}
           <input
             type="text"
-            placeholder="🔍 Search text..."
+            placeholder="Search text..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -226,7 +226,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <h4 style={{ margin: 0, fontSize: '0.98rem', color: 'var(--text-primary, #f8fafc)', fontWeight: 700 }}>
-                👥 Collaborator Color Attribution Legend
+                Collaborator Color Attribution Legend
               </h4>
               <span style={{
                 background: 'rgba(255, 255, 255, 0.08)',
@@ -261,7 +261,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
               transition: 'all 0.2s ease'
             }}
           >
-            ✨ Show All Authors ({authors.length})
+            Show All Authors ({authors.length})
           </button>
         </div>
 
@@ -510,7 +510,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
                         }} />
                         <span>Author: <strong style={{ color: authorColor }}>{seg.author}</strong></span>
                         <span style={{ opacity: 0.5 }}>|</span>
-                        <span>⏱️ {new Date(seg.timestamp).toLocaleString()}</span>
+                        <span>{new Date(seg.timestamp).toLocaleString()}</span>
                         <span style={{ opacity: 0.5 }}>|</span>
                         <span>{seg.words} words</span>
                       </div>
@@ -535,7 +535,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
                           letterSpacing: '0.02em',
                           boxShadow: `0 2px 6px ${authorBorder}44`
                         }}>
-                          👤 {seg.author}
+                          {seg.author}
                         </span>
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary, #94a3b8)' }}>
                           &bull; {seg.words} words
@@ -572,7 +572,7 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
             <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-              🗂️ Individual Paragraph Contribution Breakdown
+              Individual Paragraph Contribution Breakdown
             </h4>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               Showing {processedSegments.length} text segments
@@ -608,12 +608,12 @@ export default function AuthorHighlightViewer({ markupData, loading }: { markupD
                         padding: '0.2rem 0.75rem',
                         borderRadius: '12px'
                       }}>
-                        👤 {seg.author}
+                        {seg.author}
                       </span>
                     </div>
 
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      ⏱️ {new Date(seg.timestamp).toLocaleString()} &bull; {seg.words} words
+                      {new Date(seg.timestamp).toLocaleString()} &bull; {seg.words} words
                     </span>
                   </div>
 

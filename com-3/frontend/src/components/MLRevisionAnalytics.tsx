@@ -163,7 +163,6 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '1.3rem' }}>🧠</span>
             <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700 }}>
               Intelligent Document Evolution & ML Revision Analytics
             </h3>
@@ -204,7 +203,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
             transition: 'all 0.2s'
           }}
         >
-          {reclassifying ? '🔄 Processing ML Inferences...' : '⚡ Re-run ML Classification'}
+          {reclassifying ? 'Processing ML Inferences...' : 'Re-run ML Classification'}
         </button>
       </div>
 
@@ -251,7 +250,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
               <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                📊 Revision Intent Distribution (Proposal Table 3.1)
+                Revision Intent Distribution (Proposal Table 3.1)
               </h4>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 Operational categories derived from academic annotation guidelines
@@ -291,7 +290,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: '1.25rem' }}>
             <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              🎯 Revision Significance (Proposal Table 3.2)
+              Revision Significance (Proposal Table 3.2)
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Independent evaluative criteria based on structural & semantic scope
@@ -337,7 +336,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: '1rem' }}>
             <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              👥 Author Contribution & Intent Specialization Matrix
+              Author Contribution & Intent Specialization Matrix
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Individual contribution patterns mapped across revision categories (with anonymized research IDs per NFR-05)
@@ -388,7 +387,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              🔍 Traceable Before & After Revision Inspector (FR 10)
+              Traceable Before & After Revision Inspector (FR 10)
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Lecturers can inspect the exact textual evidence behind every ML intent and significance prediction.
@@ -561,8 +560,8 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
                   fontSize: '0.85rem',
                   lineHeight: '1.5'
                 }}>
-                  <div style={{ fontWeight: 700, color: '#4f46e5', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>💡</span> Model Attribution & Explanation ({selectedRevision.modelVersion || 'v1.0'}):
+                  <div style={{ fontWeight: 700, color: '#4f46e5', marginBottom: '0.25rem' }}>
+                    Model Attribution & Explanation ({selectedRevision.modelVersion || 'v1.0'}):
                   </div>
                   <div style={{ color: 'var(--text-primary)' }}>
                     {selectedRevision.explanation || 'Classified using linguistic, token delta, and semantic overlap features.'}
@@ -654,7 +653,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
         color: 'var(--text-secondary)',
         lineHeight: '1.5'
       }}>
-        <strong>⚖️ Academic Integrity & Decision Support Note:</strong> {analytics?.disclaimer || "ML revision classifications are provided as interpretative process analytics for lecturers and academic reviewers. Predictions do not constitute automated determinations of authorship or academic dishonesty."}
+        <strong>Academic Integrity & Decision Support Note:</strong> {analytics?.disclaimer || "ML revision classifications are provided as interpretative process analytics for lecturers and academic reviewers. Predictions do not constitute automated determinations of authorship or academic dishonesty."}
       </div>
 
     </div>

@@ -228,7 +228,6 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <span style={{ fontSize: '1.3rem' }}>📁</span>
                 <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.01em', color: '#FFFFFF' }}>
                   All Created Reports & Documents
                 </h2>
@@ -268,7 +267,6 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                 display: 'flex',
                 alignItems: 'center'
               }}>
-                <span style={{ position: 'absolute', left: '1rem', color: '#94A3B8', fontSize: '1rem' }}>🔍</span>
                 <input
                   type="text"
                   placeholder="Search reports by title, student owner, or source environment..."
@@ -276,7 +274,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                   onChange={e => setSearchTerm(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.75rem 1rem 0.75rem 2.6rem',
+                    padding: '0.75rem 1rem',
                     borderRadius: '10px',
                     border: '1.5px solid #E2E8F0',
                     background: '#F8FAFC',
@@ -307,7 +305,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                 fontSize: '0.85rem',
                 marginBottom: '1rem'
               }}>
-                ⚠️ {error}
+                {error}
               </div>
             )}
 
@@ -315,7 +313,6 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.35rem' }}>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#64748B' }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</div>
                   Loading document reports...
                 </div>
               ) : filteredDocs.length === 0 ? (
@@ -327,7 +324,6 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                   border: '1px dashed #CBD5E1',
                   color: '#64748B'
                 }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📄</div>
                   <div style={{ fontWeight: 600, color: '#334155' }}>No document reports found</div>
                   <div style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>Try clearing the search filter or create a new document.</div>
                 </div>
@@ -385,9 +381,9 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                             </h4>
                           </div>
                           <div style={{ fontSize: '0.8rem', color: '#64748B', display: 'flex', gap: '1.2rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
-                            <span>👑 Owner: <strong style={{ color: '#334155' }}>{ownerText}</strong></span>
-                            <span>👥 Collaborators: <strong style={{ color: '#334155' }}>{collabsCount}</strong></span>
-                            <span>📅 Created: <strong style={{ color: '#334155' }}>{formattedDate}</strong></span>
+                            <span>Owner: <strong style={{ color: '#334155' }}>{ownerText}</strong></span>
+                            <span>Collaborators: <strong style={{ color: '#334155' }}>{collabsCount}</strong></span>
+                            <span>Created: <strong style={{ color: '#334155' }}>{formattedDate}</strong></span>
                           </div>
                         </div>
 
@@ -406,7 +402,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                               boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)'
                             }}
                           >
-                            👁️ Open
+                            Open
                           </button>
 
                           <button
@@ -422,7 +418,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                               cursor: 'pointer'
                             }}
                           >
-                            ✏️ Rename
+                            Rename
                           </button>
 
                           {onShareDocument && (
@@ -439,7 +435,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                                 cursor: 'pointer'
                               }}
                             >
-                              🔒 Share
+                              Share
                             </button>
                           )}
 
@@ -458,7 +454,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                               opacity: deletingId === doc._id ? 0.6 : 1
                             }}
                           >
-                            {deletingId === doc._id ? 'Deleting...' : '🗑️ Delete'}
+                            {deletingId === doc._id ? 'Deleting...' : 'Delete'}
                           </button>
                         </div>
                       </div>

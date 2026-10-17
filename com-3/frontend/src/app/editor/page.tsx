@@ -194,7 +194,7 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
             fontSize: '0.82rem'
           }}
         >
-          {isOffline ? '🟢 Go Online & Sync' : '⚡ Go Offline'}
+          {isOffline ? 'Go Online & Sync' : 'Go Offline'}
         </button>
 
         <button 
@@ -209,7 +209,7 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
             boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
           }}
         >
-          💾 Save
+          Save
         </button>
 
         <button 
@@ -224,7 +224,7 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
             boxShadow: '0 2px 8px rgba(13, 148, 136, 0.3)'
           }}
         >
-          ✏️ Save & Rename
+          Save & Rename
         </button>
       </div>
     </div>
@@ -326,17 +326,68 @@ function EditorComponent() {
   const [isHighlightMode, setIsHighlightMode] = useState(false);
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
-  const fetchMarkupData = () => {
+  // Deduplicate authors in frontend (merge bare names like "Rashi" into "Rashi (IT23217522)")
+  const displayAuthors = React.useMemo(() => {
+    if (!markupData?.authors || !Array.isArray(markupData.authors)) return [];
+    const detailed = markupData.authors.filter((a: any) => a.author && a.author.includes('(') && a.author.includes(')'));
+    return markupData.authors.filter((a: any) => {
+      if (!a.author) return false;
+      if ((a.totalWordsAdded === 0 || a.percentage === 0) && !a.author.includes('(')) {
+        const plainLower = a.author.trim().toLowerCase();
+        const hasBetter = detailed.some((d: any) => {
+          const dBase = d.author.split('(')[0].trim().toLowerCase();
+          return dBase === plainLower;
+        });
+        if (hasBetter) return false;
+      }
+      return true;
+    });
+  }, [markupData?.authors]);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchMarkupData = async () => {
     if (!selectedDocId) return;
-    fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/author-markup`)
-      .then(res => res.json())
-      .then(data => setMarkupData(data))
-      .catch(err => console.error("Failed to fetch markup data", err));
+    try {
+      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/author-markup`);
+      const data = await res.json();
+      if (data && data.authors) {
+        setMarkupData(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch markup data", err);
+    }
   };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchMarkupData();
+      if (user) {
+        fetchDocs();
+      }
+      showToast("Collaborator word counts and contributions updated!", "success", "Live Refreshed");
+    } catch (err) {
+      showToast("Failed to refresh data", "error", "Refresh Error");
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  const markupDebounceRef = React.useRef<any>(null);
 
   useEffect(() => {
     fetchMarkupData();
   }, [selectedDocId]);
+
+  // Periodic heartbeat poll (every 3.5s) to guarantee real-time collaborative word count updates from peers
+  useEffect(() => {
+    if (!selectedDocId || isOffline) return;
+    const interval = setInterval(() => {
+      fetchMarkupData();
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [selectedDocId, isOffline]);
 
   const effectiveAuthor = user 
     ? `${user.name} (${user.studentId})` 
@@ -407,7 +458,10 @@ function EditorComponent() {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: false,
+        underline: false
+      }),
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({ openOnClick: false }),
@@ -470,6 +524,14 @@ function EditorComponent() {
         }
       }
       setLastText(plainText);
+
+      // Instantly update collaborative word count in background after typing (no page refresh required)
+      if (markupDebounceRef.current) {
+        clearTimeout(markupDebounceRef.current);
+      }
+      markupDebounceRef.current = setTimeout(() => {
+        fetchMarkupData();
+      }, 500);
     },
   });
 
@@ -485,6 +547,7 @@ function EditorComponent() {
         documentId: selectedDocId,
         username: user.username,
         studentId: user.studentId,
+        name: user.name,
         role: user.role
       });
     });
@@ -508,6 +571,11 @@ function EditorComponent() {
         editor.commands.setTextSelection(currentSelection);
         setLastText(editor.getText());
       }
+      fetchMarkupData();
+    });
+
+    s.on('markup-updated', () => {
+      fetchMarkupData();
     });
 
     return () => {
@@ -534,6 +602,7 @@ function EditorComponent() {
           if (response.ok) {
             await clearPendingEdit(selectedDocId);
             setOfflineRevisions([]);
+            fetchMarkupData();
           }
         }
       } catch (err) {
@@ -615,7 +684,9 @@ function EditorComponent() {
         body: JSON.stringify({
           title: newDocTitle.trim(),
           owner: user.username || user.studentId || 'student',
-          ownerName: user.name || user.username || 'Student',
+          ownerName: user.name 
+            ? (user.studentId ? `${user.name} (${user.studentId})` : user.name) 
+            : (user.username || 'Student'),
           studentId: user.studentId || '',
           members: selectedMembersForCreate
         })
@@ -706,6 +777,7 @@ function EditorComponent() {
           });
         }
         showToast(`Document "${docDetails?.title || selectedDocId}" saved to cloud database!`, "success", "Saved Successfully");
+        fetchMarkupData();
       }
     }
   };
@@ -866,7 +938,7 @@ function EditorComponent() {
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
-                  📄 Create New Group Document
+                  Create New Group Document
                 </h3>
                 <span style={{ fontSize: '0.8rem', color: '#93C5FD' }}>
                   Institutional Collaborative Workspace
@@ -927,7 +999,7 @@ function EditorComponent() {
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
-                    👥 Initial Group Members (Optional):
+                    Initial Group Members (Optional):
                   </label>
                   <span style={{ fontSize: '0.75rem', background: '#CCFBF1', color: '#0F766E', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
                     {selectedMembersForCreate.length} Selected
@@ -1099,10 +1171,11 @@ function EditorComponent() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.75rem',
+            fontSize: '1rem',
+            fontWeight: 800,
             margin: '0 auto 1.25rem auto'
           }}>
-            🔐
+            AUTH
           </div>
           <h2 style={{ color: '#1E3A8A', marginBottom: '0.5rem', fontSize: '1.4rem', fontWeight: 800 }}>
             Student Authentication Required
@@ -1156,10 +1229,11 @@ function EditorComponent() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.75rem',
+            fontSize: '1rem',
+            fontWeight: 800,
             margin: '0 auto 1.25rem auto'
           }}>
-            📄
+            DOC
           </div>
           <h2 style={{ color: '#1E3A8A', fontSize: '1.45rem', fontWeight: 800, marginBottom: '0.5rem' }}>
             Welcome, {user?.name || 'Student'}!
@@ -1218,10 +1292,11 @@ function EditorComponent() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1.75rem',
+            fontSize: '1rem',
+            fontWeight: 800,
             margin: '0 auto 1rem auto'
           }}>
-            🚫
+            DENIED
           </div>
           <h2 style={{ color: '#1E3A8A', margin: '0 0 0.5rem 0', fontSize: '1.45rem', fontWeight: 800 }}>
             Access Denied &mdash; Restricted Document
@@ -1275,7 +1350,7 @@ function EditorComponent() {
                 cursor: 'pointer'
               }}
             >
-              📁 View All My Reports
+              View All My Reports
             </button>
 
             <button
@@ -1322,11 +1397,10 @@ function EditorComponent() {
                     title="Click to rename document"
                     style={{ margin: 0, fontSize: '1rem', color: '#202124', fontWeight: '500', cursor: 'pointer' }}
                   >
-                    {docDetails?.title || selectedDocId} ✏️
+                    {docDetails?.title || selectedDocId}
                   </h3>
-                  <span style={{ cursor: 'pointer', color: '#5f6368', fontSize: '1.1rem' }}>☆</span>
                   <span style={{ fontSize: '0.75rem', color: '#70757a', background: '#e8f0fe', padding: '0.1rem 0.4rem', borderRadius: '12px' }}>
-                    ☁️ Saved to Drive & DocAnalytics
+                    Saved to Drive & DocAnalytics
                   </span>
                 </div>
                 <div className="google-docs-menubar">
@@ -1356,7 +1430,7 @@ function EditorComponent() {
                   cursor: 'pointer'
                 }}
               >
-                ✏️ Rename
+                Rename
               </button>
 
               <button
@@ -1372,7 +1446,7 @@ function EditorComponent() {
                   cursor: 'pointer'
                 }}
               >
-                📁 All Reports
+                All Reports
               </button>
 
               <button
@@ -1407,7 +1481,7 @@ function EditorComponent() {
                   gap: '0.4rem'
                 }}
               >
-                🔒 Share
+                Share
               </button>
 
               <button
@@ -1423,7 +1497,7 @@ function EditorComponent() {
                   cursor: 'pointer'
                 }}
               >
-                🗑️ Delete
+                Delete
               </button>
             </div>
           </div>
@@ -1450,7 +1524,7 @@ function EditorComponent() {
                 title="Click to rename document"
                 style={{ fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' }}
               >
-                {docDetails?.title || selectedDocId} ✏️ &mdash; Word 365
+                {docDetails?.title || selectedDocId} &mdash; Word 365
               </span>
             </div>
 
@@ -1468,7 +1542,7 @@ function EditorComponent() {
                   cursor: 'pointer'
                 }}
               >
-                ✏️ Rename
+                Rename
               </button>
 
               <button
@@ -1484,7 +1558,7 @@ function EditorComponent() {
                   cursor: 'pointer'
                 }}
               >
-                📁 All Reports
+                All Reports
               </button>
 
               <button
@@ -1516,7 +1590,7 @@ function EditorComponent() {
                   cursor: 'pointer'
                 }}
               >
-                🔒 Share
+                Share
               </button>
 
               <button
@@ -1532,7 +1606,7 @@ function EditorComponent() {
                   cursor: 'pointer'
                 }}
               >
-                🗑️ Delete
+                Delete
               </button>
             </div>
           </div>
@@ -1591,7 +1665,7 @@ function EditorComponent() {
                   gap: '0.25rem'
                 }}
               >
-                ✏️ Rename
+                Rename
               </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
@@ -1604,7 +1678,7 @@ function EditorComponent() {
                 borderRadius: '12px',
                 fontWeight: 700
               }}>
-                👑 Owner: {docDetails?.ownerName || docDetails?.owner || 'Group Leader'}
+                Owner: {docDetails?.ownerName || docDetails?.owner || 'Group Leader'}
               </span>
               <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
                 &bull; In-Built Collaborative Workspace
@@ -1613,6 +1687,27 @@ function EditorComponent() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <button
+              onClick={handleManualRefresh}
+              title="Click to refresh collaborator word counts and document data"
+              style={{
+                background: '#F0FDFA',
+                color: '#0D9488',
+                border: '1px solid #99F6E4',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: isRefreshing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                boxShadow: '0 1px 2px rgba(13, 148, 136, 0.08)'
+              }}
+            >
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+
             <button
               onClick={() => setReportsModalOpen(true)}
               style={{
@@ -1629,7 +1724,7 @@ function EditorComponent() {
                 gap: '0.35rem'
               }}
             >
-              📁 All Reports
+              All Reports
             </button>
 
             <button
@@ -1666,7 +1761,7 @@ function EditorComponent() {
                 boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
               }}
             >
-              🔒 Share
+              Share
             </button>
 
             <button
@@ -1682,7 +1777,7 @@ function EditorComponent() {
                 cursor: 'pointer'
               }}
             >
-              🗑️ Delete
+              Delete
             </button>
           </div>
         </div>
@@ -1761,12 +1856,14 @@ function EditorComponent() {
                   onClick={() => { setIsHighlightMode(false); setSelectedAuthorFilter('ALL'); }}
                   style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
-                  ✖ Close Highlight Mode
+                  Close Highlight Mode
                 </button>
               </div>
 
               {markupData?.segments?.map((seg: any) => {
-                const isMatched = selectedAuthorFilter === 'ALL' || seg.author === selectedAuthorFilter;
+                const isMatched = selectedAuthorFilter === 'ALL' || 
+                  seg.author === selectedAuthorFilter || 
+                  (selectedAuthorFilter.includes('(') && seg.author === selectedAuthorFilter.split('(')[0].trim());
                 const authorColor = seg.color || '#4285f4';
                 const authorBg = seg.bgColor || 'rgba(66, 133, 244, 0.2)';
                 
@@ -1817,16 +1914,47 @@ function EditorComponent() {
           padding: '1.5rem',
           overflowY: 'auto'
         }}>
-          <h3 style={{ margin: '0 0 0.4rem 0', color: '#1E3A8A', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', fontWeight: 700 }}>
-            👥 Collaborators
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+            <h3 style={{ margin: 0, color: '#1E3A8A', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', fontWeight: 700 }}>
+              Collaborators
+            </h3>
+            <button
+              onClick={handleManualRefresh}
+              title="Click to refresh collaborator word counts and contributions"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                background: '#F0FDFA',
+                border: '1px solid #99F6E4',
+                color: '#0D9488',
+                padding: '0.3rem 0.65rem',
+                borderRadius: '7px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: isRefreshing ? 'wait' : 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 1px 2px rgba(13, 148, 136, 0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#0D9488';
+                e.currentTarget.style.color = '#FFFFFF';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#F0FDFA';
+                e.currentTarget.style.color = '#0D9488';
+              }}
+            >
+              <span>{isRefreshing ? 'Updating...' : 'Refresh'}</span>
+            </button>
+          </div>
           <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '1.25rem', lineHeight: 1.5 }}>
             Click an author to isolate and highlight their authentic contributions across the document revisions.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {markupData?.authors && markupData.authors.length > 0 ? (
-              markupData.authors.map((a: any) => {
+            {displayAuthors && displayAuthors.length > 0 ? (
+              displayAuthors.map((a: any) => {
                 const isActive = selectedAuthorFilter === a.author;
                 return (
                   <div
@@ -1867,7 +1995,6 @@ function EditorComponent() {
               })
             ) : (
               <div style={{ color: '#64748B', fontSize: '0.82rem', textAlign: 'center', padding: '2.5rem 1rem', background: '#F8FAFC', borderRadius: '10px', border: '1px dashed #CBD5E1' }}>
-                <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>👥</div>
                 <div style={{ fontWeight: 600, color: '#334155', marginBottom: '0.2rem' }}>No contribution data yet</div>
                 Type in the document to initiate AI & authenticity tracking.
               </div>
@@ -1884,7 +2011,7 @@ function EditorComponent() {
             <span>{wordCount} words</span>
             <span>English (United States)</span>
             <span style={{ background: '#10b981', color: 'white', padding: '0.05rem 0.4rem', borderRadius: '10px', fontSize: '0.7rem' }}>
-              🟢 Live Sync Active
+              Live Sync Active
             </span>
           </div>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>

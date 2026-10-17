@@ -192,7 +192,7 @@ function DashboardComponent() {
                 gap: '0.35rem'
               }}
             >
-              <span>🧠</span> ML Revision Analytics
+              ML Revision Analytics
             </button>
             <button
               onClick={() => setActiveTab('comparison')}
@@ -242,7 +242,7 @@ function DashboardComponent() {
                 gap: '0.4rem'
               }}
             >
-              ⚡ Work Collaboratively
+              Work Collaboratively
             </button>
           </div>
         )}
@@ -316,7 +316,7 @@ function DashboardComponent() {
             <div className="glass-panel">
               <div className="panel-header" style={{ color: '#38bdf8' }}>
                 <SparklesIcon />
-                <span style={{ color: 'var(--text-primary)' }}>🎨 Multi-Author Highlighted Text Attribution (Student Contributions)</span>
+                <span style={{ color: 'var(--text-primary)' }}>Multi-Author Highlighted Text Attribution (Student Contributions)</span>
               </div>
               <AuthorHighlightViewer markupData={authorMarkup} loading={markupLoading} />
             </div>
