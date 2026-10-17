@@ -4,7 +4,7 @@ import * as mockDb from '../models/mockStore';
 
 export const createTeam = async (req: any, res: Response): Promise<void> => {
   try {
-    const { name, assignmentId, gitUsername, memberIds } = req.body;
+    const { name, assignmentId, gitUsername, memberIds, repositoryUrl, repoUrl } = req.body;
     const studentId = req.user.id;
 
     if (!name || !assignmentId || !gitUsername) {
@@ -26,8 +26,9 @@ export const createTeam = async (req: any, res: Response): Promise<void> => {
     const teamData = {
       name,
       assignment: assignmentId,
+      leader: studentId,
       inviteCode,
-      repositoryUrl: '',
+      repositoryUrl: (repositoryUrl || repoUrl || '').trim(),
       members: membersList,
       createdAt: new Date()
     };
@@ -167,13 +168,16 @@ export const updateRepositoryUrl = async (req: any, res: Response): Promise<void
         return;
       }
 
-      // Check if student is in this team
-      if (!team.members.some((m: any) => m.student === studentId) && req.user.role !== 'lecturer') {
+      // Check if student is in this team or is leader
+      const isMember = (team.leader && team.leader.toString() === studentId) ||
+        (team.members && team.members.some((m: any) => (m.student?._id || m.student)?.toString() === studentId));
+
+      if (!isMember && req.user.role !== 'lecturer') {
         res.status(403).json({ error: 'Access denied: You are not a member of this team' });
         return;
       }
 
-      team.repositoryUrl = repositoryUrl;
+      team.repositoryUrl = repositoryUrl.trim();
       res.status(200).json({ message: 'Repository URL updated (Mock DB)', team });
       return;
     }
@@ -184,12 +188,15 @@ export const updateRepositoryUrl = async (req: any, res: Response): Promise<void
       return;
     }
 
-    if (!team.members.some((m: any) => m.student.toString() === studentId) && req.user.role !== 'lecturer') {
+    const isMember = (team.leader && team.leader.toString() === studentId) ||
+      (team.members && team.members.some((m: any) => (m.student?._id || m.student)?.toString() === studentId));
+
+    if (!isMember && req.user.role !== 'lecturer') {
       res.status(403).json({ error: 'Access denied: You are not a member of this team' });
       return;
     }
 
-    team.repositoryUrl = repositoryUrl;
+    team.repositoryUrl = repositoryUrl.trim();
     await team.save();
 
     res.status(200).json({ message: 'Repository URL updated successfully', team });
@@ -247,7 +254,7 @@ export const getTeamByAssignment = async (req: any, res: Response): Promise<void
 
 export const createGeneralTeam = async (req: any, res: Response): Promise<void> => {
   try {
-    const { name, gitUsername, memberIds } = req.body;
+    const { name, gitUsername, memberIds, repositoryUrl } = req.body;
     const studentId = req.user.id;
 
     if (!name || !gitUsername) {
@@ -270,7 +277,7 @@ export const createGeneralTeam = async (req: any, res: Response): Promise<void> 
       name,
       leader: studentId,
       inviteCode,
-      repositoryUrl: '',
+      repositoryUrl: repositoryUrl ? repositoryUrl.trim() : '',
       members: membersList,
       createdAt: new Date()
     };

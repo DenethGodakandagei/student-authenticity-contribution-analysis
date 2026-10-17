@@ -81,6 +81,7 @@ export default function StudentDashboard() {
   const [showGeneralTeamModal, setShowGeneralTeamModal] = useState(false);
   const [generalTeamName, setGeneralTeamName] = useState('');
   const [generalTeamGit, setGeneralTeamGit] = useState('');
+  const [generalTeamRepo, setGeneralTeamRepo] = useState('');
   const [linkInviteCodes, setLinkInviteCodes] = useState<Record<string, string>>({});
   const [studentsList, setStudentsList] = useState<any[]>([]);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -364,15 +365,18 @@ export default function StudentDashboard() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (targetAssignmentId?: string) => {
     try {
       const data = await api.assignments.getAll();
-      setAssignments(data.assignments || []);
+      const allAssignments = data.assignments || [];
+      setAssignments(allAssignments);
 
-      if (data.assignments && data.assignments.length > 0) {
-        const first = data.assignments[0];
-        setSelectedAssignment(first);
-        await loadStudentContext(first._id);
+      if (allAssignments.length > 0) {
+        const targetId = targetAssignmentId || selectedAssignment?._id;
+        const matched = allAssignments.find((a: any) => a._id === targetId);
+        const chosen = matched || allAssignments[0];
+        setSelectedAssignment(chosen);
+        await loadStudentContext(chosen._id);
       }
       await loadMyTeams();
       await loadStudentDirectory();
@@ -471,7 +475,7 @@ export default function StudentDashboard() {
       });
       setSuccess(`Team created successfully! Invite code: ${res.team.inviteCode}`);
       setShowJoinModal(false);
-      fetchData();
+      await fetchData(searchedAssignment?._id);
     } catch (err: any) {
       setError(err.message || 'Failed to create team');
     }
@@ -481,10 +485,10 @@ export default function StudentDashboard() {
     e.preventDefault();
     setError('');
     try {
-      await api.teams.join({ inviteCode: teamInviteCode });
+      await api.teams.join({ inviteCode: teamInviteCode, gitUsername });
       setSuccess('Joined team successfully!');
       setShowJoinModal(false);
-      fetchData();
+      await fetchData(searchedAssignment?._id);
     } catch (err: any) {
       setError(err.message || 'Failed to join team');
     }
@@ -534,16 +538,35 @@ export default function StudentDashboard() {
       await api.teams.createGeneral({
         name: generalTeamName,
         gitUsername: generalTeamGit,
+        repositoryUrl: generalTeamRepo,
         memberIds: selectedMembers
       });
       setSuccess('General team template created successfully!');
       setShowGeneralTeamModal(false);
       setGeneralTeamName('');
       setGeneralTeamGit('');
+      setGeneralTeamRepo('');
       setSelectedMembers([]);
       loadMyTeams();
     } catch (err: any) {
       setError(err.message || 'Failed to create general team.');
+    }
+  };
+
+  const handleUpdateTeamRepo = async (teamId: string, repositoryUrl: string) => {
+    try {
+      await api.teams.updateRepo({ teamId, repositoryUrl });
+      setSuccess('Repository link updated successfully!');
+      if (team?._id === teamId) {
+        setRepoUrl(repositoryUrl);
+      }
+      await loadMyTeams();
+      if (selectedAssignment?._id) {
+        await loadStudentContext(selectedAssignment._id);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update repository URL');
+      throw err;
     }
   };
 
@@ -939,11 +962,13 @@ export default function StudentDashboard() {
             student={student}
             onOpenGeneralTeamModal={() => {
               setShowGeneralTeamModal(true);
+              setGeneralTeamRepo('');
               setSelectedMembers([]);
             }}
             linkInviteCodes={linkInviteCodes}
             setLinkInviteCodes={setLinkInviteCodes}
             onLinkAssignment={handleLinkAssignment}
+            onUpdateRepo={handleUpdateTeamRepo}
           />
         )}
 
@@ -1065,6 +1090,8 @@ export default function StudentDashboard() {
         setTeamName={setGeneralTeamName}
         gitUsername={generalTeamGit}
         setGitUsername={setGeneralTeamGit}
+        repoUrl={generalTeamRepo}
+        setRepoUrl={setGeneralTeamRepo}
         studentsList={studentsList}
         selectedMembers={selectedMembers}
         setSelectedMembers={setSelectedMembers}
