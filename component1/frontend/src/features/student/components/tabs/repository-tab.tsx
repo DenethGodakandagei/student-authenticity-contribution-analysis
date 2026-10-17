@@ -778,7 +778,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                               <th className="py-2 px-3 text-right w-10 border-r border-slate-100">#</th>
                               <th className="py-2 px-3 text-left w-36 border-r border-slate-100">Author</th>
                               <th className="py-2 px-3 text-center w-28 border-r border-slate-100">Provenance</th>
-                              <th className="py-2 px-3 text-center w-24 border-r border-slate-100">Time</th>
+                              <th className="py-2 px-3 text-center w-36 border-r border-slate-100">Added (Date/Time)</th>
                               <th className="py-2 px-4 text-left">Code Content</th>
                             </tr>
                           </thead>
@@ -812,8 +812,15 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-2 py-1 select-none w-24 border-r border-slate-100 text-[9px] text-slate-500 font-mono font-medium text-center whitespace-nowrap">
-                                    {attr.timeFormatted || attr.timestamp}
+                                  <td className="px-2.5 py-1 select-none w-36 border-r border-slate-100 text-[9px] font-mono text-center whitespace-nowrap">
+                                    {attr.shortDate ? (
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="text-slate-700 font-semibold">{attr.shortDate}</span>
+                                        <span className="text-slate-400 font-normal">{attr.shortTime}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-500 font-medium">{attr.timeFormatted || attr.timestamp}</span>
+                                    )}
                                   </td>
                                   <td className="px-4 py-1 text-slate-800 whitespace-pre">
                                     {attr.lineContent || ' '}

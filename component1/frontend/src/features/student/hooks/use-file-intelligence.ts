@@ -258,22 +258,28 @@ export function getFileIntelligence(
 
     const recordedLine = fileLineRecordsMap.get(currentLineNum);
 
-    // Calculate line authored timestamp (accurate per line, with seconds)
+    // Calculate line authored timestamp (accurate per line, strictly monotonic forward)
     let lineTimestamp: Date;
     if (recordedLine && recordedLine.timestamp) {
-      lineTimestamp = new Date(recordedLine.timestamp);
+      const parsed = new Date(recordedLine.timestamp);
+      lineTimestamp = !isNaN(parsed.getTime()) ? parsed : new Date(sessionEndTime);
     } else {
       const progress = rawLines.length > 1 ? idx / (rawLines.length - 1) : 0;
-      const jitterMs = ((idx * 7) % 13) * 1000;
-      const calculatedMs = sessionStartTime + Math.round(progress * sessionSpreadMs) + jitterMs;
+      // Monotonic forward progression: each subsequent line advances forward in time
+      const calculatedMs = sessionStartTime + Math.round(progress * sessionSpreadMs);
       lineTimestamp = new Date(Math.min(sessionEndTime, Math.max(sessionStartTime, calculatedMs)));
     }
 
-    const timeFormatted = lineTimestamp.toLocaleTimeString([], {
+    const shortDate = lineTimestamp.toLocaleDateString([], {
+      month: 'numeric',
+      day: 'numeric'
+    });
+    const shortTime = lineTimestamp.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit'
     });
+    const timeFormatted = `${shortDate} ${shortTime}`;
 
     let pType: 'typed' | 'pasted' | 'ai_generated' = 'typed';
     let isOffline = recordedLine?.isOffline === true;
@@ -314,6 +320,8 @@ export function getFileIntelligence(
       isOffline,
       timestamp: timeFormatted,
       timeFormatted,
+      shortDate,
+      shortTime,
       colorIndex: author.colorIndex || 0
     };
   });
