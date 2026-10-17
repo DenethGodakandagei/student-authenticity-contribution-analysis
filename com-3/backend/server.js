@@ -1062,6 +1062,180 @@ app.get('/api/documents/:id/anomalies', async (req, res) => {
   }
 });
 
+// Document Telemetry Dataset Export API (Excel .xlsx/.csv & JSON)
+app.get('/api/documents/:id/export', async (req, res) => {
+  try {
+    const { format = 'json' } = req.query;
+    const doc = await Document.findOne({ _id: req.params.id }).lean();
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    const revisions = await Revision.find({ documentId: req.params.id }).sort('timestamp').lean();
+
+    // Authenticity & Workload Calculation
+    const totalWords = (doc.content || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+    const authorStats = {};
+    revisions.forEach(r => {
+      if (!authorStats[r.author]) {
+        authorStats[r.author] = { author: r.author, wordsAdded: 0, wordsDeleted: 0, count: 0 };
+      }
+      authorStats[r.author].wordsAdded += (r.wordCountAdded || 0);
+      authorStats[r.author].wordsDeleted += (r.wordCountDeleted || 0);
+      authorStats[r.author].count += 1;
+    });
+
+    const authorsList = Object.values(authorStats);
+    const totalAdded = authorsList.reduce((acc, a) => acc + a.wordsAdded, 0) || 1;
+    const authorSummary = authorsList.map(a => ({
+      ...a,
+      netWords: a.wordsAdded - a.wordsDeleted,
+      percentage: Math.min(100, Math.round((a.wordsAdded / totalAdded) * 100))
+    }));
+
+    const pasteAnomalies = revisions.filter(r => r.isBulkInsertion || r.anomalyFlag);
+    const pastePercent = Math.min(100, Math.round((pasteAnomalies.length / Math.max(1, revisions.length)) * 100));
+    const incrementalPercent = Math.max(0, 100 - pastePercent);
+
+    let equityScore = 50;
+    if (authorsList.length === 1) {
+      equityScore = 100;
+    } else if (authorsList.length > 1) {
+      const shares = authorsList.map(a => a.wordsAdded / totalAdded);
+      const maxShare = Math.max(...shares);
+      equityScore = Math.max(20, Math.min(100, Math.round((1 - (maxShare - (1 / authorsList.length))) * 100)));
+    }
+
+    const authenticityScore = Math.round((incrementalPercent * 0.45) + (equityScore * 0.40) + (pastePercent === 0 ? 15 : 5));
+
+    const exportPayload = {
+      exportTimestamp: new Date().toISOString(),
+      platform: "DocuTrace Research Telemetry",
+      document: {
+        id: doc._id,
+        title: doc.title,
+        source: doc.source || 'in_built',
+        owner: doc.owner,
+        ownerName: doc.ownerName,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+        totalWords
+      },
+      authenticityMetrics: {
+        authenticityScore,
+        workloadEquityScore: equityScore,
+        incrementalDraftingPercent: incrementalPercent,
+        batchPastePercent: pastePercent,
+        pasteSpikesCount: pasteAnomalies.length,
+        totalRevisions: revisions.length,
+        coAuthorsCount: authorsList.length
+      },
+      authorContributions: authorSummary,
+      revisions: revisions.map((rev, idx) => ({
+        step: idx + 1,
+        revisionId: rev._id,
+        author: rev.author,
+        anonymizedAuthorId: rev.anonymizedAuthorId || '',
+        timestamp: rev.timestamp,
+        section: rev.section || 'General',
+        wordsAdded: rev.wordCountAdded,
+        wordsDeleted: rev.wordCountDeleted,
+        netWords: rev.wordCountAdded - rev.wordCountDeleted,
+        predictedIntent: rev.predictedIntent || 'Unclassified',
+        predictedSignificance: rev.predictedSignificance || 'Unclassified',
+        confidence: rev.confidence || 0,
+        anomalyFlag: rev.anomalyFlag || 'None',
+        isBulkInsertion: Boolean(rev.isBulkInsertion),
+        explanation: rev.explanation || '',
+        addedTextSnippet: (rev.addedText || '').substring(0, 120),
+        deletedTextSnippet: (rev.deletedText || '').substring(0, 120)
+      }))
+    };
+
+    const safeTitle = (doc.title || doc._id).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    if (format === 'csv' || format === 'excel' || format === 'xlsx') {
+      // Standard Machine Learning Training Dataset CSV (clean, flat, 100% compatible with pandas.read_csv)
+      const escapeCsv = (val) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/\r\n|\r|\n/g, ' ').replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const headers = [
+        "revision_id",
+        "document_id",
+        "document_title",
+        "step_number",
+        "timestamp",
+        "author",
+        "anonymized_author_id",
+        "section",
+        "source_platform",
+        "before_text",
+        "after_text",
+        "added_text",
+        "deleted_text",
+        "word_count_added",
+        "word_count_deleted",
+        "net_word_change",
+        "predicted_intent",
+        "predicted_significance",
+        "confidence",
+        "semantic_distance",
+        "is_bulk_insertion",
+        "anomaly_flag",
+        "authenticity_score",
+        "workload_equity_score",
+        "explanation"
+      ];
+
+      let csv = headers.join(',') + '\n';
+
+      revisions.forEach((rev, idx) => {
+        const row = [
+          escapeCsv(rev._id),
+          escapeCsv(doc._id),
+          escapeCsv(doc.title || doc._id),
+          idx + 1,
+          escapeCsv(new Date(rev.timestamp).toISOString()),
+          escapeCsv(rev.author),
+          escapeCsv(rev.anonymizedAuthorId || ''),
+          escapeCsv(rev.section || 'General'),
+          escapeCsv(rev.sourcePlatform || doc.source || 'in_built'),
+          escapeCsv(rev.beforeText || ''),
+          escapeCsv(rev.afterText || ''),
+          escapeCsv(rev.addedText || ''),
+          escapeCsv(rev.deletedText || ''),
+          rev.wordCountAdded || 0,
+          rev.wordCountDeleted || 0,
+          (rev.wordCountAdded || 0) - (rev.wordCountDeleted || 0),
+          escapeCsv(rev.predictedIntent || 'Unclassified'),
+          escapeCsv(rev.predictedSignificance || 'Unclassified'),
+          Number((rev.confidence || 0).toFixed(4)),
+          Number((rev.semanticDistance || 0).toFixed(4)),
+          rev.isBulkInsertion ? 1 : 0,
+          escapeCsv(rev.anomalyFlag || 'None'),
+          authenticityScore,
+          equityScore,
+          escapeCsv(rev.explanation || '')
+        ];
+        csv += row.join(',') + '\n';
+      });
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_dataset.csv"`);
+      return res.send(csv);
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}_dataset.json"`);
+    res.json(exportPayload);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Helper to extract real text/HTML from Google Docs
 async function fetchRealGoogleDoc(docUrl) {
   let googleId = null;

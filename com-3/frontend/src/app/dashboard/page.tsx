@@ -333,6 +333,137 @@ function DashboardComponent() {
   // Composite Contribution Authenticity Score
   const authenticityScore = Math.round(0.6 * workloadEquityScore + 0.4 * incrementalDraftingPercent);
 
+  const handleDownloadJSON = async () => {
+    try {
+      showToast("Preparing JSON dataset download...", "info", "Exporting");
+      const res = await fetch(`${API_BASE}/${selectedDocId}/export?format=json`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeTitle = (selectedDocObj?.title || selectedDocId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        a.download = `${safeTitle}_dataset.json`;
+        a.click();
+        showToast("Document dataset exported as JSON", "success", "Download Complete");
+      } else {
+        const blob = new Blob([JSON.stringify({
+          documentId: selectedDocId,
+          title: selectedDocObj?.title,
+          authors: activeAuthors,
+          totalWords,
+          revisions: timeline,
+          mlAnalytics: mlAnalytics,
+          authenticityScore,
+          workloadEquityScore
+        }, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${selectedDocId}_dataset.json`;
+        a.click();
+        showToast("Document dataset exported as JSON", "success", "Download Complete");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to export JSON dataset", "error", "Export Failed");
+    }
+  };
+
+  const handleDownloadCSV = async () => {
+    try {
+      showToast("Preparing ML training CSV dataset download...", "info", "Exporting");
+      const res = await fetch(`${API_BASE}/${selectedDocId}/export?format=csv`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeTitle = (selectedDocObj?.title || selectedDocId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        a.download = `${safeTitle}_ml_dataset.csv`;
+        a.click();
+        showToast("ML training dataset exported as CSV file", "success", "Download Complete");
+      } else {
+        // Flat, Machine Learning training format fallback (100% pandas.read_csv compatible)
+        const escapeCsv = (val: any) => {
+          if (val === null || val === undefined) return '""';
+          const str = String(val).replace(/\r\n|\r|\n/g, ' ').replace(/"/g, '""');
+          return `"${str}"`;
+        };
+
+        const headers = [
+          "revision_id",
+          "document_id",
+          "document_title",
+          "step_number",
+          "timestamp",
+          "author",
+          "anonymized_author_id",
+          "section",
+          "source_platform",
+          "before_text",
+          "after_text",
+          "added_text",
+          "deleted_text",
+          "word_count_added",
+          "word_count_deleted",
+          "net_word_change",
+          "predicted_intent",
+          "predicted_significance",
+          "confidence",
+          "semantic_distance",
+          "is_bulk_insertion",
+          "anomaly_flag",
+          "authenticity_score",
+          "workload_equity_score",
+          "explanation"
+        ];
+
+        let csv = headers.join(',') + '\n';
+        (timeline || []).forEach((r: any, i: number) => {
+          const row = [
+            escapeCsv(r._id || `rev_${i + 1}`),
+            escapeCsv(selectedDocId),
+            escapeCsv(selectedDocObj?.title || selectedDocId),
+            i + 1,
+            escapeCsv(new Date(r.timestamp).toISOString()),
+            escapeCsv(r.author || 'Author'),
+            escapeCsv(r.anonymizedAuthorId || `user_${i + 1}`),
+            escapeCsv(r.section || 'General'),
+            escapeCsv(r.sourcePlatform || 'in_built'),
+            escapeCsv(r.beforeText || ''),
+            escapeCsv(r.afterText || ''),
+            escapeCsv(r.addedText || ''),
+            escapeCsv(r.deletedText || ''),
+            r.words_added || r.wordCountAdded || 0,
+            r.words_deleted || r.wordCountDeleted || 0,
+            (r.words_added || r.wordCountAdded || 0) - (r.words_deleted || r.wordCountDeleted || 0),
+            escapeCsv(r.intent || r.predictedIntent || 'Content Addition'),
+            escapeCsv(r.significance || r.predictedSignificance || 'Moderate'),
+            Number((r.confidence || 0.95).toFixed(4)),
+            Number((r.semanticDistance || 0.05).toFixed(4)),
+            r.isBulkInsertion ? 1 : 0,
+            escapeCsv(r.anomalyFlag || 'None'),
+            authenticityScore,
+            workloadEquityScore,
+            escapeCsv(r.message || r.explanation || '')
+          ];
+          csv += row.join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeTitle = (selectedDocObj?.title || selectedDocId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        a.download = `${safeTitle}_ml_dataset.csv`;
+        a.click();
+        showToast("ML training dataset exported as CSV file", "success", "Download Complete");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to export CSV dataset", "error", "Export Failed");
+    }
+  };
+
   // ML Revision Substantive Intent Rate
   let substantiveIntentPercent = 78;
   if (mlAnalytics?.intentDistribution) {
@@ -622,7 +753,7 @@ function DashboardComponent() {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.65rem', marginTop: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', marginTop: '0.75rem' }}>
               <button
                 onClick={() => router.push(`/editor?docId=${selectedDocId}`)}
                 style={{
@@ -630,8 +761,8 @@ function DashboardComponent() {
                   color: '#121417',
                   border: 'none',
                   borderRadius: '9999px',
-                  padding: '0.65rem 1rem',
-                  fontSize: '0.84rem',
+                  padding: '0.65rem 0.85rem',
+                  fontSize: '0.82rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   textAlign: 'center',
@@ -651,51 +782,68 @@ function DashboardComponent() {
                   border: '1px solid #e2e8f0',
                   color: '#0f172a',
                   borderRadius: '9999px',
-                  padding: '0.65rem 1rem',
-                  fontSize: '0.84rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  textAlign: 'center'
-                }}
-              >
-                Author Highlights
-              </button>
-
-              <button
-                onClick={() => {
-                  const blob = new Blob([JSON.stringify({
-                    documentId: selectedDocId,
-                    title: selectedDocObj?.title,
-                    authors: activeAuthors,
-                    totalWords,
-                    revisions: timeline,
-                    mlAnalytics: mlAnalytics,
-                    authenticityScore,
-                    workloadEquityScore
-                  }, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `${selectedDocId}_evolution_audit.json`;
-                  a.click();
-                  showToast("Revision timeline audit report exported", "success", "Export Complete");
-                }}
-                style={{
-                  background: '#121417',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '0.65rem 1rem',
-                  fontSize: '0.84rem',
+                  padding: '0.65rem 0.85rem',
+                  fontSize: '0.82rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.background = '#1e2227'}
-                onMouseOut={e => e.currentTarget.style.background = '#121417'}
+                onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
+                onMouseOut={e => e.currentTarget.style.background = '#ffffff'}
               >
-                Evolution Audit JSON
+                Author Highlights
+              </button>
+
+              <button
+                onClick={handleDownloadJSON}
+                style={{
+                  background: '#121417',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.65rem 0.85rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#272b30'}
+                onMouseOut={e => e.currentTarget.style.background = '#121417'}
+                title="Download full document evolution telemetry as JSON"
+              >
+                <span style={{ fontWeight: 800 }}>&#123;&nbsp;&#125;</span> Download JSON
+              </button>
+
+              <button
+                onClick={handleDownloadCSV}
+                style={{
+                  background: '#0284c7',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.65rem 0.85rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#0369a1'}
+                onMouseOut={e => e.currentTarget.style.background = '#0284c7'}
+                title="Download ML training dataset as CSV (clean, flat tabular format for Pandas, PyTorch & Scikit-learn)"
+              >
+                <span style={{ fontWeight: 800 }}>&#128202;</span> Download CSV
               </button>
             </div>
           </div>
