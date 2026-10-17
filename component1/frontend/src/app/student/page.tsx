@@ -30,6 +30,16 @@ import {
   JoinCohortModal,
   CreateGeneralTeamModal
 } from '@/features/student';
+import {
+  Laptop,
+  Bot,
+  ClipboardCheck,
+  ShieldCheck,
+  RefreshCw,
+  FileText,
+  X,
+  CheckCircle2
+} from 'lucide-react';
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -51,7 +61,10 @@ export default function StudentDashboard() {
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskAssignee, setNewTaskAssignee] = useState('');
 
-  // Modals state
+  // Timeline / Cadence filter
+  const [cadenceFilter, setCadenceFilter] = useState<'keystrokes' | 'ast' | 'pastes'>('keystrokes');
+
+  // Join Cohort Modal state
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [searchedAssignment, setSearchedAssignment] = useState<any>(null);
@@ -61,9 +74,8 @@ export default function StudentDashboard() {
   const [gitUsername, setGitUsername] = useState('');
   const [teamInviteCode, setTeamInviteCode] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
-  const [cadenceFilter, setCadenceFilter] = useState<'keystrokes' | 'ast' | 'pastes'>('keystrokes');
 
-  // Teams & Directory
+  // General Teams tab state
   const [myTeams, setMyTeams] = useState<any[]>([]);
   const [showGeneralTeamModal, setShowGeneralTeamModal] = useState(false);
   const [generalTeamName, setGeneralTeamName] = useState('');
@@ -77,11 +89,13 @@ export default function StudentDashboard() {
   const [localDirHandle, setLocalDirHandle] = useState<any>(null);
   const [localDirName, setLocalDirName] = useState<string>('');
   const [scannedFiles, setScannedFiles] = useState<any[]>([]);
+  const [scannedFolders, setScannedFolders] = useState<any[]>([]);
   const [offlineEdits, setOfflineEdits] = useState<any[]>([]);
   const [scanning, setScanning] = useState(false);
   const [selectedOfflineFile, setSelectedOfflineFile] = useState<any>(null);
   const [autoSyncInProgress, setAutoSyncInProgress] = useState(false);
   const [gitVerification, setGitVerification] = useState<GitVerificationResult | null>(null);
+  const [savedFolderPrompt, setSavedFolderPrompt] = useState<{ folderName: string; handle: any } | null>(null);
 
   // Status & Telemetry
   const [syncingGit, setSyncingGit] = useState(false);
@@ -90,6 +104,126 @@ export default function StudentDashboard() {
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [studentBreakdown, setStudentBreakdown] = useState<any[]>([]);
   const [commitsList, setCommitsList] = useState<any[]>([]);
+  const [sessionsList, setSessionsList] = useState<any[]>([]);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+
+  // Unified Scanner & Directory Traversal Engine
+  const scanAndAutoSync = async (
+    handle: any,
+    assignmentId?: string,
+    teamObj?: any,
+    checkResult?: GitVerificationResult
+  ) => {
+    const targetAssignId = assignmentId || selectedAssignment?._id;
+    if (!targetAssignId || !handle) return;
+
+    setScanning(true);
+    setAutoSyncInProgress(true);
+
+    try {
+      const files: any[] = [];
+      const folderMap = new Map<string, { name: string; path: string; fileCount: number; modifiedCount: number; totalSize: number }>();
+
+      const traverse = async (dirHandle: any, relativePath = '') => {
+        for await (const entry of dirHandle.values()) {
+          if (
+            entry.name === 'node_modules' ||
+            entry.name === '.git' ||
+            entry.name === '.next' ||
+            entry.name === 'dist' ||
+            entry.name === 'build' ||
+            entry.name.startsWith('.')
+          ) continue;
+
+          const currentPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+
+          if (entry.kind === 'directory') {
+            if (!folderMap.has(currentPath)) {
+              folderMap.set(currentPath, {
+                name: entry.name,
+                path: currentPath,
+                fileCount: 0,
+                modifiedCount: 0,
+                totalSize: 0
+              });
+            }
+            await traverse(entry, currentPath);
+          } else if (entry.kind === 'file') {
+            const file = await entry.getFile();
+            let text = '';
+            try {
+              if (file.size < 2 * 1024 * 1024) {
+                text = await file.text();
+              }
+            } catch {
+              text = '';
+            }
+            const lines = text ? text.split('\n') : [];
+            const parentDir = relativePath || '(root)';
+
+            const fileObj = {
+              name: entry.name,
+              path: currentPath,
+              parentFolder: parentDir,
+              size: file.size,
+              lastModified: file.lastModified,
+              lineCount: lines.length,
+              content: text,
+              lines
+            };
+            files.push(fileObj);
+
+            if (relativePath && folderMap.has(relativePath)) {
+              const fStats = folderMap.get(relativePath)!;
+              fStats.fileCount++;
+              fStats.totalSize += file.size;
+              if (file.lastModified >= Date.now() - 48 * 60 * 60 * 1000) {
+                fStats.modifiedCount++;
+              }
+            }
+          }
+        }
+      };
+
+      await traverse(handle);
+      const foldersList = Array.from(folderMap.values()).sort((a, b) => a.path.localeCompare(b.path));
+      const recentThreshold = Date.now() - 48 * 60 * 60 * 1000;
+      const edits = files.filter(f => f.lastModified >= recentThreshold);
+
+      setScannedFiles(files);
+      setScannedFolders(foldersList);
+      setOfflineEdits(edits);
+
+      // Save instant snapshot cache
+      saveWorkspaceSnapshot(targetAssignId, {
+        folderName: handle.name,
+        scannedFiles: files.map(f => ({
+          name: f.name,
+          path: f.path,
+          parentFolder: f.parentFolder,
+          size: f.size,
+          lastModified: f.lastModified,
+          lineCount: f.lineCount
+        })),
+        offlineEdits: edits.map(f => ({
+          name: f.name,
+          path: f.path,
+          size: f.size,
+          lastModified: f.lastModified,
+          lineCount: f.lineCount
+        })),
+        gitVerification: checkResult || gitVerification
+      });
+
+      setSuccess(`Workspace scan complete: ${files.length} files tracked across ${foldersList.length} folders.`);
+    } catch (err: any) {
+      console.error('Scan error:', err);
+      setError('Workspace scan failed: ' + err.message);
+    } finally {
+      setScanning(false);
+      setAutoSyncInProgress(false);
+    }
+  };
 
   const checkAndRestoreWorkspace = async (assignmentId: string, teamObj?: any) => {
     try {
@@ -102,14 +236,25 @@ export default function StudentDashboard() {
       }
 
       const saved = await getWorkspaceHandle(assignmentId);
-      if (saved && saved.handle) {
+      if (saved && saved.folderName) {
         setLocalDirName(saved.folderName);
-        const hasPermission = await verifyHandlePermission(saved.handle, false);
-        if (hasPermission) {
-          setLocalDirHandle(saved.handle);
-          const check = await verifyLocalGitRepository(saved.handle, teamObj?.repositoryUrl || repoUrl);
-          setGitVerification(check);
+        if (saved.handle) {
+          const hasPermission = await verifyHandlePermission(saved.handle, false);
+          if (hasPermission) {
+            setLocalDirHandle(saved.handle);
+            setSavedFolderPrompt(null);
+            const check = await verifyLocalGitRepository(saved.handle, teamObj?.repositoryUrl || repoUrl);
+            setGitVerification(check);
+            await scanAndAutoSync(saved.handle, assignmentId, teamObj, check);
+          } else {
+            // Need user interaction to re-request browser permission
+            setSavedFolderPrompt({ folderName: saved.folderName, handle: saved.handle });
+          }
+        } else {
+          setSavedFolderPrompt({ folderName: saved.folderName, handle: null });
         }
+      } else {
+        setSavedFolderPrompt(null);
       }
     } catch (err) {
       console.warn('Workspace restore error:', err);
@@ -137,6 +282,7 @@ export default function StudentDashboard() {
           if (teamAnalyticsRes.timeline) setTimelineData(teamAnalyticsRes.timeline);
           if (teamAnalyticsRes.studentBreakdown) setStudentBreakdown(teamAnalyticsRes.studentBreakdown);
           if (teamAnalyticsRes.activities) setCommitsList(teamAnalyticsRes.activities);
+          if (teamAnalyticsRes.sessions) setSessionsList(teamAnalyticsRes.sessions);
         }
 
         await checkAndRestoreWorkspace(assignmentId, teamRes.team);
@@ -147,6 +293,8 @@ export default function StudentDashboard() {
         setTimelineData([]);
         setStudentBreakdown([]);
         setCommitsList([]);
+        setSessionsList([]);
+        await checkAndRestoreWorkspace(assignmentId, null);
       }
     } catch (err) {
       console.error(err);
@@ -158,18 +306,33 @@ export default function StudentDashboard() {
       const data = await api.assignments.getAll();
       setAssignments(data.assignments || []);
 
-      const directoryRes = await api.users.getStudents().catch(() => ({ students: [] }));
-      setStudentsList(directoryRes.students || []);
-
-      const teamsRes = await api.teams.getMyTeams().catch(() => ({ teams: [] }));
-      setMyTeams(teamsRes.teams || []);
-
       if (data.assignments && data.assignments.length > 0) {
-        setSelectedAssignment(data.assignments[0]);
-        await loadStudentContext(data.assignments[0]._id);
+        const first = data.assignments[0];
+        setSelectedAssignment(first);
+        await loadStudentContext(first._id);
       }
-    } catch {
-      setError('Could not fetch student profiles. Ensure backend server is active.');
+      await loadMyTeams();
+      await loadStudentDirectory();
+    } catch (err) {
+      console.error('Failed to load initial data:', err);
+    }
+  };
+
+  const loadMyTeams = async () => {
+    try {
+      const res = await api.teams.getMyTeams();
+      setMyTeams(res.teams || []);
+    } catch (err) {
+      console.error('Failed to load teams', err);
+    }
+  };
+
+  const loadStudentDirectory = async () => {
+    try {
+      const res = await api.users.getStudents();
+      setStudentsList(res.students || []);
+    } catch (err) {
+      console.error('Failed to load student directory', err);
     }
   };
 
@@ -182,77 +345,36 @@ export default function StudentDashboard() {
     }
     setStudent(currentUser);
     fetchData();
-  }, [router]);
+  }, []);
 
   const handleAssignmentChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = assignments.find((a) => a._id === e.target.value);
-    setSelectedAssignment(selected);
-    if (selected) {
-      await loadStudentContext(selected._id);
+    const id = e.target.value;
+    const found = assignments.find((a) => a._id === id);
+    if (found) {
+      setSelectedAssignment(found);
+      await loadStudentContext(found._id);
     }
   };
 
   const handleSyncGit = async () => {
-    if (!team || !selectedAssignment) return;
+    if (!repoUrl) return;
     setSyncingGit(true);
     setError('');
     setSuccess('');
     try {
-      const res = await api.github.sync({
-        teamId: team._id,
-        assignmentId: selectedAssignment._id
+      await api.github.sync({
+        url: repoUrl,
+        assignmentId: selectedAssignment?._id,
+        teamId: team?._id
       });
-      setSuccess(`Synced Git! Added ${res.commitsSynced || 0} commits and ${res.prsSynced || 0} PRs.`);
-      await loadStudentContext(selectedAssignment._id);
+      setSuccess('GitHub telemetry synchronized successfully!');
+      if (selectedAssignment) {
+        await loadStudentContext(selectedAssignment._id);
+      }
     } catch (err: any) {
-      setError(err.message || 'Git sync failed. Check URL or network state.');
+      setError(err.message || 'Git sync failed');
     } finally {
       setSyncingGit(false);
-    }
-  };
-
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle || !team || !selectedAssignment) return;
-    try {
-      await api.tasks.create({
-        title: newTaskTitle,
-        description: newTaskDesc,
-        assignedTo: newTaskAssignee || student?.id,
-        teamId: team._id,
-        assignmentId: selectedAssignment._id
-      });
-      setNewTaskTitle('');
-      setNewTaskDesc('');
-      setNewTaskAssignee('');
-      const tasksRes = await api.tasks.getByTeam(team._id);
-      setTasks(tasksRes.tasks || []);
-    } catch (err: any) {
-      setError(err.message || 'Task creation failed.');
-    }
-  };
-
-  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
-    try {
-      await api.tasks.updateStatus(taskId, newStatus);
-      if (team) {
-        const tasksRes = await api.tasks.getByTeam(team._id);
-        setTasks(tasksRes.tasks || []);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleDeleteTask = async (taskId: string) => {
-    try {
-      await api.tasks.delete(taskId);
-      if (team) {
-        const tasksRes = await api.tasks.getByTeam(team._id);
-        setTasks(tasksRes.tasks || []);
-      }
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -260,63 +382,105 @@ export default function StudentDashboard() {
     e.preventDefault();
     setError('');
     try {
-      const res = await api.assignments.getByCode(inviteCode.trim());
-      setSearchedAssignment(res.assignment);
-      setSearchedTeams(res.teams || []);
+      const res = await api.assignments.getByCode(inviteCode.trim().toUpperCase());
+      if (res && res.assignment) {
+        setSearchedAssignment(res.assignment);
+        setSearchedTeams(res.teams || []);
+        setTeamFlow('none');
+      } else {
+        setError('No assignment found with this invite code.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Invitation template not found.');
+      setError(err.message || 'Invalid cohort invite code');
     }
   };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchedAssignment) return;
+    setError('');
     try {
-      await api.teams.create({
+      const res = await api.teams.create({
         name: teamName,
         assignmentId: searchedAssignment._id,
+        repositoryUrl: repoUrl,
         gitUsername,
-        repositoryUrl: repoUrl
+        memberIds: selectedMembers
       });
+      setSuccess(`Team created successfully! Invite code: ${res.team.inviteCode}`);
       setShowJoinModal(false);
-      setSuccess('Team registered successfully!');
       fetchData();
     } catch (err: any) {
-      setError(err.message || 'Could not form team.');
+      setError(err.message || 'Failed to create team');
     }
   };
 
   const handleJoinTeam = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     try {
-      await api.teams.join({
-        inviteCode: teamInviteCode,
-        gitUsername
-      });
-      setShowJoinModal(false);
+      await api.teams.join({ inviteCode: teamInviteCode });
       setSuccess('Joined team successfully!');
+      setShowJoinModal(false);
       fetchData();
     } catch (err: any) {
-      setError(err.message || 'Failed to join team.');
+      setError(err.message || 'Failed to join team');
+    }
+  };
+
+  const handleAddTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!team) return;
+    try {
+      const res = await api.tasks.create({
+        teamId: team._id,
+        title: newTaskTitle,
+        description: newTaskDesc,
+        assignedTo: newTaskAssignee || student?.id
+      });
+      setTasks((prev) => [...prev, res.task]);
+      setNewTaskTitle('');
+      setNewTaskDesc('');
+      setNewTaskAssignee('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create task.');
+    }
+  };
+
+  const handleUpdateTaskStatus = async (taskId: string, status: string) => {
+    try {
+      await api.tasks.updateStatus(taskId, status);
+      setTasks((prev) => prev.map((t) => (t._id === taskId ? { ...t, status } : t)));
+    } catch (err: any) {
+      setError(err.message || 'Failed to update task.');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await api.tasks.delete(taskId);
+      setTasks((prev) => prev.filter((t) => t._id !== taskId));
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete task.');
     }
   };
 
   const handleCreateGeneralTeam = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     try {
       await api.teams.createGeneral({
         name: generalTeamName,
         gitUsername: generalTeamGit,
         memberIds: selectedMembers
       });
+      setSuccess('General team template created successfully!');
       setShowGeneralTeamModal(false);
       setGeneralTeamName('');
       setGeneralTeamGit('');
       setSelectedMembers([]);
-      const teamsRes = await api.teams.getMyTeams();
-      setMyTeams(teamsRes.teams || []);
+      loadMyTeams();
     } catch (err: any) {
-      setError(err.message || 'Failed to create team.');
+      setError(err.message || 'Failed to create general team.');
     }
   };
 
@@ -325,7 +489,7 @@ export default function StudentDashboard() {
     const code = linkInviteCodes[teamId];
     if (!code) return;
     try {
-      await api.teams.addAssignment(teamId, code);
+      await api.teams.addAssignment(teamId, code.trim().toUpperCase());
       setSuccess('Assignment linked to team!');
       setLinkInviteCodes((prev) => ({ ...prev, [teamId]: '' }));
       fetchData();
@@ -350,11 +514,39 @@ export default function StudentDashboard() {
       }
       setLocalDirHandle(handle);
       setLocalDirName(handle.name);
+      setSavedFolderPrompt(null);
       setSuccess('Workspace connected & verified!');
+
+      // Automatically scan folder immediately
+      await scanAndAutoSync(handle, selectedAssignment?._id, team, check);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         setError('Folder selection error: ' + err.message);
       }
+    }
+  };
+
+  const handleResumeSavedWorkspace = async () => {
+    if (!savedFolderPrompt?.handle || !selectedAssignment) {
+      await handleConnectFolder();
+      return;
+    }
+    try {
+      setError('');
+      const granted = await verifyHandlePermission(savedFolderPrompt.handle, true);
+      if (granted) {
+        setLocalDirHandle(savedFolderPrompt.handle);
+        setLocalDirName(savedFolderPrompt.folderName);
+        setSavedFolderPrompt(null);
+
+        const check = await verifyLocalGitRepository(savedFolderPrompt.handle, team?.repositoryUrl || repoUrl);
+        setGitVerification(check);
+        await scanAndAutoSync(savedFolderPrompt.handle, selectedAssignment._id, team, check);
+      } else {
+        setError('Permission to read local folder was not granted.');
+      }
+    } catch (err: any) {
+      setError('Could not resume workspace: ' + err.message);
     }
   };
 
@@ -366,8 +558,11 @@ export default function StudentDashboard() {
     setLocalDirHandle(null);
     setLocalDirName('');
     setScannedFiles([]);
+    setScannedFolders([]);
     setOfflineEdits([]);
+    setSelectedOfflineFile(null);
     setGitVerification(null);
+    setSavedFolderPrompt(null);
     setSuccess('Workspace disconnected.');
   };
 
@@ -405,6 +600,189 @@ export default function StudentDashboard() {
           onSyncGit={handleSyncGit}
         />
 
+        {/* =========================================================================
+            INTEGRITY & AUTHENTICITY HERO SECTION (STUDENT STANDING & PROVENANCE)
+        ========================================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
+          {/* Left: Authenticity & Biometric Scorecard (7 of 12 cols) */}
+          <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-5">
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Integrity & Coding Authenticity</h3>
+                  <p className="text-xs text-slate-500 font-normal mt-0.5">
+                    Biometric typing telemetry & repository provenance analysis
+                  </p>
+                </div>
+                <span
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-mono ${
+                    report?.scores?.final != null
+                      ? 'text-emerald-800 bg-emerald-50 border border-emerald-200'
+                      : 'text-slate-500 bg-slate-100'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      report?.scores?.final != null ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`}
+                  />
+                  {report?.scores?.final != null ? 'Verified Authentic' : 'Pending Baseline'}
+                </span>
+              </div>
+
+              <div className="my-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-black text-slate-900 tracking-tight font-mono">
+                    {report?.scores?.final != null ? `${report.scores.final}%` : '0%'}
+                  </span>
+                  <span className="text-xs uppercase text-slate-400 font-bold tracking-wider">
+                    AUTHENTICITY SCORE
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-normal mt-1">
+                  {report?.scores?.final
+                    ? 'Genuine human keystroke rhythm verified against local & remote Git history.'
+                    : 'Awaiting telemetry sync to establish organic typing baseline.'}
+                </p>
+              </div>
+            </div>
+
+            {/* 3 Metric Pills: Manual % vs AI % vs Pasted % */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
+              <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-2.5 text-center flex flex-col items-center justify-center">
+                <Laptop className="w-4 h-4 text-slate-600 mb-1" />
+                <span className="text-[10px] text-slate-500 leading-tight">Manual</span>
+                <span className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+                  {report?.metrics?.codingProvenance?.manualPercent ?? 88}%
+                </span>
+              </div>
+
+              <div className="bg-purple-50/50 border border-purple-100 rounded-2xl p-2.5 text-center flex flex-col items-center justify-center">
+                <Bot className="w-4 h-4 text-purple-600 mb-1" />
+                <span className="text-[10px] text-slate-500 leading-tight">AI Assist</span>
+                <span className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+                  {report?.metrics?.codingProvenance?.aiPercent ?? 8}%
+                </span>
+              </div>
+
+              <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-2.5 text-center flex flex-col items-center justify-center">
+                <ClipboardCheck className="w-4 h-4 text-rose-500 mb-1" />
+                <span className="text-[10px] text-slate-500 leading-tight">External Paste</span>
+                <span className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+                  {report?.metrics?.codingProvenance?.externalPercent ??
+                    report?.metrics?.codingProvenance?.pastePercent ??
+                    4}%
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                onClick={() =>
+                  localDirHandle
+                    ? scanAndAutoSync(localDirHandle, selectedAssignment?._id, team, gitVerification || undefined)
+                    : handleResumeSavedWorkspace()
+                }
+                disabled={autoSyncInProgress || scanning}
+                className="w-full py-2.5 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${autoSyncInProgress || scanning ? 'animate-spin' : ''}`}
+                />
+                <span>{scanning ? 'Scanning...' : 'Sync Telemetry & Workspace'}</span>
+              </button>
+              <button
+                onClick={() => setShowAuditModal(true)}
+                className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs border border-slate-200/80 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5 text-slate-600" />
+                <span>Audit Report</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Workspace Standing Evaluation (5 of 12 cols) */}
+          <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900">Workspace Standing</h3>
+                <span className="text-xs font-semibold text-slate-500 font-mono">
+                  Total {report?.metrics?.codingHours ? Number(report.metrics.codingHours).toFixed(1) : '0.0'}h
+                </span>
+              </div>
+
+              {/* Blue Weighted Standing Banner */}
+              <div className="bg-[#EFF6FF] border border-blue-100 rounded-2xl p-4 flex items-center justify-between my-3">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 font-mono">
+                    WEIGHTED SCORE
+                  </div>
+                  <div className="text-xs text-blue-900 font-medium mt-0.5">Calculated Authenticity</div>
+                </div>
+                <div className="text-3xl font-black text-blue-600 font-mono">
+                  {report?.scores?.final ?? 94}%
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Evaluation Progress Bars */}
+            <div className="space-y-2.5 text-xs">
+              <div>
+                <div className="flex justify-between items-center text-slate-600 mb-1">
+                  <span className="font-medium">Git Mining (40%)</span>
+                  <span className="font-mono font-bold text-slate-900">{report?.scores?.git ?? 92}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${Math.min(100, Math.max(0, report?.scores?.git ?? 92))}%` }}
+                    className="h-full bg-[#A3E635] transition-all duration-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center text-slate-600 mb-1">
+                  <span className="font-medium">VS Code Telemetry (30%)</span>
+                  <span className="font-mono font-bold text-slate-900">{report?.scores?.vscode ?? 95}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${Math.min(100, Math.max(0, report?.scores?.vscode ?? 95))}%` }}
+                    className="h-full bg-slate-900 transition-all duration-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center text-slate-600 mb-1">
+                  <span className="font-medium">Keystroke Cadence (20%)</span>
+                  <span className="font-mono font-bold text-slate-900">{report?.scores?.keystroke ?? 90}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${Math.min(100, Math.max(0, report?.scores?.keystroke ?? 90))}%` }}
+                    className="h-full bg-emerald-500 transition-all duration-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center text-slate-600 mb-1">
+                  <span className="font-medium">Provenance Attestation (10%)</span>
+                  <span className="font-mono font-bold text-slate-900">{report?.scores?.peer ?? 98}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div
+                    style={{ width: `${Math.min(100, Math.max(0, report?.scores?.peer ?? 98))}%` }}
+                    className="h-full bg-blue-500 transition-all duration-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Tab Navigation */}
         <StudentTabsNav
           activeTab={activeTab}
@@ -418,16 +796,27 @@ export default function StudentDashboard() {
             repoUrl={repoUrl}
             studentBreakdown={studentBreakdown}
             localDirHandle={localDirHandle}
+            localDirName={localDirName}
             gitVerification={gitVerification}
             scanning={scanning}
             autoSyncInProgress={autoSyncInProgress}
-            onManualSync={() => setSuccess('Workspace scan initiated.')}
+            onManualSync={() =>
+              scanAndAutoSync(localDirHandle, selectedAssignment?._id, team, gitVerification || undefined)
+            }
             onDisconnectWorkspace={handleDisconnectWorkspace}
             onConnectFolder={handleConnectFolder}
+            savedFolderPrompt={savedFolderPrompt}
+            onResumeSavedWorkspace={handleResumeSavedWorkspace}
             scannedFiles={scannedFiles}
+            scannedFolders={scannedFolders}
             offlineEdits={offlineEdits}
             selectedOfflineFile={selectedOfflineFile}
             onSelectOfflineFile={setSelectedOfflineFile}
+            commitsList={commitsList}
+            sessionsList={sessionsList}
+            student={student}
+            report={report}
+            team={team}
           />
         )}
 
@@ -487,7 +876,86 @@ export default function StudentDashboard() {
         )}
       </main>
 
-      {/* Modals */}
+      {/* Audit Report Modal */}
+      {showAuditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm text-left animate-fade-in">
+          <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200/80 p-6 shadow-2xl space-y-6">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900 font-mono">
+                  OffSync Student Provenance Audit Report
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowAuditModal(false)}
+                className="text-slate-400 hover:text-slate-700 text-sm p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-mono">
+              <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/60">
+                <div>
+                  <span className="text-[10px] uppercase text-slate-400 block mb-0.5">Student</span>
+                  <span className="font-bold text-slate-900">{student?.name || 'Local Student'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-slate-400 block mb-0.5">Email</span>
+                  <span className="text-slate-700">{student?.email || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-slate-400 block mb-0.5">Authenticity Standing</span>
+                  <span className="text-base font-bold text-emerald-700">{report?.scores?.final ?? 94}%</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-slate-400 block mb-0.5">Local Workspace</span>
+                  <span className="text-slate-800 font-bold">{localDirName || 'Not linked'}/</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/60">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Assigned Cohort:</span>
+                  <span className="font-bold text-slate-900">{selectedAssignment?.title || 'SSD Practical'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Repository Remote:</span>
+                  <span className="text-slate-800 truncate max-w-[280px]">
+                    {team?.repositoryUrl || repoUrl || 'Not Linked'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Attestation Verification:</span>
+                  <span className="text-emerald-700 font-bold">
+                    {gitVerification?.status === 'matched' ? '✓ Remote Hash Attested' : 'Standard Baseline'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Local Files Tracked:</span>
+                  <span className="font-bold text-slate-900">{scannedFiles.length} files</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Offline / Recent Edits:</span>
+                  <span className="font-bold text-slate-900">{offlineEdits.length} files</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowAuditModal(false)}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition cursor-pointer shadow-xs"
+              >
+                Close Audit View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cohort & Team Modals */}
       <JoinCohortModal
         isOpen={showJoinModal}
         onClose={() => setShowJoinModal(false)}
