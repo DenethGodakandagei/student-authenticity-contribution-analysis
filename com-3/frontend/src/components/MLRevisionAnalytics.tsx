@@ -180,7 +180,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
             </span>
           </div>
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Automated semantic analysis, revision intent classification (Table 3.1) and significance categorization (Table 3.2).
+            Automated semantic analysis, revision intent classification and significance categorization.
           </p>
         </div>
 
@@ -245,12 +245,12 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
       {/* Two Column Grid: Intent Taxonomy vs Significance Criteria */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem' }}>
         
-        {/* Revision Intent Taxonomy Distribution (Table 3.1) */}
+        {/* Revision Intent Taxonomy Distribution */}
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
               <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Revision Intent Distribution (Proposal Table 3.1)
+                Revision Intent Distribution
               </h4>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 Operational categories derived from academic annotation guidelines
@@ -286,11 +286,11 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
           </div>
         </div>
 
-        {/* Revision Significance Criteria Breakdown (Table 3.2) */}
+        {/* Revision Significance Criteria Breakdown */}
         <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: '1.25rem' }}>
             <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Revision Significance (Proposal Table 3.2)
+              Revision Significance Breakdown
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Independent evaluative criteria based on structural & semantic scope
@@ -339,7 +339,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
               Author Contribution & Intent Specialization Matrix
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Individual contribution patterns mapped across revision categories (with anonymized research IDs per NFR-05)
+              Individual contribution patterns mapped across revision categories with privacy-preserving author identifiers
             </span>
           </div>
 
@@ -382,12 +382,12 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
         </div>
       )}
 
-      {/* Traceable Before/After Revision Inspector (Proposal Section 5.3 FR 10 & NFR-07) */}
+      {/* Traceable Before/After Revision Inspector */}
       <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Traceable Before & After Revision Inspector (FR 10)
+              Traceable Before & After Revision Inspector
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               Lecturers can inspect the exact textual evidence behind every ML intent and significance prediction.
@@ -643,7 +643,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
         </div>
       </div>
 
-      {/* Proposal Mandated Decision Support Disclaimer */}
+      {/* Decision Support Disclaimer */}
       <div style={{
         background: 'rgba(0,0,0,0.03)',
         border: '1px solid var(--border-color)',

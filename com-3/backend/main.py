@@ -112,64 +112,26 @@ def evaluate_inter_annotator_agreement(req: AgreementEvaluationRequest):
     """Computes Cohen's Kappa for inter-annotator agreement (Section 3.6)."""
     return calculate_cohens_kappa(req.rater1, req.rater2)
 
-# Backward-Compatibility Mock Endpoints for previous frontend tests
+# Backward-Compatibility Mock Endpoints for empty fallback
 @app.get("/api/v1/documents/{doc_id}/timeline")
 def get_mock_timeline(doc_id: str):
-    return [
-        {"id": "rev_1", "author": "Alice", "timestamp": "2023-10-01T10:00:00Z", "message": "Initial document setup", "words_added": 250},
-        {"id": "rev_2", "author": "Bob", "timestamp": "2023-10-02T14:30:00Z", "message": "Drafted methodology", "words_added": 400},
-        {"id": "rev_3", "author": "Charlie", "timestamp": "2023-10-03T09:15:00Z", "message": "Added results section", "words_added": 600},
-        {"id": "rev_4", "author": "Alice", "timestamp": "2023-10-04T11:20:00Z", "message": "Refined introduction and abstract", "words_added": 150},
-        {"id": "rev_5", "author": "Bob", "timestamp": "2023-10-05T16:45:00Z", "message": "Formatting and references", "words_added": 50}
-    ]
+    return []
 
 @app.get("/api/v1/documents/{doc_id}/heatmap")
 def get_mock_heatmap(doc_id: str):
     return {
-        "authors": ["Alice", "Bob", "Charlie"],
+        "authors": [],
         "sections": ["Abstract", "Introduction", "Methodology", "Results", "Conclusion"],
-        "data": [
-            {"author": "Alice", "section": "Abstract", "value": 80},
-            {"author": "Alice", "section": "Introduction", "value": 75},
-            {"author": "Alice", "section": "Methodology", "value": 10},
-            {"author": "Alice", "section": "Results", "value": 5},
-            {"author": "Alice", "section": "Conclusion", "value": 60},
-            {"author": "Bob", "section": "Abstract", "value": 10},
-            {"author": "Bob", "section": "Introduction", "value": 20},
-            {"author": "Bob", "section": "Methodology", "value": 85},
-            {"author": "Bob", "section": "Results", "value": 15},
-            {"author": "Bob", "section": "Conclusion", "value": 30},
-            {"author": "Charlie", "section": "Abstract", "value": 10},
-            {"author": "Charlie", "section": "Introduction", "value": 5},
-            {"author": "Charlie", "section": "Methodology", "value": 5},
-            {"author": "Charlie", "section": "Results", "value": 80},
-            {"author": "Charlie", "section": "Conclusion", "value": 10},
-        ]
+        "data": []
     }
 
 @app.get("/api/v1/documents/{doc_id}/growth")
 def get_mock_growth(doc_id: str):
-    return [
-        {"date": "2023-10-01", "Alice": 250, "Bob": 0, "Charlie": 0},
-        {"date": "2023-10-02", "Alice": 250, "Bob": 400, "Charlie": 0},
-        {"date": "2023-10-03", "Alice": 250, "Bob": 400, "Charlie": 600},
-        {"date": "2023-10-04", "Alice": 400, "Bob": 400, "Charlie": 600},
-        {"date": "2023-10-05", "Alice": 400, "Bob": 450, "Charlie": 600},
-    ]
+    return []
 
 @app.get("/api/v1/documents/{doc_id}/anomalies")
 def get_mock_anomalies(doc_id: str):
-    return [
-        {
-            "id": "burst_1",
-            "author": "Charlie",
-            "timestamp": "2023-10-03T09:15:00Z",
-            "words_added": 600,
-            "duration_seconds": 30,
-            "flag": "Paste Event Detected",
-            "disclaimer": "Heuristic growth flag for reviewer inspection; does not constitute automated proof of misconduct."
-        }
-    ]
+    return []
 
 if __name__ == '__main__':
     port = int(os.environ.get("ML_PORT", 8002))

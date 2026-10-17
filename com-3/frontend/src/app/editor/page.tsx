@@ -410,13 +410,20 @@ function EditorComponent() {
         setAvailableDocs(docs);
         if (docs.length > 0) {
           if (docIdParam) {
-            setSelectedDocId(docIdParam);
+            const hasParam = docs.some((d: any) => d._id === docIdParam);
+            if (hasParam) {
+              setSelectedDocId(docIdParam);
+            } else {
+              setSelectedDocId(docs[0]._id);
+            }
           } else {
             setSelectedDocId(prev => {
               const stillValid = docs.some((d: any) => d._id === prev);
               return stillValid && prev ? prev : docs[0]._id;
             });
           }
+        } else {
+          setSelectedDocId('');
         }
       })
       .catch(err => console.error("Failed to fetch documents", err));
@@ -439,9 +446,20 @@ function EditorComponent() {
         if (res.status === 403 || data.isAccessDenied) {
           setAccessDenied(true);
           setAccessDeniedInfo(data);
+        } else if (res.status === 404 || data.error) {
+          // Document not found (or deleted)
+          if (availableDocs.length > 0) {
+            setSelectedDocId(availableDocs[0]._id);
+          } else {
+            setSelectedDocId('');
+          }
         } else {
           setAccessDenied(false);
           setDocDetails(data);
+          if (editor && !editor.isDestroyed && data.content !== undefined) {
+            editor.commands.setContent(data.content || '<p></p>');
+            setLastText(editor.getText());
+          }
         }
       })
       .catch(err => console.error("Failed to fetch doc details", err));
@@ -475,7 +493,7 @@ function EditorComponent() {
       Color,
       Highlight
     ],
-    content: '<p>Loading document...</p>',
+    content: '<p></p>',
     onUpdate: ({ editor }) => {
       if (!isAuthenticated || accessDenied) return;
       const html = editor.getHTML();
