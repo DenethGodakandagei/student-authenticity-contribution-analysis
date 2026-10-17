@@ -38,29 +38,31 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('doc_evo_user');
-      if (savedUser) {
-        try {
-          return JSON.parse(savedUser);
-        } catch (err) {
-          console.error('Error parsing stored user:', err);
-        }
-      }
-    }
-    return null;
-  });
-
+  const [user, setUser] = useState<User | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('doc_evo_user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (err) {
+      console.error('Error parsing stored user:', err);
+    } finally {
+      setIsInitialized(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
     if (user) {
       localStorage.setItem('doc_evo_user', JSON.stringify(user));
     } else {
       localStorage.removeItem('doc_evo_user');
     }
-  }, [user]);
+  }, [user, isInitialized]);
 
   const login = async (identifier, password) => {
     const res = await fetch(`${getBackendUrl()}/api/auth/login`, {

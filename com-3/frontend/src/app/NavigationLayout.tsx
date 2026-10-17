@@ -1,93 +1,225 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
 
 export default function NavigationLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout, openAuthModal, authModalOpen, closeAuthModal } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const getRoleLabel = () => {
+    if (!user) return 'Student Node';
+    if (user.role === 'lecturer') return 'Lecturer Node';
+    if (user.role === 'group_leader' || user.isLeader) return 'Leader Node';
+    return 'Student Node';
+  };
+
+  const navItems = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Editor', href: '/editor' },
+    { label: 'Integrations', href: '/integrations' }
+  ];
 
   return (
     <div className="app-layout">
-      <nav className="sidebar">
-        <h2>DocAnalytics</h2>
+      {/* Top Navigation Bar matching Component 1 design */}
+      <header style={{
+        background: '#ffffff',
+        borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+        padding: '0.65rem 2rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)'
+      }}>
+        {/* Left: Brand, Node Pill, Telemetry Simulator / Editor Pill, and Nav Links */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none' }}>
+            <div style={{
+              background: '#121417',
+              color: '#ffffff',
+              borderRadius: '8px',
+              padding: '0.35rem 0.65rem',
+              fontFamily: 'monospace',
+              fontWeight: 800,
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              &lt;/&gt;
+            </div>
+            <span style={{
+              fontWeight: 800,
+              fontSize: '1.25rem',
+              color: '#0f172a',
+              letterSpacing: '-0.02em'
+            }}>
+              DocuTrace
+            </span>
+          </Link>
 
-        <div style={{
-          background: '#1E293B',
-          border: '1px solid #334155',
-          borderRadius: '10px',
-          padding: '1rem',
-          margin: '0.5rem 0 1.5rem 0',
-          textAlign: 'left'
-        }}>
-          {isAuthenticated ? (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700, letterSpacing: '0.5px' }}>
-                  Account
-                </span>
-                <span style={{ fontSize: '0.68rem', background: '#0D9488', color: '#FFFFFF', padding: '0.15rem 0.45rem', borderRadius: '10px', fontWeight: 700, textTransform: 'uppercase' }}>
-                  {user?.role || 'Student'}
-                </span>
+          {/* Node Role Pill */}
+          <span style={{
+            background: 'rgba(163, 230, 53, 0.16)',
+            color: '#275306',
+            border: '1px solid rgba(163, 230, 53, 0.35)',
+            padding: '0.22rem 0.75rem',
+            borderRadius: '9999px',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            letterSpacing: '0.01em'
+          }}>
+            {getRoleLabel()}
+          </span>
+
+          {/* Quick Pill Button: Telemetry Simulator / Editor */}
+          <Link
+            href="/editor"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              color: '#0f172a',
+              padding: '0.35rem 0.9rem',
+              borderRadius: '9999px',
+              fontSize: '0.8rem',
+              fontFamily: 'monospace',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>&gt;_</span> Document Editor
+          </Link>
+
+          {/* Nav Links */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: '0.5rem' }}>
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/');
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    textDecoration: 'none',
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? '#275306' : '#64748b',
+                    background: isActive ? 'rgba(163, 230, 53, 0.16)' : 'transparent',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Right: User Avatar, Profile, and Sign In/Sign Out */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          {!mounted ? (
+            <div style={{ width: '120px', height: '36px', background: '#f1f5f9', borderRadius: '8px' }} />
+          ) : isAuthenticated && user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: '#121417',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '0.9rem'
+                }}>
+                  {(user.name || user.username || 'U')[0].toUpperCase()}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>
+                    {user.name || user.username}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    {user.email || user.studentId || 'Student'}
+                  </span>
+                </div>
               </div>
-              <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#FFFFFF' }}>
-                {user?.name || user?.username}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#38BDF8', marginBottom: '0.75rem' }}>
-                ID: {user?.studentId || 'N/A'}
-              </div>
+
               <button
                 onClick={logout}
                 style={{
-                  width: '100%',
-                  padding: '0.45rem 0.6rem',
-                  fontSize: '0.78rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  background: 'transparent',
+                  border: '1px solid #e2e8f0',
+                  color: '#64748b',
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
                   fontWeight: 600,
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  color: '#FCA5A5',
-                  borderRadius: '6px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#ef4444';
+                  e.currentTarget.style.color = '#ef4444';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.color = '#64748b';
                 }}
               >
-                Sign Out
+                <span>[→</span> Logout
               </button>
             </div>
           ) : (
-            <div>
-              <div style={{ fontSize: '0.82rem', color: '#94A3B8', marginBottom: '0.75rem', lineHeight: 1.4 }}>
-                Sign in to verify student authorship & track group evolution.
-              </div>
-              <button
-                onClick={openAuthModal}
-                style={{
-                  width: '100%',
-                  padding: '0.55rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-                  border: 'none',
-                  color: '#FFFFFF',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
-                }}
-              >
-                Sign In / Register
-              </button>
-            </div>
+            <button
+              onClick={openAuthModal}
+              style={{
+                background: '#a3e635',
+                color: '#121417',
+                border: 'none',
+                padding: '0.5rem 1.25rem',
+                borderRadius: '9999px',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(163, 230, 53, 0.35)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#8ee01d';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#a3e635';
+              }}
+            >
+              Sign In / Register
+            </button>
           )}
         </div>
+      </header>
 
-        <div className="nav-links">
-          <Link href="/editor" className="nav-link">Collaborative Editor</Link>
-          <Link href="/integrations" className="nav-link">External Integrations</Link>
-          <Link href="/dashboard" className="nav-link">Lecturer Dashboard</Link>
-        </div>
-      </nav>
-
+      {/* Main Content Area */}
       <main className="main-content">
         {children}
       </main>
