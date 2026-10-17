@@ -38,7 +38,8 @@ import {
   RefreshCw,
   FileText,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Download
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -628,6 +629,16 @@ export default function StudentDashboard() {
     setSuccess('Workspace disconnected.');
   };
 
+  const handleDownloadCsv = async () => {
+    try {
+      setSuccess('Generating and downloading CSV dataset from database...');
+      await api.analytics.downloadCsv();
+      setSuccess('CSV dataset downloaded successfully!');
+    } catch (err: any) {
+      setError(err.message || 'Failed to download CSV dataset');
+    }
+  };
+
   if (!mounted) return null;
 
   return (
@@ -739,7 +750,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
               <button
                 onClick={() =>
                   localDirHandle
@@ -752,7 +763,7 @@ export default function StudentDashboard() {
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${autoSyncInProgress || scanning ? 'animate-spin' : ''}`}
                 />
-                <span>{scanning ? 'Scanning...' : 'Sync Telemetry & Workspace'}</span>
+                <span>{scanning ? 'Scanning...' : 'Sync Telemetry'}</span>
               </button>
               <button
                 onClick={() => setShowAuditModal(true)}
@@ -760,6 +771,13 @@ export default function StudentDashboard() {
               >
                 <FileText className="w-3.5 h-3.5 text-slate-600" />
                 <span>Audit Report</span>
+              </button>
+              <button
+                onClick={handleDownloadCsv}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-[#A3E635]" />
+                <span>Dataset CSV</span>
               </button>
             </div>
           </div>

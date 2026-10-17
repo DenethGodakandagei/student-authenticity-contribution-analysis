@@ -320,15 +320,30 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
         .sort({ sessionStart: 1 });
     }
 
-    const headers = [
-      'session_id', 'student_id', 'student_name', 'student_email', 'team_id', 'team_name',
-      'assignment_id', 'assignment_title', 'session_start_iso', 'session_end_iso',
-      'duration_minutes', 'keystrokes', 'lines_added', 'lines_removed', 'net_lines',
-      'paste_count', 'characters_pasted', 'manual_chars', 'paste_chars', 'ai_chars',
-      'manual_percent', 'paste_percent', 'ai_percent', 'typing_speed_cpm',
-      'keystroke_efficiency_keff', 'paste_ratio', 'is_offline', 'files_edited_count',
-      'files_edited_list', 'primary_file', 'coding_style', 'authenticity_label'
-    ];
+    const mode = (req.query.mode as string) || 'sliding';
+    const windowMinutes = Math.max(1, parseInt(req.query.window as string, 10) || 5);
+    const slideMinutes = Math.max(1, parseInt(req.query.slide as string, 10) || 1);
+
+    const isSliding = mode !== 'session';
+    const headers = isSliding
+      ? [
+          'window_id', 'session_id', 'student_id', 'student_name', 'student_email', 'team_name',
+          'assignment_title', 'window_start_iso', 'window_end_iso', 'window_duration_minutes',
+          'slide_stride_minutes', 'keystrokes', 'lines_added', 'lines_removed', 'net_lines',
+          'paste_count', 'characters_pasted', 'manual_chars', 'paste_chars', 'ai_chars',
+          'manual_percent', 'paste_percent', 'ai_percent', 'typing_speed_cpm',
+          'keystroke_efficiency_keff', 'paste_ratio', 'is_offline', 'files_edited_count',
+          'primary_file', 'coding_style', 'authenticity_label'
+        ]
+      : [
+          'session_id', 'student_id', 'student_name', 'student_email', 'team_id', 'team_name',
+          'assignment_id', 'assignment_title', 'session_start_iso', 'session_end_iso',
+          'duration_minutes', 'keystrokes', 'lines_added', 'lines_removed', 'net_lines',
+          'paste_count', 'characters_pasted', 'manual_chars', 'paste_chars', 'ai_chars',
+          'manual_percent', 'paste_percent', 'ai_percent', 'typing_speed_cpm',
+          'keystroke_efficiency_keff', 'paste_ratio', 'is_offline', 'files_edited_count',
+          'files_edited_list', 'primary_file', 'coding_style', 'authenticity_label'
+        ];
 
     const csvLines = [headers.join(',')];
 
@@ -382,46 +397,127 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
 
       const label = (aiPct > 50 || pastePct > 40 || (charsPasted > 200 && keys < 30)) ? 1 : 0;
 
-      const row = [
-        s._id,
-        studentId,
-        `"${studentName.replace(/"/g, '""')}"`,
-        studentEmail,
-        teamId,
-        `"${teamName.replace(/"/g, '""')}"`,
-        assignmentId,
-        `"${assignmentTitle.replace(/"/g, '""')}"`,
-        s.sessionStart ? new Date(s.sessionStart).toISOString() : '',
-        s.sessionEnd ? new Date(s.sessionEnd).toISOString() : '',
-        durMin,
-        keys,
-        added,
-        removed,
-        netLines,
-        pasteCount,
-        charsPasted,
-        manualChars,
-        pasteChars,
-        aiChars,
-        manualPct,
-        pastePct,
-        aiPct,
-        cpm,
-        keff,
-        pasteRatio,
-        s.isOffline ? 1 : 0,
-        (s.filesEdited || []).length,
-        `"${filesList}"`,
-        `"${primaryFile}"`,
-        `"${style}"`,
-        label
-      ];
-      csvLines.push(row.join(','));
+      if (!isSliding) {
+        // Output session row
+        const row = [
+          s._id,
+          studentId,
+          `"${studentName.replace(/"/g, '""')}"`,
+          studentEmail,
+          teamId,
+          `"${teamName.replace(/"/g, '""')}"`,
+          assignmentId,
+          `"${assignmentTitle.replace(/"/g, '""')}"`,
+          s.sessionStart ? new Date(s.sessionStart).toISOString() : '',
+          s.sessionEnd ? new Date(s.sessionEnd).toISOString() : '',
+          durMin,
+          keys,
+          added,
+          removed,
+          netLines,
+          pasteCount,
+          charsPasted,
+          manualChars,
+          pasteChars,
+          aiChars,
+          manualPct,
+          pastePct,
+          aiPct,
+          cpm,
+          keff,
+          pasteRatio,
+          s.isOffline ? 1 : 0,
+          (s.filesEdited || []).length,
+          `"${filesList}"`,
+          `"${primaryFile}"`,
+          `"${style}"`,
+          label
+        ];
+        csvLines.push(row.join(','));
+      } else {
+        // Generate optimal 5-minute sliding windows with 1-minute stride (W=5 min, step=1 min)
+        const sessStart = s.sessionStart ? new Date(s.sessionStart).getTime() : Date.now();
+        const sessEnd = s.sessionEnd ? new Date(s.sessionEnd).getTime() : sessStart + durMin * 60000;
+        const totalDurMin = Math.max(1, Math.round((sessEnd - sessStart) / 60000));
+
+        const windowMs = windowMinutes * 60000;
+        const slideMs = slideMinutes * 60000;
+
+        let wStart = sessStart;
+        let winIdx = 0;
+
+        while (wStart <= sessEnd || winIdx === 0) {
+          const wEnd = Math.min(sessEnd, wStart + windowMs);
+          const actualWinMin = Math.max(1, Math.round((wEnd - wStart) / 60000));
+          const fraction = Math.min(1.0, actualWinMin / totalDurMin);
+
+          const wKeys = Math.round(keys * fraction);
+          const wAdded = Math.round(added * fraction);
+          const wRemoved = Math.round(removed * fraction);
+          const wNet = wAdded - wRemoved;
+          const wPasteCount = Math.round(pasteCount * fraction);
+          const wCharsPasted = Math.round(charsPasted * fraction);
+          const wManual = Math.round(manualChars * fraction);
+          const wPaste = Math.round(pasteChars * fraction);
+          const wAi = Math.round(aiChars * fraction);
+
+          const wTotalChars = wManual + wPaste + wAi;
+          const wManualPct = wTotalChars > 0 ? Math.round((wManual / wTotalChars) * 100) : manualPct;
+          const wPastePct = wTotalChars > 0 ? Math.round((wPaste / wTotalChars) * 100) : pastePct;
+          const wAiPct = wTotalChars > 0 ? Math.max(0, 100 - wManualPct - wPastePct) : aiPct;
+
+          const wCpm = (wManual / actualWinMin).toFixed(2);
+          const wKeff = wAdded > 0 ? (wKeys / wAdded).toFixed(2) : keff;
+          const wPasteRatio = wTotalChars > 0 ? (wPaste / wTotalChars).toFixed(4) : pasteRatio;
+
+          const winRow = [
+            `"win_${s._id || 'sess'}_${winIdx}"`,
+            s._id,
+            studentId,
+            `"${studentName.replace(/"/g, '""')}"`,
+            studentEmail,
+            `"${teamName.replace(/"/g, '""')}"`,
+            `"${assignmentTitle.replace(/"/g, '""')}"`,
+            new Date(wStart).toISOString(),
+            new Date(wEnd).toISOString(),
+            windowMinutes,
+            slideMinutes,
+            wKeys,
+            wAdded,
+            wRemoved,
+            wNet,
+            wPasteCount,
+            wCharsPasted,
+            wManual,
+            wPaste,
+            wAi,
+            wManualPct,
+            wPastePct,
+            wAiPct,
+            wCpm,
+            wKeff,
+            wPasteRatio,
+            s.isOffline ? 1 : 0,
+            (s.filesEdited || []).length,
+            `"${primaryFile}"`,
+            `"${style}"`,
+            label
+          ];
+          csvLines.push(winRow.join(','));
+
+          winIdx++;
+          wStart += slideMs;
+          if (wStart >= sessEnd) break;
+        }
+      }
     });
 
     const csvContent = csvLines.join('\n');
+    const filename = isSliding
+      ? `telemetry_dataset_w${windowMinutes}m_s${slideMinutes}m.csv`
+      : 'telemetry_dataset_session.csv';
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="telemetry_dataset.csv"');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.status(200).send(csvContent);
   } catch (error: any) {
     console.error('Export CSV Error:', error);

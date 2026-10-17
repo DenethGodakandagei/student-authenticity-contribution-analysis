@@ -7,7 +7,7 @@ import { computeWindowFeatures } from './feature-calculator';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const DEFAULT_WINDOW_SIZE_MS = 5 * 60 * 1000;    // 5 minutes
-export const DEFAULT_STEP_INTERVAL_MS = 2.5 * 60 * 1000; // 2.5 minutes
+export const DEFAULT_STEP_INTERVAL_MS = 1 * 60 * 1000;   // 1 minute sliding stride (W=5 min, step=1 min)
 
 export type WindowComputedListener = (windowFeatures: WindowFeatures) => void;
 
@@ -49,7 +49,7 @@ export class SlidingWindowManager {
       }
     }, 5000);
 
-    // Schedule regular 2.5-minute sliding interval
+    // Schedule regular 1-minute sliding interval (W=5 min, step=1 min)
     this.timer = setInterval(() => {
       this.computeCurrentWindow();
     }, this.stepIntervalMs);

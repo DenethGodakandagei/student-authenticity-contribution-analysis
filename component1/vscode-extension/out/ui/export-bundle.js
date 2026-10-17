@@ -89,14 +89,16 @@ function registerExportCommand(context, globalStoragePath) {
             vscode.window.showErrorMessage(`Export failed: ${err.message}`);
         }
     };
-    // Register both command aliases
+    // Register command aliases
     const d1 = vscode.commands.registerCommand('telemetry.exportBundle', handler);
     const d2 = vscode.commands.registerCommand('collabintel.exportBundle', handler);
-    context.subscriptions.push(d1, d2);
+    const d3 = vscode.commands.registerCommand('collabintel.exportLocalData', handler);
+    context.subscriptions.push(d1, d2, d3);
     return {
         dispose: () => {
             d1.dispose();
             d2.dispose();
+            d3.dispose();
         }
     };
 }

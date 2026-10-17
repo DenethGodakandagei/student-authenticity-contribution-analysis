@@ -37,7 +37,7 @@ function getConfig() {
     return {
         authToken: cfg.get('authToken') || '',
         assignmentId: cfg.get('assignmentId') || '',
-        serverUrl: (cfg.get('serverUrl') || 'http://localhost:5000').replace(/\/+$/, ''),
+        serverUrl: (cfg.get('serverUrl') || process.env.COLLABINTEL_SERVER_URL || 'https://student-authenticity-contribution-80jm.onrender.com').replace(/\/+$/, ''),
         syncIntervalMinutes: cfg.get('syncIntervalMinutes') || 5,
         trackOnlyLinkedRepo: cfg.get('trackOnlyLinkedRepo') ?? true,
     };
