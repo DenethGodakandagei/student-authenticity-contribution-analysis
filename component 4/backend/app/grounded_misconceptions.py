@@ -22,21 +22,25 @@ logger = logging.getLogger(__name__)
 
 # Seed queries used to gather a bounded view of the document for concept extraction.
 CONCEPT_QUERIES = [
+    "class and object",
+    "constructor",
     "inheritance",
     "polymorphism",
     "encapsulation",
     "abstraction",
     "interface",
     "method overriding and overloading",
-    "constructor",
-    "class and object",
 ]
 
 CONCEPT_CHUNK_LIMIT = 500  # chars per seed chunk sent to the LLM
 MISCONCEPTION_CHUNK_LIMIT = 700  # chars per source chunk sent to the LLM
-MIN_QUOTE_WORDS = 10
+MIN_QUOTE_WORDS = 8  # prompt rule: quotes must be 8-30 words
 MAX_QUOTE_WORDS = 30
+DISCARD_MIN_QUOTE_WORDS = 6  # discard rule: quotes under 6 words are dropped
 GROUNDING_SIMILARITY_THRESHOLD = 0.8
+
+# Stats from the most recent build_misconception_repository run.
+LAST_RUN_STATS: Dict[str, int] = {"kept": 0, "discarded": 0}
 
 
 # ============================================================================
@@ -93,8 +97,8 @@ def _format_chunks(chunks: List[Dict[str, Any]]) -> str:
 
 
 def _extract_concepts(kb: KnowledgeBase, max_concepts: int) -> List[str]:
-    """Asks the LLM which OOP concepts are actually taught in the retrieved
-    seed chunks, returning at most max_concepts short concept names."""
+    """Builds the concept list: core concepts supported by the seed text first,
+    then whatever else the LLM finds, capped at max_concepts."""
     seeds = _gather_seed_chunks(kb)
     if not seeds:
         return []
@@ -115,8 +119,36 @@ RULES:
 - Return only JSON in exactly this form:
 {{"concepts": ["concept name 1", "concept name 2"]}}
 """
-    result = generate_json(prompt, ConceptList)
-    return result.concepts[:max_concepts]
+    try:
+        discovered = generate_json(prompt, ConceptList).concepts
+    except Exception as e:
+        logger.warning(f"Concept extraction failed, using core concepts only: {e}")
+        discovered = []
+
+    seed_text = _normalise(" ".join(s["text"] for s in seeds))
+    core = [
+        "class and object", "constructor", "encapsulation",
+        "inheritance", "polymorphism", "abstraction",
+    ]
+    final: List[str] = []
+    for concept in core:
+        if not _concept_supported(concept, seed_text):
+            continue
+        if concept not in final:
+            final.append(concept)
+    for concept in discovered:
+        if concept not in final:
+            final.append(concept)
+        if len(final) >= max_concepts:
+            break
+    return final[:max_concepts]
+
+
+def _concept_supported(concept: str, seed_text: str) -> bool:
+    """True when every content word of the concept appears in the seed text."""
+    stop = {"and", "or", "the", "of", "a", "an", "in", "for"}
+    words = [w for w in concept.lower().split() if w not in stop]
+    return all(w in seed_text for w in words)
 
 
 # ============================================================================
@@ -147,12 +179,15 @@ SOURCE KNOWLEDGE (use ONLY the chunks below as the source of correct knowledge):
 TASK: Produce up to {per_concept} plausible student misconceptions about "{concept}".
 
 RULES:
-- wrong_belief: a subtle mistake a real beginner would make, written in first
-  person style such as "I think that ...".
-- correct_concept: the accurate understanding; it must be supported by the chunks.
+- wrong_belief: must be clearly WRONG (not partly correct), something a
+  beginner could really believe, written in the form "I think that ...".
+- correct_concept: a short plain sentence (max 25 words) written in simple
+  words, supported by the chunks and supported by the source quote.
 - reason: a short pedagogical explanation of why the misconception arises.
-- source_quote: copied VERBATIM from one of the provided chunks, between
-  {MIN_QUOTE_WORDS} and {MAX_QUOTE_WORDS} words long.
+- source_quote: copied EXACTLY from one of the provided chunks, between
+  {MIN_QUOTE_WORDS} and {MAX_QUOTE_WORDS} words long, and it must be a
+  definition or explanation. Never use exercise instructions such as "Write
+  the java code...". Never return "..." as a quote.
 - source_chunk_ids: must contain only chunk ids from the provided chunks
   (for example "p1_c0").
 - concept: "{concept}".
@@ -226,19 +261,84 @@ def _source_pages(chunk_ids: List[str], chunk_lookup: Dict[str, dict]) -> List[i
 # Repository Builder (Steps 4-5)
 # ============================================================================
 
+def _filter_batch(
+    batch: List[GroundedMisconception], chunk_lookup: Dict[str, dict]
+) -> tuple[List[GroundedMisconception], int]:
+    """Applies the discard rules to one generated batch: drops items whose
+    quote is under DISCARD_MIN_QUOTE_WORDS words or is not grounded in a
+    cited chunk.
+
+    Returns:
+        (kept_items, discarded_count)
+    """
+    kept: List[GroundedMisconception] = []
+    discarded = 0
+    for item in batch:
+        if (
+            len(item.source_quote.split()) < DISCARD_MIN_QUOTE_WORDS
+            or item.source_quote.strip() == "..."
+        ):
+            discarded += 1
+            continue
+        cited_texts = [
+            chunk_lookup[cid]["text"]
+            for cid in item.source_chunk_ids
+            if cid in chunk_lookup
+        ]
+        if not _is_grounded(item.source_quote, cited_texts):
+            discarded += 1
+            continue
+        kept.append(item)
+    return kept, discarded
+
+
+def _generate_grounded_for_concept(
+    kb: KnowledgeBase,
+    concept: str,
+    per_concept: int,
+    chunk_lookup: Dict[str, dict],
+) -> tuple[List[GroundedMisconception], int]:
+    """Generates batches for a concept and filters each one. If zero grounded
+    items remain after the first attempt, retries the concept exactly once.
+
+    Returns:
+        (kept_items, discarded_count)
+    """
+    discarded = 0
+    for attempt in range(2):
+        try:
+            batch = _generate_for_concept(kb, concept, per_concept)
+        except Exception as e:
+            logger.warning(f"LLM failure for concept '{concept}' (attempt {attempt + 1}): {e}")
+            batch = []
+
+        kept, attempt_discarded = _filter_batch(batch, chunk_lookup)
+        discarded += attempt_discarded
+        if kept:
+            return kept, discarded
+        if attempt == 0:
+            logger.info(f"Zero grounded items for concept '{concept}', retrying once...")
+
+    return [], discarded
+
+
 def build_misconception_repository(
     kb_id: str, max_concepts: int = 6, per_concept: int = 2
 ) -> List[dict]:
     """
     Runs Stage 3 for a built knowledge base: extracts key OOP concepts from
     retrieved chunks, generates per-concept misconceptions with the LLM,
-    verifies each source quote against its cited chunks, assigns ids
-    "m1", "m2", ..., and saves everything to
+    discards items with short/ungrounded quotes (retrying a concept once if
+    nothing survives) and duplicate correct_concept values, assigns ids
+    "m1", "m2", ..., and saves only the kept items to
     backend/knowledge/{kb_id}/misconceptions.json.
 
+    The number of discarded items from the last run is recorded in
+    LAST_RUN_STATS["discarded"].
+
     Returns:
-        list[dict]: misconception records with id, source_pages, and grounded
-        fields added. Failed grounding checks are kept with grounded=False.
+        list[dict]: kept misconception records with id, source_pages, and
+        grounded fields added.
     """
     kb = KnowledgeBase.load(kb_id)
     chunk_lookup = {c["chunk_id"]: c for c in kb.chunks}
@@ -247,28 +347,32 @@ def build_misconception_repository(
     logger.info(f"Extracted {len(concepts)} concepts for knowledge base '{kb_id}': {concepts}")
 
     items: List[GroundedMisconception] = []
+    discarded = 0
     for concept in concepts:
-        try:
-            batch = _generate_for_concept(kb, concept, per_concept)
-        except Exception as e:
-            logger.warning(
-                f"Skipping concept '{concept}' due to LLM failure: {e}"
-            )
-            continue
-        items.extend(batch)
+        kept, concept_discarded = _generate_grounded_for_concept(
+            kb, concept, per_concept, chunk_lookup
+        )
+        items.extend(kept)
+        discarded += concept_discarded
 
     output: List[dict] = []
-    for index, item in enumerate(items, start=1):
-        cited_texts = [
-            chunk_lookup[cid]["text"]
-            for cid in item.source_chunk_ids
-            if cid in chunk_lookup
-        ]
-        record = {"id": f"m{index}"}
+    seen_correct: set = set()
+    for item in items:
+        # Duplicate correct_concept: keep the first occurrence only.
+        ckey = _normalise(item.correct_concept)
+        if ckey in seen_correct:
+            discarded += 1
+            continue
+        seen_correct.add(ckey)
+
+        record = {"id": f"m{len(output) + 1}"}
         record.update(item.model_dump())
         record["source_pages"] = _source_pages(item.source_chunk_ids, chunk_lookup)
-        record["grounded"] = _is_grounded(item.source_quote, cited_texts)
+        record["grounded"] = True
         output.append(record)
+
+    LAST_RUN_STATS["discarded"] = discarded
+    LAST_RUN_STATS["kept"] = len(output)
 
     kb_dir = os.path.join(KNOWLEDGE_DIR, kb_id)
     os.makedirs(kb_dir, exist_ok=True)
@@ -292,10 +396,10 @@ def main() -> None:
 
     kb_id = sys.argv[1]
     started = time.time()
-    items = build_misconception_repository(kb_id)
+    kept = build_misconception_repository(kb_id)
     elapsed = time.time() - started
 
-    for item in items:
+    for item in kept:
         print(f"[{item['id']}] concept: {item['concept']}")
         print(f"  wrong_belief: {item['wrong_belief']}")
         print(f"  correct_concept: {item['correct_concept']}")
@@ -304,11 +408,11 @@ def main() -> None:
         print(f"  grounded: {item['grounded']}")
         print("-" * 60)
 
-    grounded = sum(1 for item in items if item["grounded"])
-    total = len(items)
-    percentage = (grounded / total * 100.0) if total else 0.0
-    print(f"Grounded: {grounded}/{total} ({percentage:.1f}%)")
-    print(f"Total time: {elapsed:.1f}s")
+    print(
+        f"Kept: {LAST_RUN_STATS['kept']}, "
+        f"Discarded: {LAST_RUN_STATS['discarded']}, "
+        f"Time: {elapsed:.1f}s"
+    )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import json
+import time
 import logging
 import urllib.request
 from abc import ABC, abstractmethod
@@ -38,32 +39,45 @@ class OllamaProvider(BaseLLMProvider):
         payload = json.dumps(payload_dict).encode("utf-8")
 
         req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=settings.OLLAMA_TIMEOUT) as response:
-                if response.status != 200:
-                    raise RuntimeError(f"Ollama API returned HTTP status code {response.status}.")
-                res_data = json.loads(response.read().decode("utf-8"))
-                if "response" not in res_data:
-                    raise ValueError("Invalid response format received from Ollama API.")
-                return res_data.get("response", "")
-        except (TimeoutError, urllib.error.URLError) as e:
-            if "timed out" in str(e).lower() or isinstance(e, TimeoutError):
-                logger.error(f"Ollama local model generation timed out ({settings.OLLAMA_TIMEOUT}s): {e}")
-                raise TimeoutError(
-                    f"LLM Timeout Error: Local Ollama model '{self.model_name}' timed out after {settings.OLLAMA_TIMEOUT}s. "
-                    "Local CPU inference on long lecture texts may take extra time. Consider reducing prompt length or checking hardware resources."
+        max_attempts = 2  # one retry when Ollama fails with HTTP 500
+        for attempt in range(max_attempts):
+            try:
+                with urllib.request.urlopen(req, timeout=settings.OLLAMA_TIMEOUT) as response:
+                    if response.status != 200:
+                        raise RuntimeError(f"Ollama API returned HTTP status code {response.status}.")
+                    res_data = json.loads(response.read().decode("utf-8"))
+                    if "response" not in res_data:
+                        raise ValueError("Invalid response format received from Ollama API.")
+                    return res_data.get("response", "")
+            except urllib.error.HTTPError as e:
+                if e.code == 500 and attempt < max_attempts - 1:
+                    logger.warning(f"Ollama returned HTTP 500; retrying once in 3 seconds: {e}")
+                    time.sleep(3)
+                    continue
+                logger.error(f"Failed to connect to Ollama server at {self.host}: {e}")
+                raise ConnectionError(
+                    f"LLM Connection Error: Unable to connect to local Ollama server at {self.host}. "
+                    "Please verify that Ollama is installed and running."
                 ) from e
-            logger.error(f"Failed to connect to Ollama server at {self.host}: {e}")
-            raise ConnectionError(
-                f"LLM Connection Error: Unable to connect to local Ollama server at {self.host}. "
-                "Please verify that Ollama is installed and running."
-            ) from e
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse Ollama response as JSON: {e}")
-            raise ValueError(f"LLM Response Error: Ollama returned invalid JSON output: {e}") from e
-        except Exception as e:
-            logger.error(f"Ollama generation failed: {e}")
-            raise RuntimeError(f"Ollama generation failed: {e}") from e
+            except (TimeoutError, urllib.error.URLError) as e:
+                if "timed out" in str(e).lower() or isinstance(e, TimeoutError):
+                    logger.error(f"Ollama local model generation timed out ({settings.OLLAMA_TIMEOUT}s): {e}")
+                    raise TimeoutError(
+                        f"LLM Timeout Error: Local Ollama model '{self.model_name}' timed out after {settings.OLLAMA_TIMEOUT}s. "
+                        "Local CPU inference on long lecture texts may take extra time. Consider reducing prompt length or checking hardware resources."
+                    ) from e
+                logger.error(f"Failed to connect to Ollama server at {self.host}: {e}")
+                raise ConnectionError(
+                    f"LLM Connection Error: Unable to connect to local Ollama server at {self.host}. "
+                    "Please verify that Ollama is installed and running."
+                ) from e
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse Ollama response as JSON: {e}")
+                raise ValueError(f"LLM Response Error: Ollama returned invalid JSON output: {e}") from e
+            except Exception as e:
+                logger.error(f"Ollama generation failed: {e}")
+                raise RuntimeError(f"Ollama generation failed: {e}") from e
+        raise RuntimeError("Ollama generation failed: retries exhausted.")
 
 class OpenAIProvider(BaseLLMProvider):
     def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
