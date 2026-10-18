@@ -1,5 +1,6 @@
 import os
 import shutil
+from typing import List, Optional
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
@@ -39,6 +40,11 @@ class ChatMessageRequest(BaseModel):
 
 class CreateSessionRequest(BaseModel):
     atlas_output: dict
+
+class CreateFromKbRequest(BaseModel):
+    kb_id: str
+    misconception_ids: Optional[List[str]] = None
+    count: int = 2
 
 @app.get("/")
 def read_root():
@@ -117,8 +123,34 @@ def create_nova_session(req: CreateSessionRequest):
             "session_id": nova.state.session_id,
             "state": nova.to_dict()
         }
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create Nova session: {str(e)}")
+
+@app.post("/sessions/create-from-kb")
+def create_session_from_kb(req: CreateFromKbRequest):
+    """Creates a Nova session from a knowledge base's misconception repository."""
+    try:
+        nova = NovaStudentAgent.from_repository(
+            kb_id=req.kb_id,
+            misconception_ids=req.misconception_ids,
+            count=req.count,
+        )
+        session_file = os.path.join(SESSIONS_DIR, f"{nova.state.session_id}.json")
+        nova.save_state(session_file)
+        return {
+            "session_id": nova.state.session_id,
+            "state": nova.to_dict()
+        }
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create session from kb: {str(e)}")
 
 @app.get("/sessions/{session_id}")
 def get_nova_session(session_id: str):

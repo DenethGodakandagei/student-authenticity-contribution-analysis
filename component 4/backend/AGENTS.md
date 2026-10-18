@@ -45,7 +45,10 @@ teaches it.
   Pydantic-validated JSON (`MisconceptionAnalysisResult`).
 - `nova_agent.py` — Stages 4–7: `NovaState` / `MisconceptionState` models and
   `NovaStudentAgent` (persona, chat responses, misconception correction, state
-  persistence to `sessions/*.json`).
+  persistence to `sessions/*.json`). Factories: `from_atlas_output`,
+  `from_repository(kb_id, ...)` (KB-grounded sessions with `source_pages` /
+  `source_quote` / `status`); every turn appends `events` entries
+  (`teacher_message`, `correction_check`, `nova_reply`).
 - `assessment_generator.py` — Stage 8: generates assessment questions from Nova's
   current misconceptions (used by the exam endpoint).
 
@@ -57,6 +60,10 @@ teaches it.
   `number_of_chunks`, `detected_topic`, `learning_objectives`,
   `generated_misconceptions`, `nova_state`.
 - `POST /sessions/create-nova` — creates a session from atlas output.
+- `POST /sessions/create-from-kb` — body `{kb_id, misconception_ids?, count?}`; creates a
+  session from `knowledge/{kb_id}/misconceptions.json` (picks `count` items from distinct
+  concepts when ids are omitted); returns `session_id`, `state`; 404 unknown kb,
+  400 unknown misconception ids.
 - `GET /sessions/{session_id}` — returns full Nova state.
 - `POST /sessions/{session_id}/exam` — Stage 8 exam: generates questions, has Nova
   answer, scores, returns `correct_answers`, `incorrect_answers`,

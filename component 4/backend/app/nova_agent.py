@@ -22,17 +22,37 @@ class MisconceptionState(BaseModel):
     wrong_concept: str = Field(description="The incorrect belief or misunderstanding Nova holds.")
     correct_concept: str = Field(description="The accurate statement or concept addressing the misconception.")
     reason: str = Field(description="Pedagogical explanation for the misconception.")
-    is_corrected: bool = Field(default=False, description="Whether Nova has understood and resolved this misconception.")
+    concept: str = Field(default="", description="OOP concept this misconception belongs to.")
+    source_pages: List[int] = Field(default_factory=list, description="Source page numbers in the lecture PDF.")
+    source_quote: str = Field(default="", description="Verbatim quote from the lecture supporting the correct concept.")
+    confidence: float = Field(default=0.8, description="Nova's confidence in her wrong belief (0-1).")
+    status: str = Field(default="active", description="Lifecycle: active, testing, or learned.")
+    is_corrected: bool = Field(default=False, description="Kept in sync: True only when status is 'learned'.")
     corrected_at: Optional[str] = Field(default=None, description="ISO timestamp when corrected.")
     user_explanation: Optional[str] = Field(default=None, description="The user explanation that helped Nova understand.")
+
+    def mark_learned(self, user_explanation: str) -> None:
+        """Marks this misconception as learned, keeping is_corrected in sync."""
+        self.status = "learned"
+        self.is_corrected = True
+        self.corrected_at = datetime.now().isoformat()
+        self.user_explanation = user_explanation
 
 
 class NovaState(BaseModel):
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique session ID.")
     topic: str = Field(description="The topic of the teaching session.")
+    name: str = Field(default="Nova", description="Nova's student name.")
+    level: str = Field(default="beginner", description="Nova's learning level.")
+    behaviour: str = Field(
+        default="Asks a short follow-up question and pushes back once before accepting an explanation",
+        description="How Nova behaves during teaching.",
+    )
+    kb_id: str = Field(default="", description="Knowledge base id this session was created from.")
     learning_objectives: List[str] = Field(default_factory=list, description="Learning objectives.")
     misconceptions: List[MisconceptionState] = Field(default_factory=list, description="Misconceptions and correction states.")
     conversation_history: List[Dict[str, str]] = Field(default_factory=list, description="Chat message history.")
+    events: List[Dict[str, Any]] = Field(default_factory=list, description="Timestamped interaction event log.")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
@@ -81,6 +101,71 @@ class NovaStudentAgent:
         )
         return cls(state=new_state, provider=provider)
 
+    @classmethod
+    def from_repository(
+        cls,
+        kb_id: str,
+        misconception_ids: Optional[List[str]] = None,
+        count: int = 2,
+        provider: Optional[BaseLLMProvider] = None,
+    ) -> "NovaStudentAgent":
+        """
+        Creates a Nova session from backend/knowledge/{kb_id}/misconceptions.json.
+
+        If misconception_ids is given, those items are used. Otherwise `count`
+        items are picked from DIFFERENT concepts.
+        """
+        from app.ingest import KNOWLEDGE_DIR
+
+        repo_path = os.path.join(KNOWLEDGE_DIR, kb_id, "misconceptions.json")
+        if not os.path.exists(repo_path):
+            raise FileNotFoundError(f"Misconception repository not found at: {repo_path}")
+        with open(repo_path, "r", encoding="utf-8") as f:
+            repo = json.load(f)
+
+        if misconception_ids:
+            wanted = set(misconception_ids)
+            chosen = [item for item in repo if item.get("id") in wanted]
+            found_ids = {item.get("id") for item in chosen}
+            missing = wanted - found_ids
+            if missing:
+                raise ValueError(f"Misconception ids not found in repository '{kb_id}': {sorted(missing)}")
+        else:
+            # Pick `count` items, each from a different concept.
+            chosen = []
+            seen_concepts: set = set()
+            for item in repo:
+                concept = item.get("concept", "")
+                if concept in seen_concepts:
+                    continue
+                seen_concepts.add(concept)
+                chosen.append(item)
+                if len(chosen) >= count:
+                    break
+
+        misconception_states = [
+            MisconceptionState(
+                id=item.get("id", str(uuid.uuid4())[:8]),
+                concept=item.get("concept", ""),
+                wrong_concept=item.get("wrong_belief", ""),
+                correct_concept=item.get("correct_concept", ""),
+                reason=item.get("reason", ""),
+                source_pages=item.get("source_pages", []),
+                source_quote=item.get("source_quote", ""),
+                confidence=0.8,
+                status="active",
+            )
+            for item in chosen
+        ]
+
+        new_state = NovaState(
+            session_id=str(uuid.uuid4()),
+            topic="Object Oriented Programming",
+            kb_id=kb_id,
+            misconceptions=misconception_states,
+        )
+        return cls(state=new_state, provider=provider)
+
     # ------------------------------------------------------------------------
     # State Persistence (Save & Load)
     # ------------------------------------------------------------------------
@@ -93,6 +178,11 @@ class NovaStudentAgent:
     def from_dict(cls, state_dict: Dict[str, Any], provider: Optional[BaseLLMProvider] = None) -> "NovaStudentAgent":
         """Deserializes dictionary into NovaStudentAgent instance."""
         state = NovaState(**state_dict)
+        # Backward compatibility: legacy sessions have is_corrected but no status.
+        for m in state.misconceptions:
+            if m.is_corrected and m.status != "learned":
+                m.status = "learned"
+            m.is_corrected = m.status == "learned"
         return cls(state=state, provider=provider)
 
     def save_state(self, filepath: str) -> None:
@@ -120,20 +210,24 @@ class NovaStudentAgent:
     def _build_student_persona_prompt(self, user_message: str) -> str:
         """
         Builds the prompt instructing the LLM to act as Nova, the student.
-        Nova answers based ONLY on current uncorrected misconceptions.
+
+        Nova receives ONLY her wrong beliefs, their confidence, her behaviour,
+        her level, the last 6 messages, and the concepts she has learned.
+        correct_concept is NEVER revealed for an active misconception.
         """
-        active_misconceptions = [m for m in self.state.misconceptions if not m.is_corrected]
-        corrected_misconceptions = [m for m in self.state.misconceptions if m.is_corrected]
+        active = [m for m in self.state.misconceptions if m.status != "learned"]
+        learned = [m for m in self.state.misconceptions if m.status == "learned"]
 
-        active_str = "\n".join([
-            f"- Flawed belief: \"{m.wrong_concept}\"\n  (What I should learn eventually: {m.correct_concept})"
-            for m in active_misconceptions
-        ]) if active_misconceptions else "None (I have mastered all core concepts!)"
+        beliefs_str = "\n".join([
+            f"- About {m.concept or 'this topic'}: I believe \"{m.wrong_concept}\" "
+            f"(confidence {m.confidence:.1f})"
+            for m in active
+        ]) if active else "None - I have learned everything."
 
-        corrected_str = "\n".join([
-            f"- Correctly understood concept: \"{m.correct_concept}\" (Previously held misconception: \"{m.wrong_concept}\")"
-            for m in corrected_misconceptions
-        ]) if corrected_misconceptions else "None yet."
+        learned_str = "\n".join([
+            f"- {m.concept or 'Concept'}: {m.correct_concept}"
+            for m in learned
+        ]) if learned else "None yet."
 
         history_str = "\n".join([
             f"{msg['role'].capitalize()}: {msg['content']}"
@@ -141,30 +235,37 @@ class NovaStudentAgent:
         ]) if self.state.conversation_history else "No previous conversation."
 
         return f"""
-You are Nova, an enthusiastic and curious AI student learning about "{self.state.topic}".
+You are {self.state.name}, a {self.state.level} student learning about "{self.state.topic}".
 
-CURRENT KNOWLEDGE STATE:
-- Misconceptions I currently hold and believe to be TRUE:
-{active_str}
+YOUR LEVEL: {self.state.level}
+YOUR BEHAVIOUR: {self.state.behaviour}
 
-- Concepts I have already learned and understand correctly:
-{corrected_str}
+MY CURRENT BELIEFS (things I believe are TRUE right now):
+{beliefs_str}
 
-TEACHER CONVERSATION HISTORY:
+CONCEPTS I HAVE ALREADY LEARNED:
+{learned_str}
+
+LAST 6 MESSAGES:
 {history_str}
 
 TEACHER'S LATEST MESSAGE:
 "{user_message}"
 
 INSTRUCTIONS FOR NOVA:
-1. Speak in first person as a student ("I think...", "Wait, isn't it true that...", "Ah, I see!").
-2. If the teacher asks a question, answer based strictly on your CURRENT active misconceptions. Do NOT demonstrate perfect knowledge if you haven't been corrected yet.
-3. If the teacher's latest message clearly explains and fixes one of your active misconceptions:
-   - Express a realistic "aha!" moment.
-   - Explain in your own words what you just learned.
-4. Keep your tone polite, curious, and concise (2-4 sentences).
+1. Reply in plain text only: 2-3 sentences, first person, no quotation marks around the whole reply,
+   no placeholders like [Your Name].
+2. First, react directly to the teacher's latest message in your own words: repeat the idea back,
+   ask a question about it, or say what is confusing about it.
+3. Only after that, if you still hold other active beliefs, you may briefly mention one of them.
+4. When you give an explanation or example, use MY CURRENT BELIEFS above, not the correct facts,
+   unless the concept is listed under CONCEPTS I HAVE ALREADY LEARNED.
+5. If the teacher's message is short, vague, or only partly correct, push back politely instead
+   of accepting it, based on your current beliefs.
+6. When the teacher clearly and fully corrects one of your beliefs, show a realistic moment
+   of understanding and restate the corrected idea in your own words.
 
-Respond ONLY as Nova:
+Respond as Nova now:
 """
 
     # ------------------------------------------------------------------------
@@ -225,6 +326,17 @@ If no misconception was correctly and completely explained, return:
 """
 
     # ------------------------------------------------------------------------
+    # Event Log
+    # ------------------------------------------------------------------------
+
+    def _log_event(self, event: Dict[str, Any]) -> None:
+        """Appends a timestamped event to state.events (capped at 500)."""
+        event = {"time": datetime.now().isoformat(), **event}
+        self.state.events.append(event)
+        if len(self.state.events) > 500:
+            del self.state.events[: len(self.state.events) - 500]
+
+    # ------------------------------------------------------------------------
     # Interactive Turn & Correction Detection
     # ------------------------------------------------------------------------
 
@@ -235,8 +347,9 @@ If no misconception was correctly and completely explained, return:
         stores the user's explanation alongside previous misconception and correct concept,
         and returns list of newly resolved misconception IDs.
         """
-        active_misconceptions = [m for m in self.state.misconceptions if not m.is_corrected]
+        active_misconceptions = [m for m in self.state.misconceptions if m.status != "learned"]
         if not active_misconceptions:
+            self._log_event({"type": "correction_check", "corrected_ids": []})
             return []
 
         check_prompt = self._build_correction_check_prompt(user_explanation)
@@ -257,14 +370,14 @@ If no misconception was correctly and completely explained, return:
             corrected_ids = eval_data.get("corrected_ids", [])
         except Exception as e:
             logger.warning(f"Correction check evaluation failed (proceeding without state change): {e}")
-            return []
+            corrected_ids = []
+
+        self._log_event({"type": "correction_check", "corrected_ids": corrected_ids})
 
         newly_corrected = []
         for m in self.state.misconceptions:
-            if m.id in corrected_ids and not m.is_corrected:
-                m.is_corrected = True
-                m.corrected_at = datetime.now().isoformat()
-                m.user_explanation = user_explanation
+            if m.id in corrected_ids and m.status != "learned":
+                m.mark_learned(user_explanation)
                 newly_corrected.append(m.id)
                 logger.info(f"Nova learned concept [{m.id}]: Previous '{m.wrong_concept}' -> Corrected '{m.correct_concept}'")
 
@@ -302,15 +415,17 @@ If no misconception was correctly and completely explained, return:
             raise ValueError("User message cannot be empty.")
 
         # Step 1: Compare & apply knowledge update
+        self._log_event({"type": "teacher_message", "text": user_message})
         newly_corrected_ids = self.evaluate_and_update_knowledge(user_message)
 
         # Step 2: Generate Nova's response
         prompt = self._build_student_persona_prompt(user_message)
         raw_response = self.provider.generate(prompt, json_mode=False).strip()
 
-        # Step 3: Append to history
+        # Step 3: Append to history and event log
         self.state.conversation_history.append({"role": "teacher", "content": user_message})
         self.state.conversation_history.append({"role": "nova", "content": raw_response})
+        self._log_event({"type": "nova_reply", "text": raw_response})
         self.state.updated_at = datetime.now().isoformat()
 
         unresolved = self.get_unresolved_misconceptions()
