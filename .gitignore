@@ -52,6 +52,9 @@ htmlcov/
 *.joblib
 trained_models/
 
+# Nova RAG knowledge base artifacts (built chunks + vectors)
+**/backend/knowledge/
+
 # ------------------------------------------
 # Datasets, Database & Telemetry Exports
 # ------------------------------------------

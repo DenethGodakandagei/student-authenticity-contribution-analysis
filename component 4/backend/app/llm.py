@@ -3,6 +3,8 @@ import logging
 import urllib.request
 from abc import ABC, abstractmethod
 from typing import Optional
+# pyrefly: ignore [missing-import]
+from pydantic import BaseModel, ValidationError  # pyright: ignore[reportMissingImports]
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -12,7 +14,7 @@ class BaseLLMProvider(ABC):
     Abstract interface for LLM providers.
     """
     @abstractmethod
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, json_mode: bool = False) -> str:
         pass
 
 class OllamaProvider(BaseLLMProvider):
@@ -23,14 +25,17 @@ class OllamaProvider(BaseLLMProvider):
         self.host = (host or settings.OLLAMA_HOST).rstrip("/")
         self.model_name = model_name or settings.OLLAMA_MODEL
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, json_mode: bool = False) -> str:
         url = f"{self.host}/api/generate"
-        payload = json.dumps({
+        payload_dict = {
             "model": self.model_name,
             "prompt": prompt,
             "stream": False,
-            "format": "json"
-        }).encode("utf-8")
+            "options": {"num_ctx": 4096, "temperature": 0.4},
+        }
+        if json_mode:
+            payload_dict["format"] = "json"
+        payload = json.dumps(payload_dict).encode("utf-8")
 
         req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
         try:
@@ -65,7 +70,7 @@ class OpenAIProvider(BaseLLMProvider):
         self.api_key = api_key or settings.OPENAI_API_KEY
         self.model_name = model_name or settings.OPENAI_MODEL
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, json_mode: bool = False) -> str:
         if not self.api_key:
             raise ConnectionError("LLM Configuration Error: OPENAI_API_KEY is not set.")
         
@@ -80,9 +85,10 @@ class OpenAIProvider(BaseLLMProvider):
                 {"role": "system", "content": "You are Atlas, an expert AI pedagogical tutor that analyzes lecture material and extracts student misconceptions in JSON format."},
                 {"role": "user", "content": prompt}
             ],
-            "response_format": {"type": "json_object"},
             "temperature": 0.7
         }
+        if json_mode:
+            data["response_format"] = {"type": "json_object"}
         try:
             req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
             with urllib.request.urlopen(req, timeout=60) as response:
@@ -97,7 +103,8 @@ class HuggingFaceProvider(BaseLLMProvider):
         self.api_key = api_key or settings.HF_TOKEN
         self.model_name = model_name or settings.HF_MODEL
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, json_mode: bool = False) -> str:
+        # json_mode is accepted for interface compatibility but ignored here.
         if not self.api_key:
             raise ConnectionError("LLM Configuration Error: HF_TOKEN is not set.")
         url = f"https://api-inference.huggingface.co/models/{self.model_name}"
@@ -139,12 +146,64 @@ def get_llm_provider() -> BaseLLMProvider:
             "Please configure a valid LLM provider (Ollama, OpenAI, or HuggingFace)."
         )
 
-def generate_response(prompt: str, provider: Optional[BaseLLMProvider] = None) -> str:
+def generate_response(prompt: str, provider: Optional[BaseLLMProvider] = None, json_mode: bool = False) -> str:
     """
     Reusable function that accepts a prompt and returns the model response string.
     Uses the configured LLM provider by default.
     """
     if provider is None:
         provider = get_llm_provider()
-    return provider.generate(prompt)
+    return provider.generate(prompt, json_mode=json_mode)
+
+
+def _strip_markdown_fences(text: str) -> str:
+    """Removes wrapping markdown code fences (```json ... ```) from LLM output."""
+    cleaned = text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    if cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    return cleaned.strip()
+
+
+def generate_json(
+    prompt: str,
+    schema: type[BaseModel],
+    provider: Optional[BaseLLMProvider] = None,
+    retries: int = 1,
+) -> BaseModel:
+    """
+    Calls the LLM in JSON mode, strips markdown fences, parses the JSON, and
+    validates it against the given Pydantic model.
+
+    On parse or validation failure, retries up to `retries` additional times,
+    appending a short "return only valid JSON" reminder to the prompt.
+    Raises ValueError if the response still cannot be parsed and validated.
+    """
+    if provider is None:
+        provider = get_llm_provider()
+
+    current_prompt = prompt
+    last_error: Optional[Exception] = None
+    for attempt in range(retries + 1):
+        raw_response = provider.generate(current_prompt, json_mode=True)
+        try:
+            clean_response = _strip_markdown_fences(raw_response)
+            parsed = json.loads(clean_response)
+            return schema(**parsed)
+        except (json.JSONDecodeError, ValidationError) as e:
+            last_error = e
+            logger.warning(
+                f"generate_json attempt {attempt + 1}/{retries + 1} failed for {schema.__name__}: {e}"
+            )
+            current_prompt = (
+                prompt + "\n\nIMPORTANT: Return only valid JSON matching the required schema."
+            )
+
+    raise ValueError(
+        f"LLM Response Error: Failed to obtain valid JSON for {schema.__name__} "
+        f"after {retries + 1} attempt(s). Last error: {last_error}"
+    )
 

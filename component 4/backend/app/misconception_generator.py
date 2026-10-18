@@ -119,7 +119,7 @@ Return ONLY raw valid JSON matching this exact structure with no extra text, exp
         prompt = self._build_prompt(lecture_text)
 
         try:
-            raw_response = self.provider.generate(prompt)
+            raw_response = self.provider.generate(prompt, json_mode=True)
         except Exception as e:
             logger.error(f"LLM Provider execution failed: {e}")
             raise RuntimeError(

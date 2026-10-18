@@ -243,7 +243,7 @@ If no misconception was correctly and completely explained, return:
         corrected_ids = []
         
         try:
-            eval_response = self.provider.generate(check_prompt)
+            eval_response = self.provider.generate(check_prompt, json_mode=True)
             clean_eval = eval_response.strip()
             if clean_eval.startswith("```json"):
                 clean_eval = clean_eval[7:]
@@ -306,7 +306,7 @@ If no misconception was correctly and completely explained, return:
 
         # Step 2: Generate Nova's response
         prompt = self._build_student_persona_prompt(user_message)
-        raw_response = self.provider.generate(prompt).strip()
+        raw_response = self.provider.generate(prompt, json_mode=False).strip()
 
         # Step 3: Append to history
         self.state.conversation_history.append({"role": "teacher", "content": user_message})
