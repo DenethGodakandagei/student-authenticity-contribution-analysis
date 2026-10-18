@@ -17,7 +17,7 @@ const DATA_DIR = path.join(__dirname, '../../data');
 const DATA_FILE = path.join(DATA_DIR, 'mock_store.json');
 
 // Disk persistence disabled: Real data is saved directly to MongoDB
-export const saveToDisk = () => {};
+export const saveToDisk = () => { };
 
 export const loadFromDisk = (): boolean => {
   return false;
@@ -59,7 +59,7 @@ export const seedMockDatabase = () => {
   // 1. Seed Users
   mockUsers.push(
     { _id: lecturerId, name: 'Dr. Sarah Jenkins', email: 'sarah.jenkins@university.edu', password: defaultPassword, role: 'lecturer' },
-    { _id: '667790901f95305cc857f099', name: 'Lecturer 2', email: 'lecture2@gmail.com', password: defaultPassword, role: 'lecturer' },
+    { _id: '667790901f95305cc857f099', name: 'Lecturer 2', email: 'lecture2gmail.com', password: defaultPassword, role: 'lecturer' },
     { _id: '6677a1a11f95305cc857f002', name: 'Alex Rivera', email: 'alex.rivera@student.edu', password: defaultPassword, role: 'student' },
     { _id: '6677a1a11f95305cc857f003', name: 'Chloe Chen', email: 'chloe.chen@student.edu', password: defaultPassword, role: 'student' },
     { _id: '6677a1a11f95305cc857f004', name: 'Marcus Vance', email: 'marcus.vance@student.edu', password: defaultPassword, role: 'student' },

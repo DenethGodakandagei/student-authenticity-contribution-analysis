@@ -19,30 +19,48 @@ import numpy as np
 import pandas as pd
 from typing import Tuple, Generator, List
 
-from .config import (
-    FEATURE_COLUMNS,
-    TARGET_COLUMN,
-    GROUP_COLUMN,
-    DEFAULT_DATA_PATH,
-    FALLBACK_DATA_PATH,
-    DEFAULT_N_SPLITS,
-    RANDOM_STATE
-)
+try:
+    from .config import (
+        FEATURE_COLUMNS,
+        TARGET_COLUMN,
+        GROUP_COLUMN,
+        DEFAULT_DATA_PATH,
+        FALLBACK_DATA_PATH,
+        DEFAULT_N_SPLITS,
+        RANDOM_STATE
+    )
+except ImportError:
+    from config import (
+        FEATURE_COLUMNS,
+        TARGET_COLUMN,
+        GROUP_COLUMN,
+        DEFAULT_DATA_PATH,
+        FALLBACK_DATA_PATH,
+        DEFAULT_N_SPLITS,
+        RANDOM_STATE
+    )
 from sklearn.model_selection import GroupKFold
 from sklearn.preprocessing import StandardScaler
 
 
 def clean_and_engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Validates, cleans, and engineers features from the input DataFrame.
-    Guarantees that code_churn_ratio and backspace_count are strictly computed.
+    Executes the 6-point architectural preprocessing pipeline:
+    1. Column Partitioning: Whitelist vs. Quarantine (PII and target leakage separated).
+    2. File Blacklisting: Noise filtering (removes non-code artifact lines like lockfiles, markdown, configs).
+    3. In-Memory Code Churn Synthesis: lines_removed / (lines_added + lines_removed) with 0.0 zero-division handling.
+    4. Idle Window Retention: Preserves zero-activity windows without survivorship bias using fillna(0.0).
+    5. Outlier Treatment (Winsorization): Caps extreme bursts (typing_speed_cpm <= 1200.0) without dropping AI paste signatures.
+    6. Scaling & Encoding: Retains raw physical units for tree model interpretability and SHAP explainability.
     """
     df = df.copy()
 
-    # 1. Normalize participant identifier
+    # 1. Normalize participant identifier (used strictly for GroupKFold partitioning)
     if GROUP_COLUMN not in df.columns:
         if "student_id" in df.columns:
             df[GROUP_COLUMN] = df["student_id"]
+        elif "participant_id" in df.columns:
+            df[GROUP_COLUMN] = df["participant_id"]
         elif "session_id" in df.columns:
             df[GROUP_COLUMN] = df["session_id"]
         else:
@@ -52,61 +70,128 @@ def clean_and_engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     if TARGET_COLUMN not in df.columns:
         if "authenticity_label" in df.columns:
             df[TARGET_COLUMN] = df["authenticity_label"]
+        elif "label" in df.columns:
+            df[TARGET_COLUMN] = df["label"]
         elif "task_condition" in df.columns:
             df[TARGET_COLUMN] = (df["task_condition"] == "TASK_B_AI").astype(int)
         else:
             df[TARGET_COLUMN] = 0
 
-    # 3. Ensure numerical counts exist
-    if "manual_chars_inserted" not in df.columns:
-        df["manual_chars_inserted"] = df.get("keystrokes", df.get("keystroke_count", 0))
+    # 3. File Blacklisting: Filter out non-code artifact noise (.json, .lock, .md, .env, .git)
+    if "primary_file" in df.columns:
+        ignored_exts = ('.json', '.lock', '.md', '.env', '.git')
+        # Only apply filter if it does not wipe all rows
+        code_mask = ~df["primary_file"].astype(str).str.lower().str.endswith(ignored_exts)
+        if code_mask.sum() > 0:
+            df = df[code_mask].copy()
 
-    if "pasted_chars" not in df.columns:
-        df["pasted_chars"] = df.get("characters_pasted", 0)
+    # 4. In-Memory Feature Synthesis: Code Churn Ratio with zero-division handling
+    if "lines_added" in df.columns and "lines_removed" in df.columns:
+        total_lines = df["lines_added"] + df["lines_removed"]
+        df["code_churn_ratio"] = np.where(
+            total_lines > 0,
+            (df["lines_removed"] / total_lines).round(4),
+            0.0
+        )
+    elif "chars_added" in df.columns and "chars_deleted" in df.columns:
+        total_churn = df["chars_added"] + df["chars_deleted"]
+        df["code_churn_ratio"] = np.where(
+            total_churn > 0,
+            (df["chars_deleted"] / total_churn).round(4),
+            0.0
+        )
+    else:
+        df["code_churn_ratio"] = 0.0
 
-    if "chars_deleted" not in df.columns:
-        df["chars_deleted"] = df.get("lines_removed", 0) * 20
+    # 5. Core Agnostic Telemetry Alignment
+    if "duration_minutes" not in df.columns:
+        df["duration_minutes"] = (df.get("active_time_sec", 300.0) / 60.0).round(2)
 
-    if "backspace_count" not in df.columns:
-        df["backspace_count"] = df.get("backspace_delete_count", df["chars_deleted"])
+    if "keystrokes" not in df.columns:
+        df["keystrokes"] = df.get("keystroke_count", df.get("manual_chars_inserted", 0))
+
+    if "lines_added" not in df.columns:
+        df["lines_added"] = (df.get("chars_added", 0) / 25.0).round().astype(int)
+
+    if "lines_removed" not in df.columns:
+        df["lines_removed"] = (df.get("chars_deleted", 0) / 20.0).round().astype(int)
+
+    if "net_lines" not in df.columns:
+        df["net_lines"] = df["lines_added"] - df["lines_removed"]
 
     if "paste_count" not in df.columns:
         df["paste_count"] = df.get("paste_events", 0)
 
-    if "keystroke_count" not in df.columns:
-        df["keystroke_count"] = df.get("keystrokes", df["manual_chars_inserted"])
+    if "characters_pasted" not in df.columns:
+        df["characters_pasted"] = df.get("pasted_chars", 0)
 
-    if "active_time_sec" not in df.columns:
-        df["active_time_sec"] = df.get("duration_minutes", 5) * 60.0
-
-    # 4. Feature Engineering: Total Content Added
-    if "chars_added" not in df.columns:
-        df["chars_added"] = df["manual_chars_inserted"] + df["pasted_chars"]
-
-    # 5. Feature Engineering: Code Churn Ratio = chars_deleted / (chars_added + chars_deleted)
-    # Genuine humans delete & refactor code (churn >= 0.15); AI pasting bots show ~0.0 churn
-    total_churn_pool = df["chars_added"] + df["chars_deleted"]
-    df["code_churn_ratio"] = np.where(
-        total_churn_pool > 0,
-        (df["chars_deleted"] / total_churn_pool).round(4),
-        0.0
-    )
-
-    # 6. Feature Engineering: Paste Ratio & Velocity
-    total_content = df["chars_added"].replace(0, 1)
-    if "paste_ratio" not in df.columns:
-        df["paste_ratio"] = (df["pasted_chars"] / total_content).round(4)
-
-    if "paste_velocity" not in df.columns:
-        p_count = df["paste_count"].replace(0, 1)
-        df["paste_velocity"] = (df["pasted_chars"] / p_count).round(2)
-
-    # 7. Feature Engineering: Typing Speed CPM
+    # 6. Typing Speed CPM & Keystroke Efficiency
     if "typing_speed_cpm" not in df.columns:
-        active_mins = (df["active_time_sec"] / 60.0).clip(lower=0.1)
-        df["typing_speed_cpm"] = (df["manual_chars_inserted"] / active_mins).round(2)
+        active_mins = df["duration_minutes"].clip(lower=0.1)
+        df["typing_speed_cpm"] = (df["keystrokes"] / active_mins).round(2)
+
+    # Outlier Treatment: Winsorization (Capping CPM at 1200 to protect tree splits)
+    df["typing_speed_cpm"] = df["typing_speed_cpm"].clip(upper=1200.0)
+
+    if "keystroke_efficiency_keff" not in df.columns:
+        total_active_lines = df["lines_added"].clip(lower=1)
+        df["keystroke_efficiency_keff"] = (df["keystrokes"] / total_active_lines).round(2)
+
+    if "paste_ratio" not in df.columns:
+        total_events = (df["keystrokes"] + df["characters_pasted"]).replace(0, 1)
+        df["paste_ratio"] = (df["characters_pasted"] / total_events).round(4)
+
+    if "is_offline" not in df.columns:
+        df["is_offline"] = 0
+
+    if "files_edited_count" not in df.columns:
+        df["files_edited_count"] = 1
+
+    # Idle Window Retention: Fill any residual NaN with 0.0 without dropping rows
+    for col in FEATURE_COLUMNS:
+        if col in df.columns:
+            df[col] = df[col].fillna(0.0)
 
     return df
+
+
+def export_preprocessed_datasets(
+    df: pd.DataFrame,
+    output_dir: str = None
+) -> Tuple[str, str]:
+    """
+    Exports two clean CSV datasets:
+    1. preprocessed_features.csv: Whitelisted agnostic features + target (for training & defense examination).
+    2. ground_truth_audit.csv: Metadata & quarantined leakage columns (for post-hoc verification).
+    """
+    if output_dir is None:
+        output_dir = os.path.dirname(os.path.abspath(__file__))
+
+    os.makedirs(output_dir, exist_ok=True)
+    features_csv_path = os.path.join(output_dir, "preprocessed_features.csv")
+    audit_csv_path = os.path.join(output_dir, "ground_truth_audit.csv")
+
+    df_clean = clean_and_engineer_features(df)
+
+    # 1. Export Whitelisted Features (No PII, No Target Leakage)
+    export_cols = [GROUP_COLUMN] + [c for c in FEATURE_COLUMNS if c in df_clean.columns] + [TARGET_COLUMN]
+    features_df = df_clean[export_cols].copy()
+    features_df.to_csv(features_csv_path, index=False)
+    print(f"[OK] Exported preprocessed features dataset: '{features_csv_path}' ({len(features_df)} rows, {len(export_cols)} columns)")
+
+    # 2. Export Ground Truth Audit Table (Metadata for defense review)
+    audit_candidate_cols = [
+        GROUP_COLUMN, "student_name", "team_name", "assignment_title",
+        "coding_style", "ai_chars", "manual_chars", "paste_chars",
+        "manual_percent", "paste_percent", "ai_percent", TARGET_COLUMN
+    ]
+    present_audit_cols = [c for c in audit_candidate_cols if c in df_clean.columns]
+    if present_audit_cols:
+        audit_df = df_clean[present_audit_cols].copy()
+        audit_df.to_csv(audit_csv_path, index=False)
+        print(f"[OK] Exported ground truth audit dataset: '{audit_csv_path}' ({len(audit_df)} rows, {len(present_audit_cols)} columns)")
+
+    return features_csv_path, audit_csv_path
 
 
 def generate_calibrated_pilot_dataset(output_path: str, n_participants: int = 20) -> pd.DataFrame:
@@ -238,3 +323,34 @@ def get_group_kfold_splits(
     actual_splits = max(2, min(n_splits, unique_groups))
     gkf = GroupKFold(n_splits=actual_splits)
     return gkf.split(X, y, groups=groups)
+
+
+if __name__ == "__main__":
+    print("=" * 80)
+    print("  COLLEGE DEFENSE PREPROCESSING: 6-POINT ARCHITECTURAL PIPELINE")
+    print("=" * 80)
+
+    # 1. Load data
+    raw_df = pd.read_csv(DEFAULT_DATA_PATH)
+    print(f"[*] Input Data Source: '{DEFAULT_DATA_PATH}' ({len(raw_df)} rows, {len(raw_df.columns)} columns)")
+
+    # 2. Clean, engineer features and export
+    clean_df = clean_and_engineer_features(raw_df)
+    features_path, audit_path = export_preprocessed_datasets(clean_df)
+
+    # 3. Extract feature matrix X, target y, and grouping keys
+    X, y, groups, active_feats = prepare_features_and_target(clean_df)
+    print("\n[*] Preprocessing Summary:")
+    print(f"    - Clean Feature Matrix (X): {X.shape[0]} samples x {X.shape[1]} features")
+    print(f"    - Target Distribution (y): {np.sum(y == 0)} Authentic (0) | {np.sum(y == 1)} AI-Assisted (1)")
+    print(f"    - Grouping Units (GroupKFold): {len(np.unique(groups))} unique students")
+    print(f"    - Active Features: {', '.join(active_feats)}")
+
+    # 4. Show GroupKFold validation split simulation
+    print("\n[*] Zero-Leakage GroupKFold Validation Splits:")
+    for fold, (train_idx, test_idx) in enumerate(get_group_kfold_splits(X, y, groups, n_splits=5), 1):
+        test_students = np.unique(groups[test_idx])
+        print(f"    - Fold {fold}: {len(train_idx):3d} train samples | {len(test_idx):3d} test samples (Held-out: {len(test_students)} students)")
+
+    print("\n[OK] Preprocessing completed successfully! Both CSV datasets are ready.")
+    print("=" * 80)

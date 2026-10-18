@@ -28,7 +28,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 
 DEFAULT_WINDOW_MINUTES = 5
-DEFAULT_SLIDE_MINUTES = 5
+DEFAULT_SLIDE_MINUTES = 1  # Best setup: 5-minute window with 1-minute sliding stride (W=5 min, step=1 min)
 DEFAULT_OUTPUT_CSV = "pilot_dataset.csv"
 
 def parse_args():
@@ -212,6 +212,7 @@ def calculate_window_features(events_in_window: List[Dict[str, Any]], session_id
     return {
         "session_id": session_id,
         "participant_id": detected_participant_id,
+        "task_condition": "TASK_B_AI" if label == 1 else "TASK_A_MANUAL",
         "window_index": window_index,
         "window_start_iso": datetime.fromtimestamp(window_start_ms / 1000.0, tz=timezone.utc).isoformat(),
         "window_end_iso": datetime.fromtimestamp(window_end_ms / 1000.0, tz=timezone.utc).isoformat(),
@@ -219,7 +220,9 @@ def calculate_window_features(events_in_window: List[Dict[str, Any]], session_id
         "active_time_sec": round(active_time_sec, 2),
         "keystroke_count": keystroke_count,
         "manual_chars_inserted": manual_chars_inserted,
+        "chars_added": total_content_chars,
         "chars_deleted": chars_deleted,
+        "backspace_count": backspace_delete_count,
         "backspace_delete_count": backspace_delete_count,
         "code_churn_ratio": code_churn_ratio,
         "paste_count": paste_count,
