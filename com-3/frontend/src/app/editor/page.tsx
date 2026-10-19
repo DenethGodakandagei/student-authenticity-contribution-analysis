@@ -141,7 +141,27 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
 
-        <button onClick={() => document.querySelector('.ProseMirror')?.classList.toggle('page-border')} className="toolbar-btn">Page Border</button>
+        <select
+          onChange={(e) => {
+            const el = document.querySelector('.ProseMirror');
+            if (el) {
+              el.classList.remove('page-border', 'page-border-solid', 'page-border-double', 'page-border-academic', 'page-border-dashed');
+              if (e.target.value !== 'none') {
+                el.classList.add('page-border', `page-border-${e.target.value}`);
+              }
+            }
+          }}
+          defaultValue="none"
+          className="toolbar-btn"
+          style={{ border: '1px solid #d1d5db', padding: '0.25rem 0.5rem', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+          title="Apply page border to document"
+        >
+          <option value="none">Border: None</option>
+          <option value="solid">Border: Box (Solid)</option>
+          <option value="double">Border: Classic Double</option>
+          <option value="academic">Border: Academic Frame</option>
+          <option value="dashed">Border: Dashed</option>
+        </select>
         <button
           onClick={(e) => {
             const el = document.querySelector('.ProseMirror');
@@ -165,8 +185,10 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
 
-        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}>Align Left</button>
-        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}>Align Center</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} title="Align Left">Align Left</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} title="Align Center">Align Center</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} title="Align Right">Align Right</button>
+        <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`} title="Justify Text">Justify</button>
         
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
         
@@ -293,6 +315,7 @@ function EditorComponent() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
+  const [newDocAssignmentType, setNewDocAssignmentType] = useState<'group' | 'individual'>('group');
   const [registeredUsersForCreate, setRegisteredUsersForCreate] = useState<any[]>([]);
   const [selectedMembersForCreate, setSelectedMembersForCreate] = useState<string[]>([]);
 
@@ -444,8 +467,16 @@ function EditorComponent() {
   useEffect(() => {
     if (docIdParam) {
       setSelectedDocId(docIdParam);
+      setAccessDenied(false);
+      setAccessDeniedInfo(null);
     }
   }, [docIdParam]);
+
+  // Reset accessDenied when selectedDocId changes
+  useEffect(() => {
+    setAccessDenied(false);
+    setAccessDeniedInfo(null);
+  }, [selectedDocId]);
 
   const fetchDocs = () => {
     if (!user) return;
@@ -499,7 +530,7 @@ function EditorComponent() {
           setAccessDenied(false);
           setDocDetails(data);
           if (editor && !editor.isDestroyed && data.content !== undefined) {
-            editor.commands.setContent(data.content || '<p></p>');
+            editor.commands.setContent(data.content || '<p></p>', { emitUpdate: false });
             setLastText(editor.getText());
           }
         }
@@ -627,7 +658,7 @@ function EditorComponent() {
 
     s.on('load-document', (content) => {
       if (editor && !editor.isDestroyed) {
-        editor.commands.setContent(content);
+        editor.commands.setContent(content || '', { emitUpdate: false });
         setLastText(editor.getText());
       }
     });
@@ -754,9 +785,10 @@ function EditorComponent() {
           owner: user.username || user.studentId || 'student',
           ownerName: user.name 
             ? (user.studentId ? `${user.name} (${user.studentId})` : user.name) 
-            : (user.username || 'Student'),
+            : (user.username || (newDocAssignmentType === 'individual' ? 'Student Author' : 'Student Leader')),
           studentId: user.studentId || '',
-          members: selectedMembersForCreate
+          assignmentType: newDocAssignmentType,
+          members: newDocAssignmentType === 'individual' ? [] : selectedMembersForCreate
         })
       });
       const data = await res.json();
@@ -765,12 +797,13 @@ function EditorComponent() {
       setCreateModalOpen(false);
       setNewDocTitle('');
       setSelectedMembersForCreate([]);
+      setNewDocAssignmentType('group');
       setAccessDenied(false);
       setAccessDeniedInfo(null);
       setDocDetails(data.document);
       setSelectedDocId(data.document._id);
       fetchDocs();
-      showToast(`Document "${data.document.title}" created successfully!`, 'success', 'Document Created');
+      showToast(`${newDocAssignmentType === 'individual' ? 'Individual assignment' : 'Group project'} "${data.document.title}" created successfully!`, 'success', 'Document Created');
     } catch (err: any) {
       showToast(err.message, 'error', 'Creation Error');
     }
@@ -1077,6 +1110,63 @@ function EditorComponent() {
             </div>
 
             <form onSubmit={handleCreateDocument} style={{ padding: '1.5rem' }}>
+              {/* Assignment Work Type Selector */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.45rem' }}>
+                  Assignment Type:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewDocAssignmentType('group');
+                    }}
+                    style={{
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: newDocAssignmentType === 'group' ? '2px solid #4F46E5' : '1px solid #CBD5E1',
+                      background: newDocAssignmentType === 'group' ? '#EEF2FF' : '#F8FAFC',
+                      color: newDocAssignmentType === 'group' ? '#1E3A8A' : '#475569',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>👥 Group Project</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewDocAssignmentType('individual');
+                      setSelectedMembersForCreate([]);
+                    }}
+                    style={{
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: newDocAssignmentType === 'individual' ? '2px solid #0284C7' : '1px solid #CBD5E1',
+                      background: newDocAssignmentType === 'individual' ? '#F0F9FF' : '#F8FAFC',
+                      color: newDocAssignmentType === 'individual' ? '#0369A1' : '#475569',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>👤 Individual Assignment</span>
+                  </button>
+                </div>
+              </div>
+
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.45rem' }}>
                   Document Title:
@@ -1084,7 +1174,7 @@ function EditorComponent() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Group 4 - System Architecture Report"
+                  placeholder={newDocAssignmentType === 'individual' ? "e.g. Individual Coursework Report" : "e.g. Group 4 - System Architecture Report"}
                   value={newDocTitle}
                   onChange={e => setNewDocTitle(e.target.value)}
                   style={{
@@ -1103,81 +1193,96 @@ function EditorComponent() {
                 />
               </div>
 
-              {/* Optional Group Member Selection during Creation */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
-                    Initial Group Members (Optional):
-                  </label>
-                  <span style={{ fontSize: '0.75rem', background: '#CCFBF1', color: '#0F766E', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
-                    {selectedMembersForCreate.length} Selected
-                  </span>
-                </div>
+              {/* Optional Group Member Selection during Creation (Only for Group projects) */}
+              {newDocAssignmentType === 'group' ? (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
+                      Initial Group Members (Optional):
+                    </label>
+                    <span style={{ fontSize: '0.75rem', background: '#CCFBF1', color: '#0F766E', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
+                      {selectedMembersForCreate.length} Selected
+                    </span>
+                  </div>
 
-                <div style={{
-                  maxHeight: '160px',
-                  overflowY: 'auto',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '8px',
-                  background: '#F8FAFC',
-                  padding: '0.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.35rem'
-                }}>
-                  {registeredUsersForCreate.length === 0 ? (
-                    <div style={{ color: '#64748B', fontSize: '0.8rem', padding: '0.75rem', textAlign: 'center' }}>
-                      No other registered members found. You can also grant permissions later using the Share button.
-                    </div>
-                  ) : (
-                    registeredUsersForCreate.map((u: any) => {
-                      const userIdentifier = u.username || u.studentId || u.email;
-                      const displayName = u.name ? `${u.name} (${userIdentifier})` : userIdentifier;
-                      const isSelected = selectedMembersForCreate.includes(userIdentifier);
+                  <div style={{
+                    maxHeight: '160px',
+                    overflowY: 'auto',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    background: '#F8FAFC',
+                    padding: '0.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem'
+                  }}>
+                    {registeredUsersForCreate.length === 0 ? (
+                      <div style={{ color: '#64748B', fontSize: '0.8rem', padding: '0.75rem', textAlign: 'center' }}>
+                        No other registered members found. You can also grant permissions later using the Share button.
+                      </div>
+                    ) : (
+                      registeredUsersForCreate.map((u: any) => {
+                        const userIdentifier = u.username || u.studentId || u.email;
+                        const displayName = u.name ? `${u.name} (${userIdentifier})` : userIdentifier;
+                        const isSelected = selectedMembersForCreate.includes(userIdentifier);
 
-                      const toggleMember = () => {
-                        if (isSelected) {
-                          setSelectedMembersForCreate((prev: string[]) => prev.filter(id => id !== userIdentifier));
-                        } else {
-                          setSelectedMembersForCreate((prev: string[]) => [...prev, userIdentifier]);
-                        }
-                      };
+                        const toggleMember = () => {
+                          if (isSelected) {
+                            setSelectedMembersForCreate((prev: string[]) => prev.filter(id => id !== userIdentifier));
+                          } else {
+                            setSelectedMembersForCreate((prev: string[]) => [...prev, userIdentifier]);
+                          }
+                        };
 
-                      return (
-                        <div
-                          key={u._id || userIdentifier}
-                          onClick={toggleMember}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            padding: '0.5rem 0.65rem',
-                            borderRadius: '6px',
-                            background: isSelected ? '#EEF2FF' : '#FFFFFF',
-                            border: `1px solid ${isSelected ? '#818CF8' : '#E2E8F0'}`,
-                            cursor: 'pointer',
-                            fontSize: '0.83rem',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}}
-                            style={{ cursor: 'pointer', accentColor: '#4F46E5' }}
-                          />
-                          <div style={{ flex: 1, color: isSelected ? '#1E3A8A' : '#334155' }}>
-                            <strong>{displayName}</strong>
-                            <span style={{ fontSize: '0.72rem', color: '#64748B', marginLeft: '0.4rem' }}>
-                              ({u.role || 'student'})
-                            </span>
+                        return (
+                          <div
+                            key={u._id || userIdentifier}
+                            onClick={toggleMember}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '0.5rem 0.65rem',
+                              borderRadius: '6px',
+                              background: isSelected ? '#EEF2FF' : '#FFFFFF',
+                              border: `1px solid ${isSelected ? '#818CF8' : '#E2E8F0'}`,
+                              cursor: 'pointer',
+                              fontSize: '0.83rem',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              style={{ cursor: 'pointer', accentColor: '#4F46E5' }}
+                            />
+                            <div style={{ flex: 1, color: isSelected ? '#1E3A8A' : '#334155' }}>
+                              <strong>{displayName}</strong>
+                              <span style={{ fontSize: '0.72rem', color: '#64748B', marginLeft: '0.4rem' }}>
+                                ({u.role || 'student'})
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{
+                  marginBottom: '1.5rem',
+                  padding: '0.85rem 1rem',
+                  background: '#F0F9FF',
+                  border: '1px solid #BAE6FD',
+                  borderRadius: '8px',
+                  color: '#0369A1',
+                  fontSize: '0.82rem',
+                  lineHeight: 1.5
+                }}>
+                  <strong>👤 Individual Assignment:</strong> You will be the sole author of this document. No collaborators are added.
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button
@@ -1508,7 +1613,7 @@ function EditorComponent() {
                     {docDetails?.title || selectedDocId}
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#70757a', background: '#e8f0fe', padding: '0.1rem 0.4rem', borderRadius: '12px' }}>
-                    Saved to Drive & DocuTrace
+                    Saved to Drive & Inkie
                   </span>
                 </div>
                 <div className="google-docs-menubar">
@@ -1776,7 +1881,18 @@ function EditorComponent() {
                 Rename
               </button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+              <span style={{
+                fontSize: '0.72rem',
+                background: docDetails?.assignmentType === 'individual' ? '#E0F2FE' : '#EEF2FF',
+                border: `1px solid ${docDetails?.assignmentType === 'individual' ? '#BAE6FD' : '#C7D2FE'}`,
+                color: docDetails?.assignmentType === 'individual' ? '#0369A1' : '#4338CA',
+                padding: '0.15rem 0.55rem',
+                borderRadius: '12px',
+                fontWeight: 800
+              }}>
+                {docDetails?.assignmentType === 'individual' ? '👤 Individual Assignment' : '👥 Group Collaborative Project'}
+              </span>
               <span style={{
                 fontSize: '0.72rem',
                 background: '#F0FDFA',
@@ -1786,7 +1902,9 @@ function EditorComponent() {
                 borderRadius: '12px',
                 fontWeight: 700
               }}>
-                Owner: {docDetails?.ownerName || docDetails?.owner || 'Group Leader'}
+                {docDetails?.assignmentType === 'individual'
+                  ? `Author: ${docDetails?.ownerName || docDetails?.owner || 'Student'}`
+                  : `Group Leader: ${docDetails?.ownerName || docDetails?.owner || 'Leader'}`}
               </span>
               <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
                 &bull; In-Built Collaborative Workspace
@@ -1828,17 +1946,6 @@ function EditorComponent() {
                   {docDetails.course}
                 </span>
               )}
-
-              <span style={{
-                fontSize: '0.74rem',
-                background: docDetails?.assignmentType === 'individual' ? 'rgba(14, 165, 233, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-                color: docDetails?.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
-                padding: '0.15rem 0.55rem',
-                borderRadius: '6px',
-                fontWeight: 800
-              }}>
-                {docDetails?.assignmentType === 'individual' ? 'Individual Project' : 'Group Collaborative Project'}
-              </span>
 
               {docDetails?.grade && (
                 <span style={{

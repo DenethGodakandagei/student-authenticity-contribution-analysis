@@ -37,9 +37,10 @@ function DashboardComponent() {
   
   // Documents state
   const [availableDocs, setAvailableDocs] = useState<any[]>([]);
+  const [docsLoading, setDocsLoading] = useState<boolean>(true);
   const [selectedDocId, setSelectedDocId] = useState<string>('doc_collaborative_1');
   const [docSearchQuery, setDocSearchQuery] = useState('');
-  const [docFilter, setDocFilter] = useState<'all' | 'led' | 'shared'>('all');
+  const [docFilter, setDocFilter] = useState<'all' | 'led' | 'shared' | 'individual' | 'group'>('all');
 
   // Analytics states for selected doc
   const [timeline, setTimeline] = useState<any[]>([]);
@@ -62,6 +63,7 @@ function DashboardComponent() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocPrompt, setNewDocPrompt] = useState('');
   const [newDocSource, setNewDocSource] = useState('in_built');
+  const [newDocAssignmentType, setNewDocAssignmentType] = useState<'group' | 'individual'>('group');
   const [selectedNewMembers, setSelectedNewMembers] = useState<string[]>([]);
   const [customMemberInput, setCustomMemberInput] = useState<string>('');
   const [createLoading, setCreateLoading] = useState(false);
@@ -106,9 +108,13 @@ function DashboardComponent() {
   const loadDocuments = async () => {
     if (!user) {
       setAvailableDocs([]);
+      setDocsLoading(false);
       return;
     }
     try {
+      if (availableDocs.length === 0) {
+        setDocsLoading(true);
+      }
       let url = API_BASE;
       const params = new URLSearchParams();
       if (user.username) params.append('username', user.username);
@@ -122,6 +128,14 @@ function DashboardComponent() {
       const list = Array.isArray(docs) ? docs : [];
       setAvailableDocs(list);
 
+      // Cache for seamless instant return without flicker
+      if (typeof window !== 'undefined') {
+        try {
+          const userKey = `inkie_docs_${user.studentId || user.username}`;
+          sessionStorage.setItem(userKey, JSON.stringify(list));
+        } catch (e) {}
+      }
+
       if (docIdQuery && list.some((d: any) => d._id === docIdQuery)) {
         setSelectedDocId(docIdQuery);
       } else if (list.length > 0 && !list.some((d: any) => d._id === selectedDocId)) {
@@ -134,17 +148,34 @@ function DashboardComponent() {
       }
     } catch (err) {
       console.error("Failed to fetch documents", err);
+    } finally {
+      setDocsLoading(false);
     }
   };
 
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Check session cache first for instant flicker-free rendering
+      if (typeof window !== 'undefined') {
+        try {
+          const userKey = `inkie_docs_${user.studentId || user.username}`;
+          const cached = sessionStorage.getItem(userKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setAvailableDocs(parsed);
+              setDocsLoading(false);
+            }
+          }
+        } catch (e) {}
+      }
       loadStudents();
       loadDocuments();
     } else {
       setAvailableDocs([]);
       setRegisteredStudents([]);
       setSelectedDocId('');
+      setDocsLoading(false);
     }
   }, [isAuthenticated, user, docIdQuery]);
 
@@ -259,8 +290,8 @@ function DashboardComponent() {
     }
     setCreateLoading(true);
     try {
-      const parsedCustom = customMemberInput.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
-      const combinedMembers = Array.from(new Set([...selectedNewMembers, ...parsedCustom]));
+      const parsedCustom = newDocAssignmentType === 'individual' ? [] : customMemberInput.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      const combinedMembers = newDocAssignmentType === 'individual' ? [] : Array.from(new Set([...selectedNewMembers, ...parsedCustom]));
 
       const res = await fetch(`${API_BASE}/create`, {
         method: 'POST',
@@ -271,19 +302,21 @@ function DashboardComponent() {
             ? `<h2>${newDocTitle.trim()}</h2><p>${newDocPrompt.trim()}</p>`
             : undefined,
           owner: user?.username || 'student',
-          ownerName: user?.name || user?.username || 'Student Leader',
+          ownerName: user?.name || user?.username || (newDocAssignmentType === 'individual' ? 'Student Author' : 'Student Leader'),
           studentId: user?.studentId || '',
           source: newDocSource,
+          assignmentType: newDocAssignmentType,
           members: combinedMembers
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create assignment");
-      showToast("Assignment created! Launching editor...", "success", "Assignment Created");
+      showToast(`${newDocAssignmentType === 'individual' ? 'Individual assignment' : 'Group project'} created! Launching editor...`, "success", "Assignment Created");
       setNewDocTitle('');
       setNewDocPrompt('');
       setSelectedNewMembers([]);
       setCustomMemberInput('');
+      setNewDocAssignmentType('group');
       await loadDocuments();
       router.push(`/editor?docId=${data.document._id}`);
     } catch (err: any) {
@@ -316,6 +349,34 @@ function DashboardComponent() {
     }
   };
 
+  const checkIsOwner = (d: any, u: any): boolean => {
+    if (!d || !u) return false;
+    const cleanOwner = (d.owner || '').toLowerCase().trim();
+    const cleanOwnerName = (d.ownerName || '').toLowerCase().trim();
+    const uUsername = (u.username || '').toLowerCase().trim();
+    const uStudentId = (u.studentId || '').toLowerCase().trim();
+    const uEmail = (u.email || '').toLowerCase().trim();
+    const uName = (u.name || '').toLowerCase().trim();
+
+    if (cleanOwner && (cleanOwner === uUsername || cleanOwner === uStudentId || cleanOwner === uEmail)) {
+      return true;
+    }
+    if (cleanOwnerName) {
+      if (uName && cleanOwnerName === uName) return true;
+      if (uStudentId && (cleanOwnerName === uStudentId || cleanOwnerName.includes(`(${uStudentId})`))) return true;
+      if (uUsername && cleanOwnerName === uUsername) return true;
+      const match = cleanOwnerName.match(/^(.+?)\s*\((.+?)\)$/);
+      if (match) {
+        const namePart = match[1].trim();
+        const idParen = match[2].trim();
+        if (uName && namePart === uName) return true;
+        if (uStudentId && idParen === uStudentId) return true;
+        if (uUsername && (namePart === uUsername || idParen === uUsername)) return true;
+      }
+    }
+    return false;
+  };
+
   const selectedDocObj = availableDocs.find((d: any) => d._id === selectedDocId) || availableDocs[0];
   const targetDocForTeam = availableDocs.find((d: any) => d._id === teamTargetDocId) || selectedDocObj;
 
@@ -327,15 +388,12 @@ function DashboardComponent() {
     
     if (!matchesSearch) return false;
 
-    const isOwner = user && (
-      (d.owner && d.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
-      (d.owner && user.email && d.owner.toLowerCase() === user.email.toLowerCase()) ||
-      (d.ownerName && user.name && d.ownerName.toLowerCase().includes(user.name.toLowerCase()))
-    );
+    const isOwner = checkIsOwner(d, user);
 
     if (docFilter === 'led') return isOwner;
     if (docFilter === 'shared') return !isOwner;
+    if (docFilter === 'individual') return d.assignmentType === 'individual';
+    if (docFilter === 'group') return d.assignmentType !== 'individual';
     return true;
   });
 
@@ -617,7 +675,9 @@ function DashboardComponent() {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
-              {availableDocs.length === 0 ? (
+              {docsLoading && availableDocs.length === 0 ? (
+                <option value="">Loading assignments...</option>
+              ) : availableDocs.length === 0 ? (
                 <option value="">No assignments assigned yet</option>
               ) : (
                 availableDocs.map((doc: any) => (
@@ -703,7 +763,39 @@ function DashboardComponent() {
         </div>
 
         {/* 3. Two Research-Aligned Cards Grid or Empty Welcome State */}
-        {availableDocs.length === 0 ? (
+        {docsLoading && availableDocs.length === 0 ? (
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '16px',
+            padding: '2.5rem 2rem',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '220px',
+            gap: '1rem',
+            color: '#64748b'
+          }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              border: '3px solid #f1f5f9',
+              borderTopColor: '#a3e635',
+              animation: 'spin 0.8s linear infinite'
+            }} />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>
+                Synchronizing assignments &amp; telemetry...
+              </p>
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                Connecting to collaborative document evolution pipeline
+              </span>
+            </div>
+          </div>
+        ) : availableDocs.length === 0 ? (
           <div style={{
             background: '#ffffff',
             border: '1px solid rgba(0, 0, 0, 0.06)',
@@ -735,7 +827,7 @@ function DashboardComponent() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                Welcome to DocuTrace, {user?.name || user?.username}!
+                Welcome to Inkie, {user?.name || user?.username}!
               </h3>
               <p style={{ margin: '0.4rem auto 0 auto', fontSize: '0.88rem', color: '#64748b', maxWidth: '580px', lineHeight: 1.5 }}>
                 You do not have any assignments or collaborative documents yet. You can create your first document as a group leader, or have your project leader invite your Student ID (<strong>{user?.studentId || 'N/A'}</strong>) to join an active group assignment.
@@ -1207,7 +1299,7 @@ function DashboardComponent() {
                   }}
                 />
 
-                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '0.2rem' }}>
+                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '0.2rem', flexWrap: 'wrap', gap: '0.2rem' }}>
                   <button
                     onClick={() => setDocFilter('all')}
                     style={{
@@ -1224,6 +1316,36 @@ function DashboardComponent() {
                     All
                   </button>
                   <button
+                    onClick={() => setDocFilter('individual')}
+                    style={{
+                      border: 'none',
+                      background: docFilter === 'individual' ? '#ffffff' : 'transparent',
+                      color: docFilter === 'individual' ? '#0369a1' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Individual
+                  </button>
+                  <button
+                    onClick={() => setDocFilter('group')}
+                    style={{
+                      border: 'none',
+                      background: docFilter === 'group' ? '#ffffff' : 'transparent',
+                      color: docFilter === 'group' ? '#4338ca' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Group Projects
+                  </button>
+                  <button
                     onClick={() => setDocFilter('led')}
                     style={{
                       border: 'none',
@@ -1236,7 +1358,7 @@ function DashboardComponent() {
                       cursor: 'pointer'
                     }}
                   >
-                    My Assignments (Leader)
+                    Led by Me
                   </button>
                   <button
                     onClick={() => setDocFilter('shared')}
@@ -1258,7 +1380,29 @@ function DashboardComponent() {
             </div>
 
             {/* Document Cards Grid */}
-            {filteredDocs.length === 0 ? (
+            {docsLoading && availableDocs.length === 0 ? (
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '3rem 2rem',
+                textAlign: 'center',
+                color: '#64748b'
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: '3px solid #f1f5f9',
+                  borderTopColor: '#0ea5e9',
+                  animation: 'spin 0.8s linear infinite',
+                  margin: '0 auto 0.75rem auto'
+                }} />
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>
+                  Loading your documents &amp; assignments...
+                </div>
+              </div>
+            ) : filteredDocs.length === 0 ? (
               <div style={{
                 background: '#ffffff',
                 border: '1px solid #e2e8f0',
@@ -1292,12 +1436,7 @@ function DashboardComponent() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
                 {filteredDocs.map((doc: any) => {
-                  const isOwner = user && (
-                    (doc.owner && doc.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
-                    (doc.owner && user.email && doc.owner.toLowerCase() === user.email.toLowerCase()) ||
-                    (doc.ownerName && user.name && doc.ownerName.toLowerCase().includes(user.name.toLowerCase()))
-                  );
+                  const isOwner = checkIsOwner(doc, user);
 
                   return (
                     <div
@@ -1316,18 +1455,46 @@ function DashboardComponent() {
                       }}
                     >
                       <div>
-                        {/* Header Badges */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <span style={{
-                            background: doc.source === 'google_docs' ? '#e8f0fe' : doc.source === 'microsoft_365' ? '#deecf9' : 'rgba(163, 230, 53, 0.16)',
-                            color: doc.source === 'google_docs' ? '#1a73e8' : doc.source === 'microsoft_365' ? '#0078d4' : '#275306',
-                            padding: '0.2rem 0.65rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.74rem',
-                            fontWeight: 700
-                          }}>
-                            {doc.source === 'google_docs' ? 'Google Docs' : doc.source === 'microsoft_365' ? 'Microsoft 365' : 'In-Built Editor'}
-                          </span>
+                        {/* Header Badges: Source & Assignment Type prominently displayed above title */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{
+                              background: doc.source === 'google_docs' ? '#e8f0fe' : doc.source === 'microsoft_365' ? '#deecf9' : 'rgba(163, 230, 53, 0.16)',
+                              color: doc.source === 'google_docs' ? '#1a73e8' : doc.source === 'microsoft_365' ? '#0078d4' : '#275306',
+                              padding: '0.2rem 0.65rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700
+                            }}>
+                              {doc.source === 'google_docs' ? 'Google Docs' : doc.source === 'microsoft_365' ? 'Microsoft 365' : 'In-Built Editor'}
+                            </span>
+
+                            <span style={{
+                              background: doc.assignmentType === 'individual' ? '#e0f2fe' : '#eef2ff',
+                              color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
+                              border: `1px solid ${doc.assignmentType === 'individual' ? '#bae6fd' : '#c7d2fe'}`,
+                              padding: '0.2rem 0.65rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.74rem',
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem'
+                            }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                {doc.assignmentType === 'individual' ? (
+                                  <>
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                  </>
+                                ) : (
+                                  <>
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                  </>
+                                )}
+                              </svg>
+                              {doc.assignmentType === 'individual' ? 'Individual Assignment' : 'Group Collaborative Project'}
+                            </span>
+                          </div>
 
                           <span style={{
                             background: isOwner ? 'rgba(163, 230, 53, 0.16)' : '#f1f5f9',
@@ -1337,7 +1504,9 @@ function DashboardComponent() {
                             fontSize: '0.74rem',
                             fontWeight: 700
                           }}>
-                            {isOwner ? 'Group Leader (You)' : `Leader: ${doc.ownerName || doc.owner || 'System'}`}
+                            {doc.assignmentType === 'individual'
+                              ? (isOwner ? 'Student Author (You)' : `Author: ${doc.ownerName || doc.owner || 'Student'}`)
+                              : (isOwner ? 'Group Leader (You)' : `Leader: ${doc.ownerName || doc.owner || 'System'}`)}
                           </span>
                         </div>
 
@@ -1369,17 +1538,6 @@ function DashboardComponent() {
                             {doc.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}
                           </span>
 
-                          <span style={{
-                            background: doc.assignmentType === 'individual' ? 'rgba(14, 165, 233, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-                            color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
-                            padding: '0.15rem 0.55rem',
-                            borderRadius: '6px',
-                            fontSize: '0.72rem',
-                            fontWeight: 800
-                          }}>
-                            {doc.assignmentType === 'individual' ? 'Individual' : 'Group Project'}
-                          </span>
-
                           {doc.course && (
                             <span style={{ background: '#f1f5f9', color: '#475569', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>
                               {doc.course}
@@ -1409,35 +1567,46 @@ function DashboardComponent() {
                           </div>
                         )}
 
-                        {/* Collaborators */}
-                        <div>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
-                            Group Members ({doc.collaborators?.length || 1}):
-                          </span>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
-                            {(doc.collaborators || [doc.ownerName || 'Author']).slice(0, 4).map((c: string, idx: number) => (
-                              <span
-                                key={idx}
-                                style={{
-                                  background: '#f8fafc',
-                                  border: '1px solid #e2e8f0',
-                                  borderRadius: '6px',
-                                  padding: '0.15rem 0.45rem',
-                                  fontSize: '0.72rem',
-                                  color: '#0f172a',
-                                  fontWeight: 500
-                                }}
-                              >
-                                {c}
-                              </span>
-                            ))}
-                            {(doc.collaborators?.length || 0) > 4 && (
-                              <span style={{ fontSize: '0.72rem', color: '#64748b', alignSelf: 'center' }}>
-                                +{doc.collaborators.length - 4} more
-                              </span>
-                            )}
+                        {/* Collaborators / Individual Author Details */}
+                        {doc.assignmentType === 'individual' ? (
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.45rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ fontSize: '0.74rem', color: '#0369a1', fontWeight: 700 }}>
+                              👤 Individual Assignment &bull;
+                            </span>
+                            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                              Sole Author: <strong style={{ color: '#0f172a' }}>{doc.ownerName || doc.owner}</strong>
+                            </span>
                           </div>
-                        </div>
+                        ) : (
+                          <div>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
+                              Group Members ({doc.collaborators?.length || 1}):
+                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
+                              {(doc.collaborators || [doc.ownerName || 'Author']).slice(0, 4).map((c: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    padding: '0.15rem 0.45rem',
+                                    fontSize: '0.72rem',
+                                    color: '#0f172a',
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  {c}
+                                </span>
+                              ))}
+                              {(doc.collaborators?.length || 0) > 4 && (
+                                <span style={{ fontSize: '0.72rem', color: '#64748b', alignSelf: 'center' }}>
+                                  +{doc.collaborators.length - 4} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Card Action Buttons */}
@@ -1484,8 +1653,8 @@ function DashboardComponent() {
                           </button>
                         </div>
 
-                        {/* Leader Quick Share / Add Member */}
-                        {(isOwner || isUserLeader) && (
+                        {/* Leader Quick Share / Add Member (Only for Group Projects) */}
+                        {(isOwner || isUserLeader) && doc.assignmentType !== 'individual' && (
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <button
                               onClick={() => {
@@ -1842,6 +2011,64 @@ function DashboardComponent() {
               </p>
 
               <form onSubmit={handleCreateAssignment} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Assignment Work Type Selector */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.45rem' }}>
+                    Assignment Type *
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewDocAssignmentType('group');
+                      }}
+                      style={{
+                        padding: '0.85rem 1rem',
+                        borderRadius: '10px',
+                        border: newDocAssignmentType === 'group' ? '2px solid #121417' : '1px solid #e2e8f0',
+                        background: newDocAssignmentType === 'group' ? '#f8fafc' : '#ffffff',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.2rem' }}>👥</span>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>Group Collaborative Project</span>
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem' }}>
+                        Multi-author collaborative assignment with teammates & workload equity tracking.
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewDocAssignmentType('individual');
+                        setSelectedNewMembers([]);
+                        setCustomMemberInput('');
+                      }}
+                      style={{
+                        padding: '0.85rem 1rem',
+                        borderRadius: '10px',
+                        border: newDocAssignmentType === 'individual' ? '2px solid #0284c7' : '1px solid #e2e8f0',
+                        background: newDocAssignmentType === 'individual' ? '#f0f9ff' : '#ffffff',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.2rem' }}>👤</span>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: newDocAssignmentType === 'individual' ? '#0369a1' : '#0f172a' }}>Individual Assignment</span>
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem' }}>
+                        Personal coursework authored solely by you. No collaborators required.
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
                     Assignment / Document Title *
@@ -1892,12 +2119,12 @@ function DashboardComponent() {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                      Group Leader
+                      {newDocAssignmentType === 'individual' ? 'Student Author' : 'Group Leader'}
                     </label>
                     <input
                       type="text"
                       disabled
-                      value={user ? `${user.name || user.username} (${user.studentId || 'Leader'})` : 'Guest / System'}
+                      value={user ? `${user.name || user.username} (${user.studentId || 'Student'})` : 'Guest / System'}
                       style={{
                         width: '100%',
                         padding: '0.75rem 0.9rem',
@@ -1935,79 +2162,94 @@ function DashboardComponent() {
                   />
                 </div>
 
-                {/* Team member selection chips */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                    Select Initial Teammates to Invite ({selectedNewMembers.length} selected)
-                  </label>
-                  <div style={{
-                    maxHeight: '160px',
-                    overflowY: 'auto',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '0.75rem',
-                    background: '#f8fafc',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.4rem'
-                  }}>
-                    {registeredStudents.map((st: any) => {
-                      const isSelected = selectedNewMembers.includes(st.username || st.studentId);
-                      return (
-                        <label
-                          key={st._id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            fontSize: '0.82rem',
-                            cursor: 'pointer',
-                            color: isSelected ? '#0f172a' : '#64748b',
-                            fontWeight: isSelected ? 700 : 500
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              const key = st.username || st.studentId;
-                              setSelectedNewMembers(prev =>
-                                prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-                              );
-                            }}
-                          />
-                          <span>{st.name} ({st.studentId}) &bull; {st.email}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Teammates Section: Shown only for Group Projects */}
+                {newDocAssignmentType === 'group' ? (
+                  <>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                        Select Initial Teammates to Invite ({selectedNewMembers.length} selected)
+                      </label>
+                      <div style={{
+                        maxHeight: '160px',
+                        overflowY: 'auto',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        background: '#f8fafc',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem'
+                      }}>
+                        {registeredStudents.map((st: any) => {
+                          const isSelected = selectedNewMembers.includes(st.username || st.studentId);
+                          return (
+                            <label
+                              key={st._id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                fontSize: '0.82rem',
+                                cursor: 'pointer',
+                                color: isSelected ? '#0f172a' : '#64748b',
+                                fontWeight: isSelected ? 700 : 500
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  const key = st.username || st.studentId;
+                                  setSelectedNewMembers(prev =>
+                                    prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+                                  );
+                                }}
+                              />
+                              <span>{st.name} ({st.studentId}) &bull; {st.email}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-                {/* Direct IT Number / Email input for assignment creation */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                    Or Enter Additional IT Numbers / Emails / Usernames (comma or space separated)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. IT23217522, student@sliit.lk, rashi"
-                    value={customMemberInput}
-                    onChange={e => setCustomMemberInput(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 0.9rem',
-                      borderRadius: '8px',
-                      border: '1.5px solid #e2e8f0',
-                      background: '#f8fafc',
-                      color: '#0f172a',
-                      fontSize: '0.9rem',
-                      outline: 'none'
-                    }}
-                  />
-                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem' }}>
-                    Assigned students can immediately view and edit this assignment upon signing in, even if they register later.
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                        Or Enter Additional IT Numbers / Emails / Usernames (comma or space separated)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. IT23217522, student@sliit.lk, rashi"
+                        value={customMemberInput}
+                        onChange={e => setCustomMemberInput(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 0.9rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #e2e8f0',
+                          background: '#f8fafc',
+                          color: '#0f172a',
+                          fontSize: '0.9rem',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem' }}>
+                        Assigned students can immediately view and edit this assignment upon signing in, even if they register later.
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{
+                    padding: '1rem 1.25rem',
+                    background: '#f0f9ff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '10px',
+                    color: '#0369a1',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.5
+                  }}>
+                    <strong>👤 Individual Assignment Selected:</strong> You are the sole author of this document. No other students will be added or allowed to modify your work.
                   </div>
-                </div>
+                )}
 
                 <button
                   type="submit"

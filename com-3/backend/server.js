@@ -113,7 +113,14 @@ function hasDocumentAccess(doc, username, studentId, role, email, userObj = null
   const identifiers = new Set();
   const addId = (val) => {
     if (val && typeof val === 'string' && val.trim()) {
-      identifiers.add(val.toLowerCase().trim());
+      const clean = val.toLowerCase().trim();
+      identifiers.add(clean);
+      // If val is formatted like "Name (ID)", also add name and ID components
+      const parenMatch = clean.match(/^(.+?)\s*\((.+?)\)$/);
+      if (parenMatch) {
+        if (parenMatch[1].trim()) identifiers.add(parenMatch[1].trim());
+        if (parenMatch[2].trim()) identifiers.add(parenMatch[2].trim());
+      }
     }
   };
 
@@ -134,10 +141,16 @@ function hasDocumentAccess(doc, username, studentId, role, email, userObj = null
   const docOwner = (doc.owner || '').toLowerCase().trim();
   const docOwnerName = (doc.ownerName || '').toLowerCase().trim();
 
-  // 1. Check Owner match (exact owner username or parenthesized student ID)
+  // 1. Check Owner match (exact owner username, exact owner name, or parenthesized student ID)
   for (const id of idList) {
     if (docOwner === id || docOwnerName === id || docOwnerName.includes(`(${id})`)) {
       return true;
+    }
+    const ownerMatch = docOwnerName.match(/^(.+?)\s*\((.+?)\)$/);
+    if (ownerMatch) {
+      if (ownerMatch[1].trim() === id || ownerMatch[2].trim() === id) {
+        return true;
+      }
     }
   }
 
@@ -149,11 +162,24 @@ function hasDocumentAccess(doc, username, studentId, role, email, userObj = null
     }
   }
 
-  // 3. Check Collaborators array (exact match or parenthesized student ID e.g. "Name (IT...)")
+  // 3. Check Collaborators array (exact match, extracted Name, or extracted ID from "Name (StudentId)")
   const collabs = (doc.collaborators || []).map(c => (c || '').toLowerCase().trim()).filter(Boolean);
-  for (const id of idList) {
-    if (collabs.some(c => c === id || c.includes(`(${id})`) || (id.length >= 4 && c.includes(id)))) {
+  for (const c of collabs) {
+    if (idList.includes(c)) {
       return true;
+    }
+    const collabMatch = c.match(/^(.+?)\s*\((.+?)\)$/);
+    if (collabMatch) {
+      const namePart = collabMatch[1].trim();
+      const idPart = collabMatch[2].trim();
+      if (idList.includes(namePart) || idList.includes(idPart)) {
+        return true;
+      }
+    }
+    for (const id of idList) {
+      if (c.includes(`(${id})`)) {
+        return true;
+      }
     }
   }
 
@@ -358,12 +384,21 @@ io.on('connection', (socket) => {
       let userObj = null;
       try {
         const queryConds = [];
-        if (username) queryConds.push({ username: username.toLowerCase().trim() });
+        if (username) {
+          queryConds.push({ username: username.toLowerCase().trim() });
+          queryConds.push({ username: new RegExp('^' + username.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+        }
         if (studentId) {
           queryConds.push({ studentId: studentId.trim() });
-          queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
+          queryConds.push({ studentId: new RegExp('^' + studentId.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
         }
-        if (email) queryConds.push({ email: email.toLowerCase().trim() });
+        if (email) {
+          queryConds.push({ email: email.toLowerCase().trim() });
+          queryConds.push({ email: new RegExp('^' + email.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+        }
+        if (name) {
+          queryConds.push({ name: new RegExp('^' + name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+        }
         if (queryConds.length > 0) {
           userObj = await User.findOne({ $or: queryConds }).lean();
         }
@@ -388,15 +423,36 @@ io.on('connection', (socket) => {
   socket.on('send-changes', async ({ documentId, content, author, studentId }) => {
     if (!documentId) return;
 
-    // Strict Security Guard 1: Verify socket is currently joined in this document's room
+    // Strict Security Guard 1: Verify socket is joined or verify permissions before joining
     const rooms = Array.from(socket.rooms || []);
-    if (!rooms.includes(documentId)) {
-      socket.emit('access-denied', { error: 'Security Violation: Unauthorized socket attempting to modify document.' });
-      return;
-    }
-
-    // Calculate diffs and track evolution
     const doc = await Document.findOne({ _id: documentId });
+    if (!doc) return;
+
+    if (!rooms.includes(documentId)) {
+      let userObj = null;
+      try {
+        const queryConds = [];
+        if (studentId) {
+          queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
+          queryConds.push({ username: studentId.toLowerCase().trim() });
+        }
+        if (author) {
+          queryConds.push({ username: author.toLowerCase().trim() });
+          queryConds.push({ name: new RegExp('^' + author.trim() + '$', 'i') });
+        }
+        if (queryConds.length > 0) {
+          userObj = await User.findOne({ $or: queryConds }).lean();
+        }
+      } catch (e) {}
+
+      const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student', null, userObj);
+      if (isPermitted) {
+        socket.join(documentId);
+      } else {
+        socket.emit('access-denied', { error: 'Security Violation: Unauthorized socket attempting to modify document.' });
+        return;
+      }
+    }
     if (doc) {
       // Strict Security Guard 2: Verify author access permissions with identity alias resolution
       if (author && author !== 'Anonymous') {
@@ -869,17 +925,13 @@ app.get('/api/documents', async (req, res) => {
     const cleanStudentId = studentId ? studentId.trim() : '';
     const cleanEmail = email ? email.toLowerCase().trim() : '';
 
-    if (cleanUser || cleanEmail) {
+    if (cleanUser || cleanEmail || cleanStudentId) {
       userObj = await User.findOne({
         $or: [
-          cleanUser ? { username: cleanUser } : null,
-          cleanEmail ? { email: cleanEmail } : null
+          cleanUser ? { username: new RegExp('^' + cleanUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } : null,
+          cleanEmail ? { email: new RegExp('^' + cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } : null,
+          cleanStudentId ? { studentId: new RegExp('^' + cleanStudentId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } : null
         ].filter(Boolean)
-      }).lean();
-    }
-    if (!userObj && cleanStudentId) {
-      userObj = await User.findOne({
-        studentId: new RegExp('^' + cleanStudentId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i')
       }).lean();
     }
 
@@ -1154,30 +1206,32 @@ app.get('/api/documents/:id', async (req, res) => {
     }
 
     // Access control check for students
-    if (username || studentId || role || email) {
-      let userObj = null;
-      const cleanUser = username ? username.toLowerCase().trim() : '';
-      const cleanStudentId = studentId ? studentId.trim() : '';
-      const cleanEmail = email ? email.toLowerCase().trim() : '';
+    if (!username && !studentId && !role && !email) {
+      return res.status(401).json({ error: "Authentication required to access documents.", isAccessDenied: true });
+    }
 
-      if (cleanUser || cleanStudentId || cleanEmail) {
-        userObj = await User.findOne({
-          $or: [
-            cleanUser ? { username: cleanUser } : null,
-            cleanStudentId ? { studentId: cleanStudentId } : null,
-            cleanEmail ? { email: cleanEmail } : null
-          ].filter(Boolean)
-        }).lean();
-      }
+    let userObj = null;
+    const cleanUser = username ? username.toLowerCase().trim() : '';
+    const cleanStudentId = studentId ? studentId.trim() : '';
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
 
-      const allowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
-      if (!allowed) {
-        return res.status(403).json({
-          error: "Access Denied: You do not have permission to view or edit this document.",
-          isAccessDenied: true,
-          ownerName: doc.ownerName || doc.owner || "Group Leader"
-        });
-      }
+    if (cleanUser || cleanStudentId || cleanEmail) {
+      userObj = await User.findOne({
+        $or: [
+          cleanUser ? { username: new RegExp('^' + cleanUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } : null,
+          cleanStudentId ? { studentId: new RegExp('^' + cleanStudentId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } : null,
+          cleanEmail ? { email: new RegExp('^' + cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } : null
+        ].filter(Boolean)
+      }).lean();
+    }
+
+    const allowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
+    if (!allowed) {
+      return res.status(403).json({
+        error: "Access Denied: You do not have permission to view or edit this document.",
+        isAccessDenied: true,
+        ownerName: doc.ownerName || doc.owner || "Group Leader"
+      });
     }
 
     res.json(doc);
@@ -1720,7 +1774,7 @@ app.get('/api/documents/:id/export', async (req, res) => {
 
     const exportPayload = {
       exportTimestamp: new Date().toISOString(),
-      platform: "DocuTrace Research Telemetry",
+      platform: "Inkie Research Telemetry",
       document: {
         id: doc._id,
         title: doc.title,

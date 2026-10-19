@@ -209,7 +209,12 @@ body {
 
 @keyframes fadeIn {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to { transform: rotate(0deg); opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .editor-content-wrapper {
@@ -239,6 +244,30 @@ body {
 .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0; overflow: hidden; }
 .ProseMirror td, .ProseMirror th { min-width: 1em; border: 1px solid #ced4da; padding: 3px 5px; vertical-align: top; box-sizing: border-box; position: relative; }
 .ProseMirror blockquote { border-left: 4px solid var(--accent-purple); padding-left: 1rem; margin-left: 0; color: var(--text-secondary); font-style: italic; background: rgba(0,0,0,0.02); padding: 1rem; border-radius: 0 8px 8px 0; }
+
+/* Page Border Styles (MS Word / Document styling) */
+.ProseMirror.page-border,
+.ProseMirror.page-border-solid {
+  outline: 2px solid #1e293b !important;
+  outline-offset: -14px !important;
+}
+
+.ProseMirror.page-border-double {
+  outline: 5px double #1e293b !important;
+  outline-offset: -16px !important;
+}
+
+.ProseMirror.page-border-academic {
+  outline: 3px double #1e3a8a !important;
+  outline-offset: -16px !important;
+  box-shadow: 0 0 0 2px #cbd5e1, 0 10px 25px -5px rgba(15, 23, 42, 0.08) !important;
+}
+
+.ProseMirror.page-border-dashed {
+  outline: 2px dashed #64748b !important;
+  outline-offset: -14px !important;
+}
+
 /* Google Docs & MS Word Specific Editor Background Skins */
 
 /* Google Docs Mode */

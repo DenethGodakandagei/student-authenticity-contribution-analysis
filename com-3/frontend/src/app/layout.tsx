@@ -4,8 +4,8 @@ import './globals.css';
 import NavigationLayout from './NavigationLayout'; // Client wrapper for the sidebar layout
 
 export const metadata = {
-  title: 'DocuTrace',
-  description: 'Document Revision Analytics Platform',
+  title: 'Inkie',
+  description: 'Intelligent Document Revision & Evolution Analytics Platform',
 };
 
 export default function RootLayout({ children }) {

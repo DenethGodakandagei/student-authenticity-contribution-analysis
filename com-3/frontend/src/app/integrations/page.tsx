@@ -390,7 +390,7 @@ export default function Integrations() {
                       }}
                     />
                     <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
-                      Ensure link sharing in Google Docs or Word is set to <strong>&quot;Anyone with the link can view&quot;</strong> so DocuTrace can fetch your real document text without authentication errors.
+                      Ensure link sharing in Google Docs or Word is set to <strong>&quot;Anyone with the link can view&quot;</strong> so Inkie can fetch your real document text without authentication errors.
                     </p>
                   </div>
                 ) : (

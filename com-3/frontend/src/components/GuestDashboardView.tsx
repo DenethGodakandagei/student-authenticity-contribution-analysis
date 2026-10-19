@@ -88,7 +88,7 @@ export default function GuestDashboardView({ onSignIn }: GuestDashboardViewProps
           gap: '0.5rem'
         }}>
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a3e635', boxShadow: '0 0 10px #a3e635' }} />
-          DocuTrace Academic Repository
+          Inkie Academic Repository
         </div>
 
         <h1 style={{
