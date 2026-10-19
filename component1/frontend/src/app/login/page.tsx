@@ -7,16 +7,13 @@ import { AuthCard } from '@/features/auth';
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-[#F6F8FA] text-slate-900 flex flex-col justify-between font-sans p-6 selection:bg-[#A3E635] selection:text-slate-950">
+    <div className="min-h-screen bg-transparent text-[#0D1110] flex flex-col justify-between font-sans p-6 selection:bg-[#6FAF9A] selection:text-white relative">
       {/* Top Subtle Bar */}
-      <div className="max-w-5xl mx-auto w-full flex items-center justify-between text-xs text-slate-500 py-2">
-        <Link href="/" className="flex items-center space-x-2 group">
-          <div className="w-7 h-7 rounded-lg bg-slate-950 text-[#A3E635] flex items-center justify-center shadow-xs">
-            <Code2 className="w-4 h-4 stroke-[2.5]" />
-          </div>
-          <span className="font-bold text-sm text-slate-900">INCODE</span>
+      <div className="max-w-5xl mx-auto w-full flex items-center justify-between text-xs text-[#576561] py-2">
+        <Link href="/" className="font-extrabold text-base tracking-tight text-[#0D1110] hover:text-[#6FAF9A] transition">
+          INCODE
         </Link>
-        <span className="text-[11px] bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full text-slate-600 font-medium">
+        <span className="text-[11px] bg-[#EFF8F3] backdrop-blur-md border border-[#6FAF9A]/25 px-2.5 py-0.5 rounded-full text-[#0D1110] font-medium shadow-xs">
           Academic Portal
         </span>
       </div>
@@ -25,8 +22,8 @@ export default function LoginPage() {
       <div className="flex-grow flex items-center justify-center my-8">
         <Suspense
           fallback={
-            <div className="w-full max-w-md bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-md">
-              <p className="text-xs text-slate-500">Loading sign in portal...</p>
+            <div className="w-full max-w-md bg-white/90 backdrop-blur-2xl rounded-3xl p-10 text-center border border-[#6FAF9A]/20 shadow-xl shadow-[#0D1110]/5">
+              <p className="text-xs text-[#576561]">Loading sign in portal...</p>
             </div>
           }
         >
@@ -35,7 +32,7 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <div className="max-w-5xl mx-auto w-full text-center text-xs text-slate-400 py-3 font-normal">
+      <div className="max-w-5xl mx-auto w-full text-center text-xs text-[#8fa099] py-3 font-normal">
         INCODE — Trust & Equity Analytics for Student Contributions © 2026
       </div>
     </div>

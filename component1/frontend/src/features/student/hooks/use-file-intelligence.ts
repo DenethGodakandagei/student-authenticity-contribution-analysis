@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 
 export const MEMBER_COLORS = [
-  { text: 'text-[#34C759]', bg: 'bg-emerald-500/10', border: 'border-[#34C759]/20', bar: 'bg-[#34C759]', dot: 'bg-emerald-400', badge: 'bg-[#34C759]/8 text-[#34C759] border border-[#34C759]/20' },
-  { text: 'text-[#2D6606]', bg: 'bg-sky-500/10', border: 'border-[#A3E635]/20', bar: 'bg-[#A3E635]', dot: 'bg-sky-400', badge: 'bg-[#A3E635]/15 text-[#2D6606] border border-[#A3E635]/20' },
+  { text: 'text-[#0D1110]', bg: 'bg-[#EFF8F3]', border: 'border-[#6FAF9A]/20', bar: 'bg-[#0D1110]', dot: 'bg-[#6FAF9A]', badge: 'bg-[#EFF8F3] text-[#0D1110] border border-[#6FAF9A]/30' },
+  { text: 'text-[#2d5849]', bg: 'bg-[#EFF8F3]', border: 'border-[#6FAF9A]/20', bar: 'bg-[#6FAF9A]', dot: 'bg-[#6FAF9A]', badge: 'bg-[#EFF8F3] text-[#2d5849] border border-[#6FAF9A]/30' },
   { text: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/30', bar: 'bg-[#AF52DE]', dot: 'bg-purple-400', badge: 'bg-purple-50 text-purple-700 border border-purple-200' },
   { text: 'text-[#FF9500]', bg: 'bg-amber-500/10', border: 'border-[#FF9500]/20', bar: 'bg-[#FF9500]', dot: 'bg-amber-400', badge: 'bg-[#FF9500]/10 text-[#FF9500] border border-[#FF9500]/20' },
   { text: 'text-pink-600', bg: 'bg-pink-500/10', border: 'border-pink-500/30', bar: 'bg-[#EC4899]', dot: 'bg-pink-400', badge: 'bg-pink-50 text-pink-700 border border-pink-200' },

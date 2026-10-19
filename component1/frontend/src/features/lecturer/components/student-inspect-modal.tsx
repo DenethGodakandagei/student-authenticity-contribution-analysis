@@ -45,7 +45,7 @@ export const StudentInspectModal: React.FC<StudentInspectModalProps> = ({
           </div>
 
           <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden flex">
-            <div style={{ width: `${metrics.manualPercent ?? 100}%` }} className="bg-[#A3E635] h-full" title="Manual" />
+            <div style={{ width: `${metrics.manualPercent ?? 100}%` }} className="bg-[#6FAF9A] h-full" title="Manual" />
             <div style={{ width: `${metrics.aiPercent ?? 0}%` }} className="bg-[#8B5CF6] h-full" title="AI-Assisted" />
             <div style={{ width: `${metrics.pastePercent ?? 0}%` }} className="bg-rose-500 h-full" title="Pasted" />
           </div>

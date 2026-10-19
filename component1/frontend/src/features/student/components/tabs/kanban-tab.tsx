@@ -85,10 +85,10 @@ export const KanbanTab: React.FC<KanbanTabProps> = ({
           </div>
           <button
             type="submit"
-            className="py-2.5 px-4 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+            className="py-2.5 px-4 rounded-xl bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold shadow-xs text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add Task
+            <Plus className="w-3.5 h-3.5 text-[#6FAF9A]" />
+            <span>Add Task</span>
           </button>
         </form>
 

@@ -128,7 +128,7 @@ export default function LecturerDashboard() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#F6F8FA] text-slate-900 flex flex-col md:flex-row font-sans selection:bg-[#A3E635] selection:text-slate-950">
+    <div className="min-h-screen bg-transparent text-[#0D1110] flex flex-col md:flex-row font-sans selection:bg-[#6FAF9A] selection:text-white relative">
       {/* Left Sidebar Navigation */}
       <LecturerSidebar
         user={user}
@@ -139,25 +139,25 @@ export default function LecturerDashboard() {
       {/* Main Content Area */}
       <div className="flex-grow flex flex-col min-h-screen overflow-x-hidden">
         {/* Header Bar */}
-        <header className="border-b border-black/[0.06] bg-white/90 backdrop-blur-xl sticky top-0 z-40 px-6 sm:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-medium text-slate-800">Lecturer Console</span>
-            <span className="text-slate-300">/</span>
-            <span className="font-semibold text-slate-900">{selectedAssignment?.title || 'Assignment Dashboard'}</span>
+        <header className="border-b border-[#6FAF9A]/15 bg-white/90 backdrop-blur-xl sticky top-0 z-40 px-6 sm:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs text-[#576561]">
+            <span className="font-medium text-[#0D1110]">Lecturer Console</span>
+            <span className="text-[#6FAF9A]/40">/</span>
+            <span className="font-semibold text-[#0D1110]">{selectedAssignment?.title || 'Assignment Dashboard'}</span>
           </div>
 
           <div className="flex items-center gap-3">
             {teamAnalytics && (
               <button
                 onClick={() => setShowTeamAnalyticsModal(true)}
-                className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-full px-3.5 py-1 font-semibold transition cursor-pointer"
+                className="text-xs bg-[#EFF8F3] hover:bg-[#e2ece7] text-[#0D1110] border border-[#6FAF9A]/20 rounded-full px-3.5 py-1 font-semibold transition cursor-pointer"
               >
                 View Team Radar
               </button>
             )}
             {selectedAssignment?.invitationCode && (
-              <span className="text-xs bg-slate-100 border border-slate-200 text-slate-700 rounded-full px-3.5 py-1 font-mono flex items-center gap-1.5 shadow-2xs">
-                Invite Code: <strong className="text-slate-900">{selectedAssignment.invitationCode}</strong>
+              <span className="text-xs bg-[#EFF8F3] border border-[#6FAF9A]/25 text-[#0D1110] rounded-full px-3.5 py-1 font-mono flex items-center gap-1.5 shadow-2xs">
+                Invite Code: <strong className="text-[#0D1110]">{selectedAssignment.invitationCode}</strong>
               </span>
             )}
           </div>
@@ -174,10 +174,10 @@ export default function LecturerDashboard() {
           {/* Top Selection Row */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-2 text-left">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-[#0D1110]">
                 Assignment Analytics & Standing
               </h1>
-              <p className="text-slate-500 text-xs font-normal mt-0.5">
+              <p className="text-[#576561] text-xs font-normal mt-0.5">
                 Audit student contributions, Git commits, and biometric keystroke provenance.
               </p>
             </div>
@@ -187,7 +187,7 @@ export default function LecturerDashboard() {
                 <select
                   onChange={handleAssignmentChange}
                   value={selectedAssignment?._id || ''}
-                  className="bg-white border border-slate-200 rounded-full px-4 py-2 text-xs font-medium text-slate-800 outline-none focus:border-[#A3E635] shadow-xs cursor-pointer"
+                  className="bg-white border border-[#6FAF9A]/20 rounded-full px-4 py-2 text-xs font-medium text-[#0D1110] outline-none focus:border-[#6FAF9A] shadow-xs cursor-pointer"
                 >
                   {assignments.map((a) => (
                     <option key={a._id} value={a._id}>
@@ -199,9 +199,9 @@ export default function LecturerDashboard() {
 
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 rounded-full bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 text-[#6FAF9A]" />
                 New Assignment
               </button>
             </div>

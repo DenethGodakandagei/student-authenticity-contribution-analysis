@@ -47,19 +47,19 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
 
         {/* 4 Provenance Stat Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60 space-y-1">
-            <div className="text-[10px] uppercase font-mono text-[#2D6606] flex items-center justify-between font-bold">
+          <div className="p-3.5 rounded-xl bg-[#EFF8F3]/50 border border-[#6FAF9A]/20 space-y-1">
+            <div className="text-[10px] uppercase font-mono text-[#2d5849] flex items-center justify-between font-bold">
               <span>Typed Code</span>
               <span>{report?.metrics?.codingProvenance?.manualPercent ?? 0}%</span>
             </div>
-            <div className="text-lg font-bold text-slate-900">
+            <div className="text-lg font-bold text-[#0D1110]">
               {report?.metrics?.keystrokes?.toLocaleString() ?? '0'}
-              <span className="text-[10px] text-slate-400 font-normal ml-1">keys</span>
+              <span className="text-[10px] text-[#8fa099] font-normal ml-1">keys</span>
             </div>
-            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+            <div className="w-full bg-[#EFF8F3] h-1.5 rounded-full overflow-hidden">
               <div
                 style={{ width: `${report?.metrics?.codingProvenance?.manualPercent ?? 0}%` }}
-                className="bg-[#A3E635] h-full"
+                className="bg-[#6FAF9A] h-full"
               />
             </div>
           </div>
@@ -159,17 +159,17 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
             <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorCadence" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#A3E635" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#A3E635" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#6FAF9A" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6FAF9A" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} />
               <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px' }} />
+              <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: 'rgba(111, 175, 154, 0.25)', borderRadius: '12px' }} />
               <Area
                 type="monotone"
                 dataKey={cadenceFilter === 'pastes' ? 'commits' : 'sessions'}
-                stroke="#84cc16"
+                stroke="#6FAF9A"
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorCadence)"

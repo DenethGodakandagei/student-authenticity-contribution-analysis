@@ -52,8 +52,8 @@ export const JoinCohortModal: React.FC<JoinCohortModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Join Assignment Cohort"
-      description="Enter the cohort invite code provided by your lecturer."
+      title="Join Assignment"
+      description="Enter the assignment invite code provided by your lecturer."
       maxWidth="lg"
     >
       <div className="space-y-5">
@@ -63,7 +63,7 @@ export const JoinCohortModal: React.FC<JoinCohortModalProps> = ({
             required
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
-            placeholder="Cohort Invite Code (e.g. INV-100)"
+            placeholder="Assignment Invite Code (e.g. INV-100)"
             className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
           />
           <Button type="submit" variant="primary" size="md">
