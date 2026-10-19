@@ -15,7 +15,7 @@ export const AnomalyAlertsBanner: React.FC<AnomalyAlertsBannerProps> = ({ alerts
       <div className="flex items-center gap-2 text-rose-700 font-bold text-xs">
         <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
         <span className="uppercase tracking-wide">
-          Anomaly Detected: Free-Rider or Inactive Contributor Alerts
+          Review Needed: Inactive or Low Contribution Alerts
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

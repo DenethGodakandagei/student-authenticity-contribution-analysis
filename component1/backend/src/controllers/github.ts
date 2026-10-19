@@ -253,7 +253,7 @@ export const getRepositoryContents = async (req: any, res: Response): Promise<vo
 
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
     const headers: Record<string, string> = {
-      'User-Agent': 'OffSync-Academic-Tracker',
+      'User-Agent': 'INCODE-Academic-Tracker',
       'Accept': 'application/vnd.github.v3+json'
     };
     if (GITHUB_TOKEN) {
@@ -332,7 +332,7 @@ export const getFileContent = async (req: any, res: Response): Promise<void> => 
 
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
     const headers: Record<string, string> = {
-      'User-Agent': 'OffSync-Academic-Tracker',
+      'User-Agent': 'INCODE-Academic-Tracker',
       'Accept': 'application/vnd.github.v3+json'
     };
     if (GITHUB_TOKEN) {

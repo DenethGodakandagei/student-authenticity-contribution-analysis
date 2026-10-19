@@ -47,9 +47,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     <div className="space-y-6 text-left">
       <div className="flex justify-between items-center pb-4 border-b border-black/[0.06]">
         <div>
-          <h1 className="text-xl font-bold text-[#1d1d1f] tracking-tight">Teams Manager</h1>
+          <h1 className="text-xl font-bold text-[#1d1d1f] tracking-tight">My Teams</h1>
           <p className="text-xs text-slate-500 font-light mt-0.5">
-            Form general teams, select members directly, and link cohort assignments.
+            Create teams, invite classmates, and link your group assignments.
           </p>
         </div>
         <button
@@ -57,7 +57,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
           className="px-4 py-2 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
-          Form General Team
+          Create New Team
         </button>
       </div>
 
@@ -87,7 +87,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
                 <div className="space-y-2 border-t border-slate-100 pt-4">
                   <span className="text-[10px] uppercase font-mono text-slate-400 tracking-wider">
-                    Team Roster
+                    Team Members
                   </span>
                   <div className="space-y-1.5">
                     {t.members?.map((m: any) => (
@@ -255,7 +255,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
         </div>
       ) : (
         <div className="bg-white border border-slate-200/80 p-12 rounded-3xl text-center text-xs text-slate-500">
-          You are not a member of any teams yet. Click &quot;Form General Team&quot; to create one.
+          You are not in any teams yet. Click &quot;Create New Team&quot; to get started.
         </div>
       )}
     </div>

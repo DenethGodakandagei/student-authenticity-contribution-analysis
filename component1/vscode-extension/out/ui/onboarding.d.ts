@@ -9,7 +9,8 @@ export interface ExperimentSession {
 export declare function validateParticipantId(value: string): string | null;
 /**
  * Ensure participant ID and task condition are initialized in workspaceState.
- * If not set, triggers modal input prompts on extension startup.
+ * If in Real Mode, skips prompts completely.
+ * If in Experimental Mode, triggers modal prompts if not already configured.
  */
 export declare function ensureParticipantSession(context: vscode.ExtensionContext): Promise<ExperimentSession>;
 /**
@@ -24,3 +25,7 @@ export declare function reconfigureParticipant(context: vscode.ExtensionContext)
  * Retrieve current experiment session state synchronously.
  */
 export declare function getExperimentSession(context: vscode.ExtensionContext): ExperimentSession;
+/**
+ * Interactive mode switcher allowing seamless toggle between Real Mode and Experimental Mode.
+ */
+export declare function switchOperatingMode(context: vscode.ExtensionContext, onModeChanged?: (newMode: 'real' | 'experimental') => void): Promise<'real' | 'experimental'>;

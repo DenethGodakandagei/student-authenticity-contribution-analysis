@@ -17,12 +17,12 @@ export const StudentTabsNav: React.FC<StudentTabsNavProps> = ({
   kanbanTaskCount = 0
 }) => {
   const tabs = [
-    { key: 'repository' as StudentTabKey, label: 'Repository & Attestation', icon: GitBranch },
-    { key: 'commits' as StudentTabKey, label: 'Commits & Telemetry', icon: GitCommit },
-    { key: 'timeline' as StudentTabKey, label: 'Provenance Timeline', icon: Clock },
-    { key: 'kanban' as StudentTabKey, label: 'Team Kanban', icon: Kanban, badge: kanbanTaskCount },
-    { key: 'teams' as StudentTabKey, label: 'Teams Manager', icon: Users },
-    { key: 'directory' as StudentTabKey, label: 'Student Directory', icon: Search }
+    { key: 'repository' as StudentTabKey, label: 'Project Repository', icon: GitBranch },
+    { key: 'commits' as StudentTabKey, label: 'Commits & Activity', icon: GitCommit },
+    { key: 'timeline' as StudentTabKey, label: 'Activity Timeline', icon: Clock },
+    { key: 'kanban' as StudentTabKey, label: 'Tasks & Kanban', icon: Kanban, badge: kanbanTaskCount },
+    { key: 'teams' as StudentTabKey, label: 'My Teams', icon: Users },
+    { key: 'directory' as StudentTabKey, label: 'Find Students', icon: Search }
   ];
 
   return (

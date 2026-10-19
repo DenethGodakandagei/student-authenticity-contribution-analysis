@@ -17,5 +17,6 @@ export function getConfig(): ExtConfig {
     serverUrl: (cfg.get<string>('serverUrl') || process.env.COLLABINTEL_SERVER_URL || 'https://student-authenticity-contribution-80jm.onrender.com').replace(/\/+$/, ''),
     syncIntervalMinutes: cfg.get<number>('syncIntervalMinutes') || 5,
     trackOnlyLinkedRepo: cfg.get<boolean>('trackOnlyLinkedRepo') ?? true,
+    operatingMode: (cfg.get<string>('operatingMode') as 'real' | 'experimental') || 'real',
   };
 }

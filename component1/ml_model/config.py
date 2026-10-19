@@ -51,6 +51,16 @@ HIGH_RISK_MIN = 70.0  # Suspicion > 70.0%  -> High Risk (AI-Generated / Pasted)
                       # 30.0% <= S <= 70.0% -> Inconclusive (Mixed / Syntax Review)
 
 # Model Hyperparameters
+XGB_PARAMS = {
+    "n_estimators": 100,
+    "max_depth": 5,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "eval_metric": "logloss",
+    "random_state": RANDOM_STATE
+}
+
 RF_PARAMS = {
     "n_estimators": 100,
     "max_depth": 6,

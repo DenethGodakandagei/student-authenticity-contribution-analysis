@@ -3,337 +3,396 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CollabIntel Sidebar</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>INCODE</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg: #06070a;
+      --card-bg: rgba(14, 20, 32, 0.55);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(22, 32, 50, 0.7);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-sub: #64748b;
+      --blue: #38bdf8;
+      --green: #4ade80;
+      --red: #f87171;
+    }
+
     body {
       padding: 12px;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      color: #e8eaed;
-      background: #0a0a0f;
-      font-size: 12px;
-      line-height: 1.5;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: var(--text);
+      background: radial-gradient(ellipse 100% 45% at 50% 0%, #0d1629 0%, #06070a 75%);
+      background-attachment: fixed;
+      font-size: 11px;
+      line-height: 1.45;
       -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-      position: relative;
+      user-select: none;
+      min-height: 100vh;
     }
-
-    /* ── Liquid Animated Background Blobs ── */
-    body::before, body::after {
-      content: '';
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.15;
-      z-index: 0;
-      pointer-events: none;
-    }
-    body::before {
-      width: 200px; height: 200px;
-      background: radial-gradient(circle, #6366f1, #a855f7, transparent 70%);
-      top: -40px; left: -40px;
-      animation: blobFloat1 12s ease-in-out infinite alternate;
-    }
-    body::after {
-      width: 180px; height: 180px;
-      background: radial-gradient(circle, #06b6d4, #3b82f6, transparent 70%);
-      bottom: -30px; right: -30px;
-      animation: blobFloat2 14s ease-in-out infinite alternate;
-    }
-    @keyframes blobFloat1 {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(30px, 40px) scale(1.15); }
-      100% { transform: translate(-10px, 60px) scale(0.95); }
-    }
-    @keyframes blobFloat2 {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(-20px, -30px) scale(1.1); }
-      100% { transform: translate(15px, -50px) scale(0.9); }
-    }
-
-    /* All content above the blobs */
-    body > * { position: relative; z-index: 1; }
 
     /* ── Header ── */
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 14px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--card-border);
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 7px;
-      font-weight: 800;
-      font-size: 14px;
-      letter-spacing: -0.3px;
-      background: linear-gradient(135deg, #a78bfa 0%, #6366f1 30%, #06b6d4 60%, #a78bfa 100%);
-      background-size: 300% 300%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: gradientShift 6s ease infinite;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: -0.01em;
+      color: var(--text);
     }
-    .brand svg { width: 16px; height: 16px; color: #818cf8; }
-    @keyframes gradientShift {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
+    .brand svg { width: 14px; height: 14px; color: var(--blue); }
 
-    /* ── Status Pills with Glow ── */
-    .status-pill {
+    /* ── Status Badge ── */
+    .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 3px 10px;
+      padding: 2px 7px;
       border-radius: 100px;
       font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-    }
-    .status-tracking { background: rgba(52, 211, 153, 0.12); color: #34d399; box-shadow: 0 0 12px rgba(52, 211, 153, 0.25), inset 0 0 8px rgba(52, 211, 153, 0.08); }
-    .status-idle { background: rgba(251, 191, 36, 0.12); color: #fbbf24; box-shadow: 0 0 12px rgba(251, 191, 36, 0.2); }
-    .status-syncing { background: rgba(99, 102, 241, 0.15); color: #818cf8; box-shadow: 0 0 12px rgba(99, 102, 241, 0.25); }
-    .status-error { background: rgba(248, 113, 113, 0.12); color: #f87171; box-shadow: 0 0 12px rgba(248, 113, 113, 0.2); }
-    .status-unconfigured { background: rgba(251, 146, 60, 0.12); color: #fb923c; box-shadow: 0 0 12px rgba(251, 146, 60, 0.2); }
-
-    .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
-    .pulse-dot.anim { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.4; transform: scale(0.8); box-shadow: 0 0 0 0 currentColor; }
-      50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px currentColor; }
-    }
-
-    /* ── Glass Card (Liquid) ── */
-    .glass-card {
-      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+      font-weight: 500;
+      background: rgba(14, 20, 32, 0.6);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 10px 11px;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid var(--card-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
     }
-    .glass-card:hover {
-      border-color: rgba(139, 92, 246, 0.3);
-      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-sub);
     }
-    /* Liquid shimmer line on glass cards */
-    .glass-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: -100%;
-      width: 100%; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), rgba(6, 182, 212, 0.5), transparent);
-      animation: shimmer 4s ease-in-out infinite;
+    .status-tracking .status-dot,
+    .status-synced .status-dot {
+      background: var(--green);
     }
-    @keyframes shimmer {
-      0% { left: -100%; }
-      100% { left: 200%; }
+    .status-syncing .status-dot {
+      background: var(--blue);
+      animation: pulse 1s infinite alternate;
+    }
+    .status-error .status-dot {
+      background: var(--red);
+    }
+    @keyframes pulse {
+      0% { opacity: 0.3; }
+      100% { opacity: 1; }
     }
 
-    /* ── Stats Grid ── */
+    /* ── Mode Switcher (Glass Card) ── */
+    .mode-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 6px 9px;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .mode-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mode-info svg {
+      width: 13px;
+      height: 13px;
+      color: var(--blue);
+    }
+    .mode-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .btn-mode-switch {
+      background: rgba(22, 32, 50, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .btn-mode-switch:hover {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+    .btn-mode-switch svg { width: 10px; height: 10px; }
+
+    /* ── Metric Cards (Glass Effect) ── */
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 6px;
+      margin-bottom: 8px;
     }
-    .stat-label {
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .card:hover {
+      border-color: rgba(56, 189, 248, 0.22);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+    }
+    .card-label {
       font-size: 10px;
-      color: rgba(255,255,255,0.45);
-      font-weight: 500;
-      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      font-weight: 400;
       margin-bottom: 2px;
     }
-    .stat-value {
-      font-size: 18px;
-      font-weight: 800;
+    .card-val {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
       font-variant-numeric: tabular-nums;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #e8eaed 0%, #a5b4fc 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
     }
-    .val-green { background: linear-gradient(135deg, #34d399, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .val-red { background: linear-gradient(135deg, #f87171, #fca5a5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .val-amber { color: #fbbf24; background: none; -webkit-text-fill-color: #fbbf24; }
-    .val-blue { color: #67e8f9; background: none; -webkit-text-fill-color: #67e8f9; }
+    .val-green { color: var(--green); }
+    .val-red { color: var(--red); }
 
-    /* ── Metrics Panel ── */
+    /* ── Detailed Metric Rows ── */
     .metric-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 5px 0;
-      font-size: 11px;
+      padding: 4px 0;
+      font-size: 10.5px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     }
-    .metric-row + .metric-row { border-top: 1px solid rgba(255, 255, 255, 0.04); }
-    .metric-name { color: rgba(255,255,255,0.45); font-weight: 500; }
-    .metric-val { font-weight: 600; font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; color: #c4b5fd; }
-
-    /* ── Liquid Buttons ── */
-    .btn {
-      width: 100%;
-      padding: 9px 12px;
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
-      background-size: 200% 200%;
-      color: #ffffff;
-      border: none;
-      border-radius: 10px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: -0.1px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      margin-bottom: 6px;
-      transition: all 0.3s ease;
-      animation: btnGradient 5s ease infinite;
-      box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
-    }
-    @keyframes btnGradient {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    .btn:hover {
-      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5);
-      transform: translateY(-1px);
-    }
-    .btn:active { transform: scale(0.98); }
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.06);
-      color: #c4b5fd;
-      border: 1px solid rgba(139, 92, 246, 0.2);
-      box-shadow: none;
-      animation: none;
-    }
-    .btn-secondary:hover {
-      background: rgba(139, 92, 246, 0.12);
-      border-color: rgba(139, 92, 246, 0.4);
-      box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+    .metric-row:last-child { border-bottom: none; }
+    .metric-name { color: var(--text-muted); }
+    .metric-val {
+      font-weight: 500;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
     }
 
-    /* ── Provenance ── */
+    /* ── Provenance Bar ── */
     .prov-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(20, 28, 44, 0.7);
       display: flex;
-      height: 6px;
-      border-radius: 3px;
       overflow: hidden;
-      margin: 6px 0;
-      background: rgba(255, 255, 255, 0.06);
+      margin: 8px 0 6px 0;
     }
-    .prov-seg-manual { background: linear-gradient(90deg, #6366f1, #818cf8); border-radius: 3px; transition: width 0.5s ease; }
-    .prov-seg-ai { background: linear-gradient(90deg, #a855f7, #c084fc); transition: width 0.5s ease; }
-    .prov-seg-paste { background: linear-gradient(90deg, #f43f5e, #fb7185); transition: width 0.5s ease; }
+    .prov-seg-manual { background: var(--blue); transition: width 0.3s; }
+    .prov-seg-ai { background: #818cf8; transition: width 0.3s; }
+    .prov-seg-paste { background: #475569; transition: width 0.3s; }
+
     .prov-legend {
       display: flex;
       justify-content: space-between;
       font-size: 10px;
-      color: rgba(255,255,255,0.45);
-      margin-top: 6px;
+      color: var(--text-muted);
     }
-    .prov-legend-item {
+    .prov-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+    .dot-indicator { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* ── Buttons (Frosted Glass) ── */
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .btn {
+      width: 100%;
+      background: rgba(18, 25, 40, 0.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      font-weight: 500;
+      justify-content: center;
+      gap: 5px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: background 0.15s ease, border-color 0.15s ease;
     }
-    .prov-legend-item svg { width: 10px; height: 10px; }
-    .prov-legend-item span span { font-weight: 700; color: #e8eaed; font-family: 'SF Mono','Menlo',monospace; font-size: 10px; }
+    .btn:hover {
+      background: var(--card-hover);
+      border-color: rgba(56, 189, 248, 0.28);
+    }
+    .btn-primary {
+      grid-column: span 2;
+      background: rgba(14, 116, 144, 0.16);
+      border-color: rgba(56, 189, 248, 0.28);
+      color: #7dd3fc;
+      box-shadow: inset 0 1px 0 rgba(56, 189, 248, 0.15), 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+    .btn-primary:hover {
+      background: rgba(14, 116, 144, 0.28);
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    .btn svg { width: 12px; height: 12px; }
 
     /* ── Section Titles ── */
     .section-title {
-      font-size: 11px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-sub);
       font-weight: 600;
-      color: rgba(255,255,255,0.45);
-      margin: 14px 0 6px 0;
+      margin: 10px 0 5px 0;
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
     }
 
-    /* ── File Items ── */
-    .file-item {
-      background: rgba(255, 255, 255, 0.03);
+    /* ── List Items (Frosted Glass) ── */
+    .item-card {
+      background: rgba(14, 20, 32, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 8px;
-      padding: 6px 9px;
+      border-radius: 6px;
+      padding: 5px 8px;
       margin-bottom: 4px;
-      font-size: 11px;
+      font-size: 10.5px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      transition: border-color 0.2s ease;
+      align-items: center;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
-    .file-item:hover { border-color: rgba(139, 92, 246, 0.25); }
-    .file-path { font-family: 'SF Mono','Menlo',monospace; font-size: 10px; color: rgba(255,255,255,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-    .prov-badge {
-      display: inline-flex; align-items: center; gap: 3px;
-      font-size: 9px; padding: 2px 6px; border-radius: 5px; font-weight: 600;
+    .item-title {
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 150px;
     }
-    .prov-badge svg { width: 9px; height: 9px; }
-    .prov-badge-manual { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-    .prov-badge-ai_assisted { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
-    .prov-badge-copy_paste { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
-    .prov-badge-mixed { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
-
-    /* ── Commits ── */
-    .commit-item {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 8px; padding: 7px 9px; margin-bottom: 4px; font-size: 11px;
+    .badge {
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 500;
+      background: rgba(22, 32, 50, 0.6);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .commit-msg { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e8eaed; }
-    .commit-meta { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; font-family: 'SF Mono','Menlo',monospace; }
-    .badge-offline { background: rgba(248, 113, 113, 0.15); color: #f87171; font-size: 9px; padding: 1px 6px; border-radius: 100px; font-weight: 600; }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      <span>CollabIntel</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <span>INCODE</span>
     </div>
-    <div id="statusPill" class="status-pill status-unconfigured">
-      <div id="pulseDot" class="pulse-dot"></div>
-      <span id="statusText">Checking</span>
+    <div id="statusBadge" class="status-badge status-unconfigured">
+      <div id="statusDot" class="status-dot"></div>
+      <span id="statusText">Ready</span>
     </div>
   </div>
 
+  <!-- Operating Mode Switcher -->
+  <div class="mode-bar">
+    <div class="mode-info">
+      <div id="modeIconSlot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div>
+        <div id="modeTitle" class="mode-title">Real Mode</div>
+      </div>
+    </div>
+    <button class="btn-mode-switch" onclick="postCmd('switchMode')" title="Switch operating mode">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 17H4M4 17l4-4M4 17l4 4M4 7h16M20 7l-4-4M20 7l-4 4"/>
+      </svg>
+      <span>Switch</span>
+    </button>
+  </div>
+
+  <!-- Primary Stats Grid -->
   <div class="stats-grid">
-    <div class="glass-card"><div class="stat-label">Active Time</div><div class="stat-value" id="statTime">0m</div></div>
-    <div class="glass-card"><div class="stat-label">Keystrokes</div><div class="stat-value" id="statKeys">0</div></div>
-    <div class="glass-card"><div class="stat-label">Lines Added</div><div class="stat-value val-green" id="statAdded">+0</div></div>
-    <div class="glass-card"><div class="stat-label">Lines Removed</div><div class="stat-value val-red" id="statRemoved">-0</div></div>
+    <div class="card">
+      <div class="card-label">Time</div>
+      <div class="card-val" id="statTime">0m</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Keystrokes</div>
+      <div class="card-val" id="statKeys">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Added</div>
+      <div class="card-val val-green" id="statAdded">+0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Removed</div>
+      <div class="card-val val-red" id="statRemoved">-0</div>
+    </div>
   </div>
 
-  <div class="glass-card" style="margin-bottom:10px;">
-    <div class="stat-label" style="margin-bottom:4px; color:#c4b5fd; font-weight:600;">Live Sensor Metrics</div>
-    <div class="metric-row"><span class="metric-name">Active / Idle Split</span><span class="metric-val val-blue" id="statActiveIdleSplit">0m / 0m</span></div>
-    <div class="metric-row"><span class="metric-name">Active Typing Time</span><span class="metric-val" id="statTypingTime">0s</span></div>
-    <div class="metric-row"><span class="metric-name">Syntax Errors</span><span class="metric-val val-amber" id="statSyntaxErrors">0 active</span></div>
-    <div class="metric-row"><span class="metric-name">Focus Transitions</span><span class="metric-val" id="statFocusTransitions">0 (0 tabs)</span></div>
-    <div class="metric-row"><span class="metric-name">Local SQLite Queue</span><span class="metric-val" id="statQueuePending">0 pending</span></div>
+  <!-- Sensor Metrics -->
+  <div class="card" style="margin-bottom: 8px;">
+    <div class="metric-row">
+      <span class="metric-name">Active / Idle</span>
+      <span class="metric-val" id="statActiveIdleSplit">0m / 0m</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">Typing Speed</span>
+      <span class="metric-val" id="statTypingTime">0s</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">Syntax Errors</span>
+      <span class="metric-val" id="statSyntaxErrors">0 active</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">Focus Shifts</span>
+      <span class="metric-val" id="statFocusTransitions">0</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">Queue Pending</span>
+      <span class="metric-val" id="statQueuePending">0</span>
+    </div>
   </div>
 
-  <div class="glass-card" style="margin-bottom:10px;">
-    <div class="stat-label" style="display:flex; justify-content:space-between;">
-      <span>Coding Provenance</span>
-      <span id="provStyleText" style="color:#818cf8; text-transform:none; font-weight:600;">Manual Typing</span>
+  <!-- Coding Provenance -->
+  <div class="card" style="margin-bottom: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+      <span style="font-size: 10px; color: var(--text-muted);">Provenance</span>
+      <span id="provStyleText" style="font-weight: 600; color: var(--blue); font-size: 10.5px;">Manual</span>
     </div>
     <div class="prov-bar">
       <div id="provBarManual" class="prov-seg-manual" style="width: 100%;"></div>
@@ -342,51 +401,50 @@
     </div>
     <div class="prov-legend">
       <span class="prov-legend-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        <span><span id="provManPct">100%</span> Manual</span>
+        <span class="dot-indicator" style="background: var(--blue);"></span>
+        <span>Manual <strong id="provManPct" style="color: var(--text);">100%</strong></span>
       </span>
       <span class="prov-legend-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
-        <span><span id="provAiPct">0%</span> AI</span>
+        <span class="dot-indicator" style="background: #818cf8;"></span>
+        <span>AI <strong id="provAiPct" style="color: var(--text);">0%</strong></span>
       </span>
       <span class="prov-legend-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-        <span><span id="provPastePct">0%</span> Paste</span>
+        <span class="dot-indicator" style="background: #475569;"></span>
+        <span>Paste <strong id="provPastePct" style="color: var(--text);">0%</strong></span>
       </span>
     </div>
   </div>
 
-  <button class="btn" onclick="postCmd('syncNow')">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
-    Sync Telemetry Now
-  </button>
-  <button class="btn btn-secondary" onclick="postCmd('openDashboard')">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-    Open Full Dashboard
-  </button>
-  <button class="btn btn-secondary" onclick="postCmd('viewQueueAudit')">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-    View Queue Status
-  </button>
-  <button class="btn btn-secondary" onclick="postCmd('testConnection')">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-    Test Connection
-  </button>
+  <!-- Actions -->
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="postCmd('syncNow')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/>
+      </svg>
+      <span>Sync Telemetry</span>
+    </button>
+    <button class="btn" onclick="postCmd('openDashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/>
+        <rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+      </svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="btn" onclick="postCmd('viewQueueAudit')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span>Queue Audit</span>
+    </button>
+  </div>
 
+  <!-- Active Tracked Files -->
   <div class="section-title">
     <span>Tracked Files</span>
-    <span id="filesCountBadge" style="color:#818cf8; font-size:10px; font-weight:600;">0 files</span>
+    <span id="filesCountBadge" style="color: var(--text-sub);">0</span>
   </div>
   <div id="fileActivitiesList">
-    <div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No modified files yet.</div>
-  </div>
-
-  <div class="section-title">
-    <span>Session Commits</span>
-    <span id="offlineBadge" class="badge-offline" style="display:none">0 queued</span>
-  </div>
-  <div id="commitsList">
-    <div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No commits recorded yet.</div>
+    <div style="color: var(--text-sub); font-size: 10px; padding: 2px 0;">No modified files.</div>
   </div>
 
   <script>
@@ -397,29 +455,45 @@
 
     function render(s) {
       if (!s) return;
-      const pill = document.getElementById('statusPill');
-      const pText = document.getElementById('statusText');
-      const dot = document.getElementById('pulseDot');
-      pill.className = 'status-pill status-' + (s.statusState || 'unconfigured');
-      pText.innerText = (s.statusState || 'CHECKING').toUpperCase();
-      dot.className = 'pulse-dot' + (s.statusState === 'tracking' || s.statusState === 'syncing' ? ' anim' : '');
+
+      const badge = document.getElementById('statusBadge');
+      const text = document.getElementById('statusText');
+      const st = s.statusState || 'tracking';
+      badge.className = 'status-badge status-' + st;
+      text.innerText = st === 'tracking' ? 'Active' : (st === 'syncing' ? 'Syncing' : 'Ready');
 
       document.getElementById('statTime').innerText = (s.durationMinutes || 0) + 'm';
       document.getElementById('statKeys').innerText = s.keystrokes || 0;
       document.getElementById('statAdded').innerText = '+' + (s.linesAdded || 0);
       document.getElementById('statRemoved').innerText = '-' + (s.linesRemoved || 0);
 
+      // Mode Display
+      const isExp = s.operatingMode === 'experimental';
+      const mTitle = document.getElementById('modeTitle');
+      const mSlot = document.getElementById('modeIconSlot');
+      if (mTitle && mSlot) {
+        if (isExp) {
+          const pId = s.experimentSession ? s.experimentSession.participantId : 'Exp';
+          const tCond = s.experimentSession && s.experimentSession.taskCondition === 'TASK_B_AI' ? 'Task B' : 'Task A';
+          mTitle.innerText = `${pId} (${tCond})`;
+          mSlot.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M10 2v7.31M14 2v7.31M8.5 2h7M14 9.3l5.88 9.8A2 2 0 0 1 18.18 22H5.82a2 2 0 0 1-1.7-2.9L10 9.3"/></svg>`;
+        } else {
+          mTitle.innerText = 'Real Mode';
+          mSlot.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--green)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+        }
+      }
+
       const idleSec = s.idleSummary ? s.idleSummary.idleSeconds : 0;
       const activeSec = s.idleSummary ? s.idleSummary.activeCodingSeconds : ((s.durationMinutes || 0) * 60);
-      document.getElementById('statActiveIdleSplit').innerText = Math.round(activeSec / 60) + 'm active / ' + Math.round(idleSec / 60) + 'm idle';
-      document.getElementById('statTypingTime').innerText = (s.idleSummary ? s.idleSummary.activeTypingSeconds : 0) + 's continuous';
+      document.getElementById('statActiveIdleSplit').innerText = Math.round(activeSec / 60) + 'm / ' + Math.round(idleSec / 60) + 'm';
+      document.getElementById('statTypingTime').innerText = (s.idleSummary ? s.idleSummary.activeTypingSeconds : 0) + 's';
       const errCount = s.diagnosticSummary ? s.diagnosticSummary.currentErrorCount : 0;
-      document.getElementById('statSyntaxErrors').innerText = errCount + ' active (' + (s.diagnosticSummary ? s.diagnosticSummary.totalErrorsSeen : 0) + ' total)';
-      document.getElementById('statFocusTransitions').innerText = (s.focusSummary ? s.focusSummary.focusTransitions : 0) + ' focus (' + (s.focusSummary ? s.focusSummary.tabSwitches : 0) + ' tabs)';
-      document.getElementById('statQueuePending').innerText = (s.pendingEventCount !== undefined ? s.pendingEventCount : (s.queueStatus ? s.queueStatus.pendingCount : 0)) + ' pending';
+      document.getElementById('statSyntaxErrors').innerText = errCount + ' active';
+      document.getElementById('statFocusTransitions').innerText = (s.focusSummary ? s.focusSummary.focusTransitions : 0);
+      document.getElementById('statQueuePending').innerText = (s.pendingEventCount !== undefined ? s.pendingEventCount : (s.queueStatus ? s.queueStatus.pendingCount : 0));
 
       if (s.provenance) {
-        document.getElementById('provStyleText').innerText = s.provenance.style || 'Manual Typing';
+        document.getElementById('provStyleText').innerText = s.provenance.style || 'Manual';
         document.getElementById('provBarManual').style.width = (s.provenance.manualPercent || 0) + '%';
         document.getElementById('provBarAi').style.width = (s.provenance.aiPercent || 0) + '%';
         document.getElementById('provBarPaste').style.width = (s.provenance.pastePercent || 0) + '%';
@@ -431,31 +505,21 @@
       const filesListEl = document.getElementById('fileActivitiesList');
       const filesCountEl = document.getElementById('filesCountBadge');
       if (s.fileActivities && s.fileActivities.length > 0) {
-        filesCountEl.innerText = s.fileActivities.length + ' files';
-        filesListEl.innerHTML = s.fileActivities.slice(0, 6).map(fa => `
-          <div class="file-item">
-            <div class="file-path" title="${escapeHtml(fa.filePath)}">${escapeHtml(fa.filePath)}</div>
-            <span class="prov-badge prov-badge-${fa.typingProvenance || 'manual'}">
-              ${fa.typingProvenance === 'ai_assisted' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg> AI' : (fa.typingProvenance === 'copy_paste' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Paste' : (fa.typingProvenance === 'mixed' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Mixed' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Manual'))}
+        filesCountEl.innerText = s.fileActivities.length;
+        filesListEl.innerHTML = s.fileActivities.slice(0, 5).map(fa => `
+          <div class="item-card">
+            <span class="item-title" title="${escapeHtml(fa.filePath)}">${escapeHtml(fa.filePath)}</span>
+            <span class="badge">
+              ${fa.typingProvenance === 'ai_assisted' ? 'AI' : (fa.typingProvenance === 'copy_paste' ? 'Paste' : (fa.typingProvenance === 'mixed' ? 'Mixed' : 'Manual'))}
             </span>
           </div>
         `).join('');
       } else {
-        filesCountEl.innerText = '0 files';
-        filesListEl.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No active files tracked yet.</div>';
-      }
-
-      const offlineBadge = document.getElementById('offlineBadge');
-      if (s.offlineCount > 0) { offlineBadge.style.display = 'inline-block'; offlineBadge.innerText = s.offlineCount + ' offline'; }
-      else { offlineBadge.style.display = 'none'; }
-
-      const list = document.getElementById('commitsList');
-      if (!s.commits || s.commits.length === 0) {
-        list.innerHTML = '<div style="color:rgba(255,255,255,0.3); font-style:italic; padding:4px 0; font-size:11px;">No commits recorded yet.</div>';
-      } else {
-        list.innerHTML = s.commits.slice(0, 5).map(c => `<div class="commit-item"><div class="commit-msg">${escapeHtml(c.message)}</div><div class="commit-meta"><span>${c.hash.slice(0,7)}</span><span>+${c.insertions} -${c.deletions}</span></div></div>`).join('');
+        filesCountEl.innerText = '0';
+        filesListEl.innerHTML = '<div style="color: var(--text-sub); font-size: 10px; padding: 2px 0;">No active files tracked.</div>';
       }
     }
+
     function escapeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   </script>
 </body>

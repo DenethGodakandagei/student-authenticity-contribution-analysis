@@ -49,7 +49,7 @@ class CollabIntelSidebarProvider {
                     break;
                 case 'syncNow':
                     await this._callbacks.saveAndSyncSession();
-                    vscode.window.showInformationMessage('✅ CollabIntel: Telemetry sync initiated.');
+                    vscode.window.showInformationMessage('INCODE: Sync initiated.');
                     break;
                 case 'openDashboard':
                     this._callbacks.openInteractiveDashboard();
@@ -65,9 +65,12 @@ class CollabIntelSidebarProvider {
                 case 'testConnection':
                     const testRes = await this._callbacks.testBackendConnection();
                     if (testRes.success)
-                        vscode.window.showInformationMessage(`✅ ${testRes.message}`);
+                        vscode.window.showInformationMessage(`INCODE: ${testRes.message}`);
                     else
-                        vscode.window.showErrorMessage(`❌ ${testRes.message}`);
+                        vscode.window.showErrorMessage(`INCODE: ${testRes.message}`);
+                    break;
+                case 'switchMode':
+                    vscode.commands.executeCommand('collabintel.switchMode');
                     break;
                 case 'openSetup':
                     this._callbacks.openInteractiveDashboard('setup');
@@ -100,12 +103,12 @@ class CollabIntelSidebarProvider {
                     return fs.readFileSync(p, 'utf8');
                 }
                 catch (err) {
-                    console.error('[CollabIntel] Error reading sidebar HTML from', p, err);
+                    console.error('[INCODE] Error reading sidebar HTML from', p, err);
                 }
             }
         }
         // Emergency inline fallback
-        return `<!DOCTYPE html><html><body><h3>CollabIntel Sidebar</h3><p>Could not locate sidebar.html template.</p></body></html>`;
+        return `<!DOCTYPE html><html><body><h3>INCODE Sidebar</h3><p>Could not locate sidebar.html template.</p></body></html>`;
     }
 }
 exports.CollabIntelSidebarProvider = CollabIntelSidebarProvider;

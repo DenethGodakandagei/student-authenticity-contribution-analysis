@@ -1,9 +1,9 @@
 /**
- * OffSync Persistent Workspace Storage (IndexedDB + Local Storage Snapshot)
+ * INCODE Persistent Workspace Storage (IndexedDB + Local Storage Snapshot)
  * Securely persists FileSystemDirectoryHandle across page reloads and browser sessions
  */
 
-const DB_NAME = 'OffSyncWorkspaceDB';
+const DB_NAME = 'InCodeWorkspaceDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'workspaceHandles';
 
@@ -40,7 +40,7 @@ export async function saveWorkspaceHandle(
   // Always persist metadata to localStorage for instant recovery
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(`offsync_folder_meta_${assignmentId}`, JSON.stringify({
+      localStorage.setItem(`incode_folder_meta_${assignmentId}`, JSON.stringify({
         assignmentId,
         folderName,
         lastConnected: new Date().toISOString()
@@ -76,7 +76,7 @@ export async function getWorkspaceHandle(
   let fallbackMeta: any = null;
   if (typeof window !== 'undefined') {
     try {
-      const raw = localStorage.getItem(`offsync_folder_meta_${assignmentId}`);
+      const raw = localStorage.getItem(`incode_folder_meta_${assignmentId}`) || localStorage.getItem(`offsync_folder_meta_${assignmentId}`);
       if (raw) fallbackMeta = JSON.parse(raw);
     } catch {}
   }
@@ -129,6 +129,7 @@ export async function getWorkspaceHandle(
 export async function deleteWorkspaceHandle(assignmentId: string): Promise<void> {
   if (typeof window !== 'undefined') {
     try {
+      localStorage.removeItem(`incode_folder_meta_${assignmentId}`);
       localStorage.removeItem(`offsync_folder_meta_${assignmentId}`);
     } catch {}
   }
@@ -170,7 +171,7 @@ export async function verifyHandlePermission(handle: any, prompt = false): Promi
 export function saveWorkspaceSnapshot(assignmentId: string, snapshot: any): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(`offsync_snapshot_${assignmentId}`, JSON.stringify({
+    localStorage.setItem(`incode_snapshot_${assignmentId}`, JSON.stringify({
       ...snapshot,
       savedAt: new Date().toISOString()
     }));
@@ -182,7 +183,7 @@ export function saveWorkspaceSnapshot(assignmentId: string, snapshot: any): void
 export function getWorkspaceSnapshot(assignmentId: string): any | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(`offsync_snapshot_${assignmentId}`);
+    const raw = localStorage.getItem(`incode_snapshot_${assignmentId}`) || localStorage.getItem(`offsync_snapshot_${assignmentId}`);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -191,5 +192,6 @@ export function getWorkspaceSnapshot(assignmentId: string): any | null {
 
 export function clearWorkspaceSnapshot(assignmentId: string): void {
   if (typeof window === 'undefined') return;
+  localStorage.removeItem(`incode_snapshot_${assignmentId}`);
   localStorage.removeItem(`offsync_snapshot_${assignmentId}`);
 }

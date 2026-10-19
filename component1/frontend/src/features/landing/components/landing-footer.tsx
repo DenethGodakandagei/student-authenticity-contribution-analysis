@@ -13,7 +13,7 @@ export const LandingFooter: React.FC = () => {
             <div className="w-7 h-7 rounded-lg bg-slate-950 flex items-center justify-center text-[#A3E635]">
               <Code2 className="w-4 h-4 stroke-[2.5]" />
             </div>
-            <span className="font-extrabold text-slate-900 text-sm">OffSync</span>
+            <span className="font-extrabold text-slate-900 text-sm">INCODE</span>
           </div>
           <p className="text-xs text-slate-500 max-w-sm leading-relaxed mb-4">
             Trust & Equity Analytics for Student Contributions. Verifying continuous individual contribution to ensure fair team grading.
@@ -65,7 +65,7 @@ export const LandingFooter: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-slate-400 text-[11px] font-mono gap-2">
-        <p>© 2026 OffSync. All rights reserved.</p>
+        <p>© 2026 INCODE. All rights reserved.</p>
         <div className="flex items-center gap-2">
           <span>Modern White & Lime Theme</span>
           <span>•</span>

@@ -26,12 +26,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateStatusBar = exports.refreshStatusBarPendingCount = exports.updateTelemetryStatusBar = exports.getStatusState = exports.createStatusBar = exports.formatStatusBarText = exports.getSafePendingCount = void 0;
 const vscode = __importStar(require("vscode"));
 const event_store_1 = require("../storage/event-store");
+const settings_1 = require("../config/settings");
 // ─────────────────────────────────────────────────────────────────────────────
-//  STATUS BAR MANAGEMENT (Plan 4 & Plan 6)
-//  Spec text:
-//    - $(check) Telemetry: Synced
-//    - $(cloud-offline) Telemetry: 38 Offline Pending
-//    - $(sync~spin) Telemetry: Syncing...
+//  STATUS BAR MANAGEMENT (Dual-Mode Real vs Experimental)
 // ─────────────────────────────────────────────────────────────────────────────
 let statusBarItem;
 let currentStatusState = 'unconfigured';
@@ -48,16 +45,19 @@ function getSafePendingCount() {
 }
 exports.getSafePendingCount = getSafePendingCount;
 /**
- * Format status bar text according to spec.
+ * Format status bar text reflecting active operating mode.
  */
 function formatStatusBarText(status, pendingCount) {
+    const cfg = (0, settings_1.getConfig)();
+    const isExp = cfg.operatingMode === 'experimental';
+    const prefix = isExp ? '$(beaker) INCODE [Exp]' : '$(shield) INCODE';
     switch (status) {
         case 'synced':
-            return '$(check) Telemetry: Synced';
+            return `${prefix}: Synced`;
         case 'syncing':
-            return '$(sync~spin) Telemetry: Syncing...';
+            return `$(sync~spin) INCODE: Syncing...`;
         case 'offline_pending':
-            return `$(cloud-offline) Telemetry: ${pendingCount} Offline Pending`;
+            return `$(cloud-offline) ${prefix}: ${pendingCount} Pending`;
     }
 }
 exports.formatStatusBarText = formatStatusBarText;
@@ -89,23 +89,26 @@ function updateTelemetryStatusBar(status, pendingCount, onUpdate) {
     if (!statusBarItem)
         return;
     const count = pendingCount !== undefined ? pendingCount : getSafePendingCount();
+    const cfg = (0, settings_1.getConfig)();
+    const isExp = cfg.operatingMode === 'experimental';
+    const modeLabel = isExp ? '[Experimental Mode]' : '[Real Mode]';
     switch (status) {
         case 'synced':
             currentStatusState = 'tracking';
             statusBarItem.text = formatStatusBarText('synced', count);
-            statusBarItem.tooltip = 'All telemetry events are synced to the backend. Click to open dashboard.';
+            statusBarItem.tooltip = `INCODE ${modeLabel}: All telemetry events are synced. Click to open dashboard.`;
             statusBarItem.backgroundColor = undefined;
             break;
         case 'syncing':
             currentStatusState = 'syncing';
             statusBarItem.text = formatStatusBarText('syncing', count);
-            statusBarItem.tooltip = 'Syncing telemetry events to CollabIntel server...';
+            statusBarItem.tooltip = `INCODE ${modeLabel}: Syncing telemetry events to server...`;
             statusBarItem.backgroundColor = undefined;
             break;
         case 'offline_pending':
             currentStatusState = 'error';
             statusBarItem.text = formatStatusBarText('offline_pending', count);
-            statusBarItem.tooltip = `${count} telemetry event(s) buffered in SQLite. Auto-syncs when online. Click to open dashboard.`;
+            statusBarItem.tooltip = `INCODE ${modeLabel}: ${count} event(s) buffered in SQLite. Auto-syncs when online.`;
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             break;
     }
@@ -156,7 +159,7 @@ function updateStatusBar(state, onUpdate) {
             break;
         case 'syncing':
             statusBarItem.text = formatStatusBarText('syncing', count);
-            statusBarItem.tooltip = 'Syncing telemetry to CollabIntel server...';
+            statusBarItem.tooltip = 'Syncing telemetry to INCODE server...';
             statusBarItem.backgroundColor = undefined;
             break;
         case 'error':
@@ -165,8 +168,8 @@ function updateStatusBar(state, onUpdate) {
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             break;
         case 'unconfigured':
-            statusBarItem.text = '$(warning) CollabIntel: Setup Needed';
-            statusBarItem.tooltip = 'Click to configure CollabIntel credentials and assignment.';
+            statusBarItem.text = '$(warning) INCODE: Setup Needed';
+            statusBarItem.tooltip = 'Click to configure INCODE credentials and assignment.';
             statusBarItem.backgroundColor = undefined;
             break;
     }

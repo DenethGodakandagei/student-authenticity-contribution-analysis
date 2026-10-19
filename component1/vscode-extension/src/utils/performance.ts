@@ -29,7 +29,7 @@ const MAX_SLOW_RECORDS = 50;
  */
 export function getPerformanceOutputChannel(): vscode.OutputChannel {
   if (!perfOutputChannel) {
-    perfOutputChannel = vscode.window.createOutputChannel('CollabIntel: Performance Profiler');
+    perfOutputChannel = vscode.window.createOutputChannel('INCODE: Performance Profiler');
   }
   return perfOutputChannel;
 }

@@ -45,7 +45,7 @@ export class CollabIntelSidebarProvider implements vscode.WebviewViewProvider {
           break;
         case 'syncNow':
           await this._callbacks.saveAndSyncSession();
-          vscode.window.showInformationMessage('✅ CollabIntel: Telemetry sync initiated.');
+          vscode.window.showInformationMessage('INCODE: Sync initiated.');
           break;
         case 'openDashboard':
           this._callbacks.openInteractiveDashboard();
@@ -59,8 +59,11 @@ export class CollabIntelSidebarProvider implements vscode.WebviewViewProvider {
           break;
         case 'testConnection':
           const testRes = await this._callbacks.testBackendConnection();
-          if (testRes.success) vscode.window.showInformationMessage(`✅ ${testRes.message}`);
-          else vscode.window.showErrorMessage(`❌ ${testRes.message}`);
+          if (testRes.success) vscode.window.showInformationMessage(`INCODE: ${testRes.message}`);
+          else vscode.window.showErrorMessage(`INCODE: ${testRes.message}`);
+          break;
+        case 'switchMode':
+          vscode.commands.executeCommand('collabintel.switchMode');
           break;
         case 'openSetup':
           this._callbacks.openInteractiveDashboard('setup');
@@ -96,12 +99,12 @@ export class CollabIntelSidebarProvider implements vscode.WebviewViewProvider {
         try {
           return fs.readFileSync(p, 'utf8');
         } catch (err) {
-          console.error('[CollabIntel] Error reading sidebar HTML from', p, err);
+          console.error('[INCODE] Error reading sidebar HTML from', p, err);
         }
       }
     }
 
     // Emergency inline fallback
-    return `<!DOCTYPE html><html><body><h3>CollabIntel Sidebar</h3><p>Could not locate sidebar.html template.</p></body></html>`;
+    return `<!DOCTYPE html><html><body><h3>INCODE Sidebar</h3><p>Could not locate sidebar.html template.</p></body></html>`;
   }
 }

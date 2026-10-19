@@ -43,7 +43,7 @@ export function openInteractiveDashboard(
 
   const panel = vscode.window.createWebviewPanel(
     'collabintel_dashboard',
-    'CollabIntel – Student Dashboard',
+    'INCODE – Student Dashboard',
     vscode.ViewColumn.One,
     { enableScripts: true, retainContextWhenHidden: true }
   );
@@ -72,7 +72,7 @@ export function openInteractiveDashboard(
         await cfg.update('assignmentId', msg.assignmentId, vscode.ConfigurationTarget.Global);
         await cfg.update('syncIntervalMinutes', Number(msg.syncIntervalMinutes) || 5, vscode.ConfigurationTarget.Global);
 
-        vscode.window.showInformationMessage('✅ CollabIntel: Configuration updated and saved.');
+        vscode.window.showInformationMessage('INCODE: Settings saved.');
         callbacks.updateStatusBar('tracking');
 
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
@@ -81,7 +81,7 @@ export function openInteractiveDashboard(
 
       case 'syncNow':
         await callbacks.saveAndSyncSession();
-        vscode.window.showInformationMessage('✅ CollabIntel: Session synced to server.');
+        vscode.window.showInformationMessage('INCODE: Session synced.');
         panel.webview.postMessage({ type: 'updateState', state: callbacks.getTelemetrySnapshot() });
         break;
 
@@ -90,7 +90,7 @@ export function openInteractiveDashboard(
           callbacks.computeSlidingWindow();
         }
         panel.webview.postMessage({ type: 'updateState', state: callbacks.getTelemetrySnapshot() });
-        vscode.window.showInformationMessage('CollabIntel: 5-minute ML sliding window recomputed.');
+        vscode.window.showInformationMessage('INCODE: 5-minute ML sliding window recomputed.');
         break;
 
       case 'viewQueueAudit':
@@ -107,15 +107,20 @@ export function openInteractiveDashboard(
           authToken: msg.authToken || cfg.get<string>('authToken') || '',
           assignmentId: msg.assignmentId || cfg.get<string>('assignmentId') || '',
           syncIntervalMinutes: 5,
-          trackOnlyLinkedRepo: true
+          trackOnlyLinkedRepo: true,
+          operatingMode: (cfg.get<string>('operatingMode') as 'real' | 'experimental') || 'real'
         };
         const res = await callbacks.testBackendConnection(testConfig);
         panel.webview.postMessage({ type: 'testResult', result: res });
         break;
 
+      case 'switchMode':
+        vscode.commands.executeCommand('collabintel.switchMode');
+        break;
+
       case 'clearOfflineCache':
         context.globalState.update('offline_sessions', []);
-        vscode.window.showInformationMessage('CollabIntel: Offline sessions cleared.');
+        vscode.window.showInformationMessage('INCODE: Offline sessions cleared.');
         panel.webview.postMessage({ type: 'updateState', state: callbacks.getTelemetrySnapshot() });
         break;
     }
@@ -147,10 +152,10 @@ function loadDashboardHtml(extensionPath: string): string {
       try {
         return fs.readFileSync(p, 'utf8');
       } catch (err) {
-        console.error('[CollabIntel] Error reading dashboard HTML from', p, err);
+        console.error('[INCODE] Error reading dashboard HTML from', p, err);
       }
     }
   }
 
-  return `<!DOCTYPE html><html><body><h3>CollabIntel Dashboard</h3><p>Could not locate dashboard.html template.</p></body></html>`;
+  return `<!DOCTYPE html><html><body><h3>INCODE Dashboard</h3><p>Could not locate dashboard.html template.</p></body></html>`;
 }

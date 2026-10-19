@@ -26,7 +26,7 @@ export const StudentAssignmentBar: React.FC<StudentAssignmentBarProps> = ({
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 text-left">
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-mono">
-          Cohort:
+          Assignment:
         </span>
         <select
           onChange={onAssignmentChange}
@@ -44,7 +44,7 @@ export const StudentAssignmentBar: React.FC<StudentAssignmentBarProps> = ({
           className="px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-medium transition shadow-xs flex items-center gap-1 cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5 text-[#A3E635]" />
-          Join Cohort
+          Join Assignment
         </button>
       </div>
 
@@ -58,7 +58,7 @@ export const StudentAssignmentBar: React.FC<StudentAssignmentBarProps> = ({
             <RefreshCw
               className={`w-3.5 h-3.5 text-slate-900 ${syncingGit ? 'animate-spin' : ''}`}
             />
-            <span>{syncingGit ? 'Syncing...' : 'Sync Git'}</span>
+            <span>{syncingGit ? 'Syncing...' : 'Sync Commits'}</span>
           </button>
         </div>
       )}

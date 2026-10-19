@@ -14,7 +14,7 @@ export default function LoginPage() {
           <div className="w-7 h-7 rounded-lg bg-slate-950 text-[#A3E635] flex items-center justify-center shadow-xs">
             <Code2 className="w-4 h-4 stroke-[2.5]" />
           </div>
-          <span className="font-bold text-sm text-slate-900">OffSync</span>
+          <span className="font-bold text-sm text-slate-900">INCODE</span>
         </Link>
         <span className="text-[11px] bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full text-slate-600 font-medium">
           Academic Portal
@@ -36,7 +36,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <div className="max-w-5xl mx-auto w-full text-center text-xs text-slate-400 py-3 font-normal">
-        OffSync — Trust & Equity Analytics for Student Contributions © 2026
+        INCODE — Trust & Equity Analytics for Student Contributions © 2026
       </div>
     </div>
   );

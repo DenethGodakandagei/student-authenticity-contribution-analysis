@@ -40,7 +40,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <Code2 className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base tracking-tight text-slate-900">OffSync</span>
+              <span className="font-extrabold text-base tracking-tight text-slate-900">INCODE</span>
               <Badge variant={badgeVariant} size="sm">
                 {roleTitle}
               </Badge>

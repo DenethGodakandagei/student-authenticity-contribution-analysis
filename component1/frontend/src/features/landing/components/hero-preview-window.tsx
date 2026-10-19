@@ -15,13 +15,13 @@ export const HeroPreviewWindow: React.FC = () => {
           <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" />
           <span className="w-3 h-3 rounded-full bg-[#22C55E] inline-block" />
           <span className="ml-2 font-medium text-slate-700">
-            OffSync Telemetry Bridge · Live Active Node
+            INCODE Activity Tracker · Live View
           </span>
         </div>
 
         {/* State Toggle Switch */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-400 hidden sm:inline">Simulate Sensor:</span>
+          <span className="text-[11px] text-slate-400 hidden sm:inline">Simulate Status:</span>
           <div className="inline-flex p-1 bg-slate-100 rounded-full border border-slate-200">
             <button
               onClick={() => setHeroSyncState('buffered')}
@@ -54,43 +54,43 @@ export const HeroPreviewWindow: React.FC = () => {
           <div className="flex items-center justify-between text-slate-500 mb-3 pb-2 border-b border-slate-200">
             <span className="flex items-center gap-1.5 font-bold text-slate-800">
               <Terminal className="w-4 h-4 text-slate-700" />
-              <span>VS Code Activity Logger</span>
+              <span>VS Code Activity</span>
             </span>
             {heroSyncState === 'buffered' ? (
               <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-semibold">
-                <WifiOff className="w-3 h-3" /> OFFLINE BUFFER
+                <WifiOff className="w-3 h-3" /> OFFLINE MODE
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[10px] text-[#15803D] bg-[#22C55E]/15 px-2 py-0.5 rounded-full font-bold">
-                <Wifi className="w-3 h-3 text-[#22C55E]" /> ONLINE SYNC
+                <Wifi className="w-3 h-3 text-[#22C55E]" /> CONNECTED & SYNCED
               </span>
             )}
           </div>
 
           <div className="space-y-2.5 text-xs text-slate-600">
             <div className="flex justify-between items-center">
-              <span>Target File:</span>
+              <span>Current File:</span>
               <span className="font-mono font-semibold text-slate-900">
                 src/components/Dashboard.tsx
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span>Typing Cadence:</span>
-              <strong className="font-mono text-slate-900 text-sm">91.4 WPM Peak</strong>
+              <span>Typing Speed:</span>
+              <strong className="font-mono text-slate-900 text-sm">91 WPM Peak</strong>
             </div>
             <div className="flex justify-between items-center">
-              <span>Keystroke Breakdown:</span>
+              <span>Input Breakdown:</span>
               <span className="text-[#15803D] font-bold font-mono">
-                92% Manual · 6% AI · 2% Pasted
+                92% Typed · 6% AI Assisted · 2% Pasted
               </span>
             </div>
             <div className="p-3 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs mt-3 shadow-2xs">
               <div className="text-slate-900 font-bold mb-1 flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Cryptographic Attestation Block:</span>
+                <span>Activity Summary:</span>
               </div>
               <span className="text-slate-500 font-mono text-[11px]">
-                1,840 keystrokes verified · 21 files attested · SHA-256 integrity seal
+                1,840 keystrokes recorded · 21 files checked · Verified secure
               </span>
             </div>
           </div>
@@ -102,43 +102,41 @@ export const HeroPreviewWindow: React.FC = () => {
             <div className="flex items-center justify-between text-slate-500 mb-3 pb-2 border-b border-slate-100">
               <span className="flex items-center gap-1.5 font-bold text-slate-800">
                 <ShieldCheck className="w-4 h-4 text-[#22C55E]" />
-                <span>Contribution Score</span>
+                <span>Authenticity Score</span>
               </span>
-              <span className="text-[11px] font-mono text-slate-400">Target: GitHub Repo</span>
+              <span className="text-[11px] font-mono text-slate-400">Project: GitHub Repository</span>
             </div>
 
             {heroSyncState === 'buffered' ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-amber-600 font-semibold text-xs">
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                  <span>Offline work buffered securely on local disk</span>
+                  <span>Work saved locally while offline</span>
                 </div>
                 <p className="text-slate-500 text-xs leading-relaxed">
-                  Telemetry daemon runs in the background with zero internet. Work timestamps and
-                  rhythms are encrypted locally.
+                  Tracks your work in the background without internet. Your coding time and patterns are saved safely on your computer.
                 </p>
                 <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                   <div className="bg-amber-400 h-full w-[65%]" />
                 </div>
                 <span className="text-[11px] text-slate-400 block font-mono">
-                  Waiting for git push sync...
+                  Waiting for internet to sync...
                 </span>
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-emerald-700 font-semibold text-xs">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Verified Human Code Attribution (94.2%)</span>
+                  <span>Verified Student Work (94.2%)</span>
                 </div>
                 <p className="text-slate-500 text-xs leading-relaxed">
-                  Git commits cross-checked against biometric typing rhythms. Work attested to
-                  authenticated university student identity.
+                  Commits matched with actual typing activity. Confirmed authored by the enrolled student.
                 </p>
                 <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                   <div className="bg-[#A3E635] h-full w-[94%]" />
                 </div>
                 <span className="text-[11px] text-slate-400 block font-mono">
-                  Multi-Factor Equilibrium: Balanced Contributor
+                  Overall Status: Active Contributor
                 </span>
               </div>
             )}

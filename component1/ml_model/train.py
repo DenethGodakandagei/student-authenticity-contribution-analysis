@@ -28,15 +28,28 @@ from sklearn.metrics import (
     f1_score
 )
 
-from .config import (
-    MODEL_SAVE_PATH,
-    METADATA_SAVE_PATH,
-    DEFAULT_N_SPLITS,
-    LOW_RISK_MAX,
-    HIGH_RISK_MIN
-)
-from .classifier import get_models
-from .preprocess import get_group_kfold_splits
+try:
+    from .config import (
+        MODEL_SAVE_PATH,
+        METADATA_SAVE_PATH,
+        DEFAULT_N_SPLITS,
+        LOW_RISK_MAX,
+        HIGH_RISK_MIN,
+        DEFAULT_DATA_PATH
+    )
+    from .classifier import get_models, build_primary_model_pipeline
+    from .preprocess import get_group_kfold_splits, load_data, prepare_features_and_target
+except ImportError:
+    from config import (
+        MODEL_SAVE_PATH,
+        METADATA_SAVE_PATH,
+        DEFAULT_N_SPLITS,
+        LOW_RISK_MAX,
+        HIGH_RISK_MIN,
+        DEFAULT_DATA_PATH
+    )
+    from classifier import get_models, build_primary_model_pipeline
+    from preprocess import get_group_kfold_splits, load_data, prepare_features_and_target
 
 
 def train_grouped_cv(
@@ -207,3 +220,59 @@ def save_model_artifacts(
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
     print(f"[OK] Training: Saved defense audit metadata to: '{metadata_path}'")
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Train and evaluate Authenticity ML Models (GroupKFold)")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="all",
+        choices=["all", "xgb", "rf", "hgb", "logreg"],
+        help="Model architecture: 'all' to benchmark all algorithms, or 'xgb' to train XGBoost specifically."
+    )
+    parser.add_argument(
+        "--data",
+        type=str,
+        default=None,
+        help="Path to feature CSV (defaults to preprocessed_features.csv or dataset.csv)"
+    )
+    parser.add_argument(
+        "--splits",
+        type=int,
+        default=DEFAULT_N_SPLITS,
+        help=f"Number of GroupKFold splits (default: {DEFAULT_N_SPLITS})"
+    )
+    args = parser.parse_args()
+
+    if args.data:
+        csv_target = args.data
+    else:
+        csv_target = "preprocessed_features.csv" if os.path.exists("preprocessed_features.csv") else DEFAULT_DATA_PATH
+
+    print(f"[*] Training: Loading features from '{csv_target}'...")
+    df = load_data(csv_target)
+    X, y, groups, feature_names = prepare_features_and_target(df)
+
+    if args.model == "all":
+        selected_models = get_models()
+    elif args.model == "xgb":
+        selected_models = {"XGBoost (Tuned)": build_primary_model_pipeline("xgb")}
+    elif args.model == "rf":
+        selected_models = {"Random Forest (Tuned)": build_primary_model_pipeline("rf")}
+    elif args.model == "hgb":
+        selected_models = {"Gradient Boosting": build_primary_model_pipeline("hgb")}
+    elif args.model == "logreg":
+        selected_models = {"Logistic Regression Baseline": build_primary_model_pipeline("logreg")}
+    else:
+        selected_models = get_models()
+
+    best_name, best_model, benchmark_results = train_grouped_cv(
+        X, y, groups, models=selected_models, n_splits=args.splits
+    )
+    final_model = train_final_model(best_model, X, y)
+    display_feature_importances(final_model, feature_names)
+    save_model_artifacts(final_model, best_name, feature_names, benchmark_results)
+
+

@@ -278,7 +278,7 @@ export default function VSCodeSimulator() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-base tracking-tight text-slate-900">OffSync</span>
+            <span className="font-extrabold text-base tracking-tight text-slate-900">INCODE</span>
             <span className="text-[10px] bg-slate-100 text-slate-700 font-mono px-2 py-0.5 rounded-full border border-slate-200">
               VS Code Sensor Simulator
             </span>

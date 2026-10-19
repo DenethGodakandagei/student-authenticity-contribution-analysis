@@ -25,7 +25,7 @@ export const LecturerSidebar: React.FC<LecturerSidebarProps> = ({
             <Code2 className="w-4 h-4 stroke-[2.2]" />
           </div>
           <div>
-            <span className="font-extrabold text-sm tracking-tight text-slate-900 block leading-none">OffSync</span>
+            <span className="font-extrabold text-sm tracking-tight text-slate-900 block leading-none">INCODE</span>
             <span className="text-[10px] text-slate-500 font-semibold block mt-1">Lecturer Console</span>
           </div>
         </Link>

@@ -49,6 +49,8 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 .ipynb_checkpoints/
+*.joblib
+trained_models/
 
 # ------------------------------------------
 # Datasets, Database & Telemetry Exports
@@ -61,6 +63,9 @@ htmlcov/
 *.db
 collabintel_telemetry.db
 *.jsonl
+# Un-comment if you want to keep specific sample datasets tracked:
+# !telemetry_dataset.csv
+# !pilot_dataset.csv
 
 # ------------------------------------------
 # VS Code Extension Development & Packaging

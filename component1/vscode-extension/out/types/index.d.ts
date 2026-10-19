@@ -122,6 +122,7 @@ export interface ExtConfig {
     serverUrl: string;
     syncIntervalMinutes: number;
     trackOnlyLinkedRepo: boolean;
+    operatingMode: 'real' | 'experimental';
 }
 export type StatusState = 'tracking' | 'idle' | 'syncing' | 'error' | 'unconfigured';
 /** Represents a single telemetry event stored in the SQLite database. */

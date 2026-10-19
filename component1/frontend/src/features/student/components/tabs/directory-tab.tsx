@@ -25,7 +25,7 @@ export const DirectoryTab: React.FC<DirectoryTabProps> = ({
       <div className="pb-4 border-b border-black/[0.06]">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Student Directory</h1>
         <p className="text-xs text-slate-500 font-light mt-0.5">
-          Search classmates registered in the contribution tracking platform.
+          Find registered students and classmates.
         </p>
       </div>
 
@@ -36,7 +36,7 @@ export const DirectoryTab: React.FC<DirectoryTabProps> = ({
             type="text"
             value={studentSearchQuery}
             onChange={(e) => setStudentSearchQuery(e.target.value)}
-            placeholder="Search by student name or academic email address..."
+            placeholder="Search by name or email address..."
             className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition"
           />
         </div>
@@ -69,7 +69,7 @@ export const DirectoryTab: React.FC<DirectoryTabProps> = ({
               ) : (
                 <tr>
                   <td colSpan={3} className="py-12 text-center text-slate-400 text-xs">
-                    No student profiles match your query.
+                    No students found matching your search.
                   </td>
                 </tr>
               )}

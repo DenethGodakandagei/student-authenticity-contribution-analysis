@@ -157,6 +157,8 @@ function getTelemetrySnapshot() {
         config: cfg,
         commits: cachedCommitsThisSession,
         workspaceRoot,
+        operatingMode: cfg.operatingMode,
+        experimentSession: cfg.operatingMode === 'experimental' ? (extensionContext ? (0, onboarding_1.getExperimentSession)(extensionContext) : null) : null,
         // ── Plan 2 sensor data ──
         saveCount: documentSensor.saveCount,
         fileOpenCount: documentSensor.fileOpenCount,
@@ -411,13 +413,15 @@ function storeEvent(eventType, category, filePath, payload) {
             const studentCheck = (0, privacy_1.verifyStudentIdAnonymization)(cfg.assignmentId || 'unknown');
             const expParticipantId = extensionContext?.workspaceState?.get('telemetry_participant_id');
             const expTaskCondition = extensionContext?.workspaceState?.get('telemetry_task_condition');
-            const studentIdToUse = expParticipantId || studentCheck.sanitizedId;
-            const taskIdToUse = expTaskCondition || cfg.assignmentId || '';
+            const isExperimental = cfg.operatingMode === 'experimental';
+            const studentIdToUse = isExperimental ? (expParticipantId || 'P01') : studentCheck.sanitizedId;
+            const taskIdToUse = isExperimental ? (expTaskCondition || 'TASK_A_MANUAL') : (cfg.assignmentId || '');
             const enrichedPayload = {
                 ...sanitizedPayload,
-                participantId: expParticipantId || 'P01',
-                taskCondition: expTaskCondition || 'TASK_A_MANUAL',
-                conditionLabel: expTaskCondition === 'TASK_B_AI' ? 1 : 0
+                operatingMode: cfg.operatingMode,
+                participantId: isExperimental ? (expParticipantId || 'P01') : undefined,
+                taskCondition: isExperimental ? (expTaskCondition || 'TASK_A_MANUAL') : undefined,
+                conditionLabel: isExperimental ? (expTaskCondition === 'TASK_B_AI' ? 1 : 0) : undefined
             };
             (0, event_store_1.insertEvent)({
                 session_id: currentSessionId,
@@ -479,19 +483,25 @@ function activate(context) {
         (0, privacy_1.checkAndWarnInsecureServerUrl)(cfg.serverUrl);
     }
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('collabintel.operatingMode')) {
+            (0, status_bar_1.refreshStatusBarPendingCount)();
+            broadcastStateToWebviews();
+        }
         if (e.affectsConfiguration('collabintel.serverUrl')) {
             const currentCfg = (0, settings_1.getConfig)();
             if (currentCfg.serverUrl)
                 (0, privacy_1.checkAndWarnInsecureServerUrl)(currentCfg.serverUrl);
         }
     }));
-    // ── Initial Setup & Experiment Onboarding Check ────────────────────────
-    (0, onboarding_1.ensureParticipantSession)(context).catch(err => {
-        console.warn('[CollabIntel] Onboarding dialog notice:', err);
-    });
-    if (!cfg.authToken || !cfg.assignmentId) {
+    // ── Initial Setup & Dual-Mode Check ─────────────────────────────────────
+    if (cfg.operatingMode === 'experimental') {
+        (0, onboarding_1.ensureParticipantSession)(context).catch(err => {
+            console.warn('[CollabIntel] Experimental onboarding notice:', err);
+        });
+    }
+    else if (!cfg.authToken || !cfg.assignmentId) {
         (0, status_bar_1.updateStatusBar)('unconfigured', broadcastStateToWebviews);
-        vscode.window.showInformationMessage('CollabIntel: Setup required to begin tracking your repository.', 'Open Setup').then(choice => {
+        vscode.window.showInformationMessage('CollabIntel [Real Mode]: Setup required to begin tracking your repository.', 'Open Setup').then(choice => {
             if (choice === 'Open Setup')
                 openDashboard('setup');
         });
@@ -943,7 +953,7 @@ function activate(context) {
         if (dbInitialized) {
             await (0, batch_sync_1.triggerBatchSync)({ onStatusUpdate: broadcastStateToWebviews });
         }
-        vscode.window.showInformationMessage('✅ CollabIntel: Telemetry synced successfully!');
+        vscode.window.showInformationMessage('CollabIntel: Telemetry synced.');
     }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.reconcile', async () => {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
@@ -966,9 +976,9 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.testConnection', async () => {
         const res = await (0, http_client_1.testBackendConnection)((0, settings_1.getConfig)());
         if (res.success)
-            vscode.window.showInformationMessage(`✅ ${res.message}`);
+            vscode.window.showInformationMessage(`CollabIntel: ${res.message}`);
         else
-            vscode.window.showErrorMessage(`❌ ${res.message}`);
+            vscode.window.showErrorMessage(`CollabIntel: ${res.message}`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.status', () => openDashboard('overview')));
     context.subscriptions.push((0, audit_viewer_1.registerAuditViewerCommand)(context, globalStoragePath, async () => {
@@ -977,6 +987,12 @@ function activate(context) {
         }
     }));
     // ── Volunteer Experiment & Offline Export Commands (Phase 1) ───────────
+    context.subscriptions.push(vscode.commands.registerCommand('collabintel.switchMode', async () => {
+        await (0, onboarding_1.switchOperatingMode)(context, () => {
+            (0, status_bar_1.refreshStatusBarPendingCount)();
+            broadcastStateToWebviews();
+        });
+    }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.setupParticipant', () => (0, onboarding_1.reconfigureParticipant)(context)));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.switchTask', () => (0, onboarding_1.switchTaskCondition)(context)));
     // 1-Click offline failsafe exporter
