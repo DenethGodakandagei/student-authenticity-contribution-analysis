@@ -165,6 +165,88 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleExportAllPlatformCSV = async () => {
+    try {
+      showToast("Fetching all actual database revisions across all documents...", "info", "Exporting Dataset");
+      const res = await fetch(`${getBackendUrl()}/api/admin/overview`);
+      const data = await res.json();
+      const docs = data.documents || [];
+
+      const escapeCsv = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/\r\n|\r|\n/g, ' ').replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const headers = [
+        "sample_id",
+        "document_id",
+        "document_title",
+        "author",
+        "anonymized_author_id",
+        "timestamp",
+        "section",
+        "before_text",
+        "after_text",
+        "words_added",
+        "words_deleted",
+        "predicted_intent",
+        "predicted_significance",
+        "semantic_distance",
+        "confidence",
+        "is_bulk_insertion",
+        "anomaly_flag",
+        "explanation"
+      ];
+
+      let csv = headers.join(',') + '\n';
+      let rowCount = 0;
+
+      for (const doc of docs) {
+        try {
+          const revRes = await fetch(`${getBackendUrl()}/api/documents/${doc._id}/revisions`);
+          if (revRes.ok) {
+            const revs = await revRes.json();
+            for (const r of revs) {
+              rowCount++;
+              const row = [
+                escapeCsv(`LIVE_${String(rowCount).padStart(4, '0')}`),
+                escapeCsv(doc._id),
+                escapeCsv(doc.title),
+                escapeCsv(r.author || doc.ownerName || 'Author'),
+                escapeCsv(r.anonymizedAuthorId || 'STU_ANON'),
+                escapeCsv(r.timestamp),
+                escapeCsv(r.section || 'General'),
+                escapeCsv(r.beforeText || r.deletedText || ''),
+                escapeCsv(r.afterText || r.addedText || ''),
+                r.words_added || r.wordCountAdded || 0,
+                r.words_deleted || r.wordCountDeleted || 0,
+                escapeCsv(r.predictedIntent || 'Content Addition'),
+                escapeCsv(r.predictedSignificance || 'Moderate'),
+                Number((r.semanticDistance || 0.05).toFixed(4)),
+                Number((r.confidence || 0.95).toFixed(4)),
+                r.isBulkInsertion ? 1 : 0,
+                escapeCsv(r.anomalyFlag || 'None'),
+                escapeCsv(r.explanation || '')
+              ];
+              csv += row.join(',') + '\n';
+            }
+          }
+        } catch (e) {}
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `actual_database_all_documents_dataset.csv`;
+      a.click();
+      showToast(`Exported all ${rowCount} actual revisions from all documents!`, "success", "Download Complete");
+    } catch (err: any) {
+      showToast("Failed to export complete platform dataset", "error", "Export Error");
+    }
+  };
+
   // Filtered documents
   const filteredDocuments = documents.filter(doc => {
     const q = searchQuery.toLowerCase().trim();
@@ -295,6 +377,33 @@ export default function AdminDashboard() {
                 Forensic Center
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={handleExportAllPlatformCSV}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                borderRadius: '10px',
+                padding: '0.65rem 1.15rem',
+                fontSize: '0.84rem',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Download all actual student revisions across all documents as a clean CSV"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download All Documents CSV {stats.totalRevisions ? `(${stats.totalRevisions} Revisions)` : ''}
+            </button>
 
             <Link
               href="/editor"
