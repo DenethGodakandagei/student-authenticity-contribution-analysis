@@ -46,7 +46,10 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentUsername: user?.username || user?.studentId || '',
+          currentUsername: user?.username || '',
+          currentStudentId: user?.studentId || '',
+          currentUserEmail: user?.email || '',
+          currentRole: user?.role || '',
           targetUserIdentifier: identifier.trim(),
           action
         })
@@ -203,7 +206,7 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input
                 type="text"
-                placeholder="Enter Student ID, Username, or Email"
+                placeholder="Enter Student ID / IT Number, Username, or Email (e.g. IT23217522)"
                 value={targetIdentifier}
                 onChange={(e) => setTargetIdentifier(e.target.value)}
                 style={{

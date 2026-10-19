@@ -11,6 +11,9 @@ import ShareModal from '../../components/ShareModal';
 import { useAuth } from '../../context/AuthContext';
 import { getApiBase, getBackendUrl } from '../../utils/apiConfig';
 import { ToastContainer, ToastItem } from '../../components/CustomDialog';
+import LecturerDashboard from '../../components/LecturerDashboard';
+import AdminDashboard from '../../components/AdminDashboard';
+import GuestDashboardView from '../../components/GuestDashboardView';
 
 const API_BASE = getApiBase();
 
@@ -53,12 +56,14 @@ function DashboardComponent() {
   const [studentSearch, setStudentSearch] = useState('');
   const [teamTargetDocId, setTeamTargetDocId] = useState<string>('');
   const [selectedStudentForAdd, setSelectedStudentForAdd] = useState<string>('');
+  const [manualStudentInput, setManualStudentInput] = useState<string>('');
 
   // Create Assignment / Document states
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocPrompt, setNewDocPrompt] = useState('');
   const [newDocSource, setNewDocSource] = useState('in_built');
   const [selectedNewMembers, setSelectedNewMembers] = useState<string[]>([]);
+  const [customMemberInput, setCustomMemberInput] = useState<string>('');
   const [createLoading, setCreateLoading] = useState(false);
 
   // Share Modal State
@@ -70,6 +75,16 @@ function DashboardComponent() {
   const [compareLoading, setCompareLoading] = useState(false);
 
   const isUserLeader = user?.role === 'group_leader' || user?.role === 'lecturer' || user?.isLeader || false;
+  const isUserLecturer = user?.role === 'lecturer';
+  const [viewMode, setViewMode] = useState<'lecturer' | 'student'>('student');
+
+  useEffect(() => {
+    if (user?.role === 'lecturer') {
+      setViewMode('lecturer');
+    } else {
+      setViewMode('student');
+    }
+  }, [user?.role]);
 
   // Load registered students
   const loadStudents = async () => {
@@ -84,26 +99,32 @@ function DashboardComponent() {
 
   // Load documents accessible to user
   const loadDocuments = async () => {
+    if (!user) {
+      setAvailableDocs([]);
+      return;
+    }
     try {
       let url = API_BASE;
-      if (user) {
-        const params = new URLSearchParams();
-        if (user.username) params.append('username', user.username);
-        if (user.studentId) params.append('studentId', user.studentId);
-        if (user.role) params.append('role', user.role);
-        url += `?${params.toString()}`;
-      }
+      const params = new URLSearchParams();
+      if (user.username) params.append('username', user.username);
+      if (user.studentId) params.append('studentId', user.studentId);
+      if (user.email) params.append('email', user.email);
+      if (user.role) params.append('role', user.role);
+      url += `?${params.toString()}`;
+
       const res = await fetch(url);
       const docs = await res.json();
       const list = Array.isArray(docs) ? docs : [];
       setAvailableDocs(list);
 
-      if (docIdQuery) {
+      if (docIdQuery && list.some((d: any) => d._id === docIdQuery)) {
         setSelectedDocId(docIdQuery);
       } else if (list.length > 0 && !list.some((d: any) => d._id === selectedDocId)) {
         setSelectedDocId(list[0]._id);
+      } else if (list.length === 0) {
+        setSelectedDocId('');
       }
-      if (!teamTargetDocId && list.length > 0) {
+      if (list.length > 0 && (!teamTargetDocId || !list.some((d: any) => d._id === teamTargetDocId))) {
         setTeamTargetDocId(list[0]._id);
       }
     } catch (err) {
@@ -112,16 +133,19 @@ function DashboardComponent() {
   };
 
   useEffect(() => {
-    loadStudents();
-  }, []);
-
-  useEffect(() => {
-    loadDocuments();
-  }, [user, docIdQuery]);
+    if (isAuthenticated && user) {
+      loadStudents();
+      loadDocuments();
+    } else {
+      setAvailableDocs([]);
+      setRegisteredStudents([]);
+      setSelectedDocId('');
+    }
+  }, [isAuthenticated, user, docIdQuery]);
 
   // Fetch document analytics when selectedDocId changes
   const fetchDocAnalytics = async (isInitial = false) => {
-    if (!selectedDocId) return;
+    if (!selectedDocId || !isAuthenticated || !user) return;
     try {
       if (isInitial) setLoading(true);
 
@@ -160,16 +184,16 @@ function DashboardComponent() {
   };
 
   useEffect(() => {
-    if (!selectedDocId) return;
+    if (!selectedDocId || !isAuthenticated || !user) return;
     fetchDocAnalytics(true);
     const interval = setInterval(() => fetchDocAnalytics(false), 5000);
     return () => clearInterval(interval);
-  }, [selectedDocId]);
+  }, [selectedDocId, isAuthenticated, user]);
 
   // Handle adding student to document
   const handleAddStudentToDoc = async (targetId: string, identifier: string) => {
     if (!identifier || !targetId) {
-      showToast("Please select both a document and a student.", "error", "Selection Required");
+      showToast("Please specify both a target document and a student ID / email.", "error", "Selection Required");
       return;
     }
     try {
@@ -177,15 +201,19 @@ function DashboardComponent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentUsername: user?.username || user?.studentId || '',
+          currentUsername: user?.username || '',
+          currentStudentId: user?.studentId || '',
+          currentUserEmail: user?.email || '',
+          currentRole: user?.role || '',
           targetUserIdentifier: identifier.trim(),
           action: 'add'
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add student");
-      showToast(`Student "${identifier}" successfully added to document!`, "success", "Student Added");
+      showToast(`Member "${identifier}" successfully added to document!`, "success", "Member Added");
       setSelectedStudentForAdd('');
+      setManualStudentInput('');
       await loadDocuments();
     } catch (err: any) {
       showToast(err.message, "error", "Failed to Add Student");
@@ -200,7 +228,10 @@ function DashboardComponent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentUsername: user?.username || user?.studentId || '',
+          currentUsername: user?.username || '',
+          currentStudentId: user?.studentId || '',
+          currentUserEmail: user?.email || '',
+          currentRole: user?.role || '',
           targetUserIdentifier: identifier.trim(),
           action: 'remove'
         })
@@ -223,6 +254,9 @@ function DashboardComponent() {
     }
     setCreateLoading(true);
     try {
+      const parsedCustom = customMemberInput.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      const combinedMembers = Array.from(new Set([...selectedNewMembers, ...parsedCustom]));
+
       const res = await fetch(`${API_BASE}/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,7 +269,7 @@ function DashboardComponent() {
           ownerName: user?.name || user?.username || 'Student Leader',
           studentId: user?.studentId || '',
           source: newDocSource,
-          members: selectedNewMembers
+          members: combinedMembers
         })
       });
       const data = await res.json();
@@ -244,6 +278,7 @@ function DashboardComponent() {
       setNewDocTitle('');
       setNewDocPrompt('');
       setSelectedNewMembers([]);
+      setCustomMemberInput('');
       await loadDocuments();
       router.push(`/editor?docId=${data.document._id}`);
     } catch (err: any) {
@@ -289,7 +324,9 @@ function DashboardComponent() {
 
     const isOwner = user && (
       (d.owner && d.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
+      (d.owner && user.email && d.owner.toLowerCase() === user.email.toLowerCase()) ||
+      (d.ownerName && user.name && d.ownerName.toLowerCase().includes(user.name.toLowerCase()))
     );
 
     if (docFilter === 'led') return isOwner;
@@ -498,6 +535,27 @@ function DashboardComponent() {
     0.15 * significanceRatePercent
   );
 
+  // Security Gate 1: Unauthenticated visitors do not see any documents
+  if (!isAuthenticated || !user) {
+    return (
+      <GuestDashboardView onSignIn={() => openAuthModal()} />
+    );
+  }
+
+  // Security Gate 2: Administrators access executive superuser dashboard
+  if (user?.role === 'admin' || user?.username === 'admin') {
+    return (
+      <AdminDashboard />
+    );
+  }
+
+  // Security Gate 3: Lecturers access supervisor evaluation dashboard
+  if (isUserLecturer) {
+    return (
+      <LecturerDashboard />
+    );
+  }
+
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={id => setToasts(prev => prev.filter(t => t.id !== id))} />
@@ -554,11 +612,15 @@ function DashboardComponent() {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
-              {availableDocs.map((doc: any) => (
-                <option key={doc._id} value={doc._id}>
-                  {doc.title || doc._id}
-                </option>
-              ))}
+              {availableDocs.length === 0 ? (
+                <option value="">No assignments assigned yet</option>
+              ) : (
+                availableDocs.map((doc: any) => (
+                  <option key={doc._id} value={doc._id}>
+                    {doc.title || doc._id}
+                  </option>
+                ))
+              )}
             </select>
 
             <button
@@ -1108,7 +1170,9 @@ function DashboardComponent() {
                 {filteredDocs.map((doc: any) => {
                   const isOwner = user && (
                     (doc.owner && doc.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
+                    (doc.owner && user.email && doc.owner.toLowerCase() === user.email.toLowerCase()) ||
+                    (doc.ownerName && user.name && doc.ownerName.toLowerCase().includes(user.name.toLowerCase()))
                   );
 
                   return (
@@ -1158,8 +1222,71 @@ function DashboardComponent() {
                           {doc.title || doc._id}
                         </h4>
 
+                        {/* Assignment Metadata (Course, Type, Submission Status) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+                          <span style={{
+                            background: doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.14)' : 'rgba(245, 158, 11, 0.14)',
+                            color: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
+                            border: `1px solid ${doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            <span style={{
+                              width: '5px',
+                              height: '5px',
+                              borderRadius: '50%',
+                              background: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
+                            }} />
+                            {doc.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}
+                          </span>
+
+                          <span style={{
+                            background: doc.assignmentType === 'individual' ? 'rgba(14, 165, 233, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+                            color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800
+                          }}>
+                            {doc.assignmentType === 'individual' ? 'Individual' : 'Group Project'}
+                          </span>
+
+                          {doc.course && (
+                            <span style={{ background: '#f1f5f9', color: '#475569', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>
+                              {doc.course}
+                            </span>
+                          )}
+
+                          {doc.grade && (
+                            <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800 }}>
+                              Grade: {doc.grade}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Lecturer Feedback (if evaluated) */}
+                        {doc.lecturerFeedback && (
+                          <div style={{
+                            background: 'rgba(99, 102, 241, 0.06)',
+                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                            borderRadius: '8px',
+                            padding: '0.6rem 0.75rem',
+                            marginBottom: '0.65rem',
+                            fontSize: '0.76rem',
+                            color: '#334155',
+                            lineHeight: 1.4
+                          }}>
+                            <strong style={{ color: '#4338ca' }}>Lecturer Feedback:</strong> {doc.lecturerFeedback}
+                          </div>
+                        )}
+
                         {/* Collaborators */}
-                        <div style={{ marginTop: '0.75rem' }}>
+                        <div>
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
                             Group Members ({doc.collaborators?.length || 1}):
                           </span>
@@ -1234,7 +1361,7 @@ function DashboardComponent() {
                         </div>
 
                         {/* Leader Quick Share / Add Member */}
-                        {isOwner && (
+                        {(isOwner || isUserLeader) && (
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <button
                               onClick={() => {
@@ -1252,7 +1379,7 @@ function DashboardComponent() {
                                 cursor: 'pointer'
                               }}
                             >
-                              + Add Teammate
+                              + Add Member
                             </button>
 
                             <button
@@ -1310,10 +1437,10 @@ function DashboardComponent() {
                 </h4>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr auto', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
-                    1. Select Target Document
+                    1. Target Assignment / Document
                   </label>
                   <select
                     value={teamTargetDocId}
@@ -1321,9 +1448,9 @@ function DashboardComponent() {
                     style={{
                       width: '100%',
                       background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: '1.5px solid #e2e8f0',
                       borderRadius: '8px',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.65rem 0.85rem',
                       fontSize: '0.85rem',
                       color: '#0f172a',
                       fontWeight: 600
@@ -1339,23 +1466,26 @@ function DashboardComponent() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
-                    2. Select Registered Student / Classmate
+                    2. Choose Registered Classmate
                   </label>
                   <select
                     value={selectedStudentForAdd}
-                    onChange={e => setSelectedStudentForAdd(e.target.value)}
+                    onChange={e => {
+                      setSelectedStudentForAdd(e.target.value);
+                      if (e.target.value) setManualStudentInput('');
+                    }}
                     style={{
                       width: '100%',
                       background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: '1.5px solid #e2e8f0',
                       borderRadius: '8px',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.65rem 0.85rem',
                       fontSize: '0.85rem',
                       color: '#0f172a',
                       fontWeight: 600
                     }}
                   >
-                    <option value="">-- Choose a student to add --</option>
+                    <option value="">-- Choose student from directory --</option>
                     {registeredStudents.map((st: any) => (
                       <option key={st._id} value={st.username || st.studentId}>
                         {st.name} ({st.studentId}) &bull; {st.email}
@@ -1364,23 +1494,54 @@ function DashboardComponent() {
                   </select>
                 </div>
 
-                <div style={{ paddingTop: '1.35rem' }}>
-                  <button
-                    onClick={() => handleAddStudentToDoc(teamTargetDocId, selectedStudentForAdd)}
-                    disabled={!selectedStudentForAdd}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
+                    OR Enter IT Number / Student ID / Email
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. IT23217522 or student@sliit.lk"
+                    value={manualStudentInput}
+                    onChange={e => {
+                      setManualStudentInput(e.target.value);
+                      if (e.target.value) setSelectedStudentForAdd('');
+                    }}
                     style={{
-                      background: selectedStudentForAdd ? '#a3e635' : '#e2e8f0',
-                      color: selectedStudentForAdd ? '#121417' : '#94a3b8',
+                      width: '100%',
+                      background: '#f8fafc',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.85rem',
+                      color: '#0f172a',
+                      fontWeight: 600,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => {
+                      const idToAdd = manualStudentInput.trim() || selectedStudentForAdd;
+                      handleAddStudentToDoc(teamTargetDocId, idToAdd);
+                    }}
+                    disabled={!manualStudentInput.trim() && !selectedStudentForAdd}
+                    style={{
+                      width: '100%',
+                      background: (manualStudentInput.trim() || selectedStudentForAdd) ? '#a3e635' : '#e2e8f0',
+                      color: (manualStudentInput.trim() || selectedStudentForAdd) ? '#121417' : '#94a3b8',
                       border: 'none',
                       borderRadius: '8px',
-                      padding: '0.6rem 1.25rem',
+                      padding: '0.65rem 1.25rem',
                       fontSize: '0.85rem',
                       fontWeight: 800,
-                      cursor: selectedStudentForAdd ? 'pointer' : 'not-allowed',
+                      cursor: (manualStudentInput.trim() || selectedStudentForAdd) ? 'pointer' : 'not-allowed',
+                      boxShadow: (manualStudentInput.trim() || selectedStudentForAdd) ? '0 2px 8px rgba(163, 230, 53, 0.35)' : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    Add to Group
+                    + Add Member to Group
                   </button>
                 </div>
               </div>
@@ -1691,6 +1852,32 @@ function DashboardComponent() {
                   </div>
                 </div>
 
+                {/* Direct IT Number / Email input for assignment creation */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                    Or Enter Additional IT Numbers / Emails / Usernames (comma or space separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. IT23217522, student@sliit.lk, rashi"
+                    value={customMemberInput}
+                    onChange={e => setCustomMemberInput(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 0.9rem',
+                      borderRadius: '8px',
+                      border: '1.5px solid #e2e8f0',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      fontSize: '0.9rem',
+                      outline: 'none'
+                    }}
+                  />
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem' }}>
+                    Assigned students can immediately view and edit this assignment upon signing in, even if they register later.
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={createLoading}
@@ -1842,7 +2029,7 @@ function DashboardComponent() {
                         cursor: 'pointer'
                       }}
                     >
-                      {isChecked ? '✓ ' : '+ '} {doc.title || doc._id}
+                      {isChecked ? '[Selected] ' : '+ '} {doc.title || doc._id}
                     </button>
                   );
                 })}

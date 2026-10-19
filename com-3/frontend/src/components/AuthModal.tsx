@@ -483,6 +483,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <option value="student">Student Member</option>
                     <option value="group_leader">Group Leader</option>
                     <option value="lecturer">Lecturer / Staff</option>
+                    <option value="admin">System Administrator (Full Access)</option>
                   </select>
                 </div>
               </div>

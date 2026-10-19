@@ -85,7 +85,7 @@ const clearPendingEdit = async (docId: string) => {
   }
 };
 
-const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink }: any) => {
+const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink, onSubmitAssignment, submissionStatus }: any) => {
   if (!editor) return null;
   
   const addImage = () => {
@@ -142,6 +142,21 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
 
         <button onClick={() => document.querySelector('.ProseMirror')?.classList.toggle('page-border')} className="toolbar-btn">Page Border</button>
+        <button
+          onClick={(e) => {
+            const el = document.querySelector('.ProseMirror');
+            if (el) {
+              const current = el.getAttribute('spellcheck');
+              const next = current === 'false' ? 'true' : 'false';
+              el.setAttribute('spellcheck', next);
+              e.currentTarget.classList.toggle('active', next === 'true');
+            }
+          }}
+          className="toolbar-btn active"
+          title="Toggle browser spellcheck & correction suggestions"
+        >
+          Spellcheck
+        </button>
 
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
 
@@ -226,6 +241,27 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         >
           Save & Rename
         </button>
+
+        {onSubmitAssignment && (
+          <button 
+            onClick={onSubmitAssignment} 
+            className="toolbar-btn" 
+            title="Save and submit completed assignment to lecturer"
+            style={{ 
+              background: submissionStatus === 'submitted' ? 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
+              border: 'none',
+              color: '#FFFFFF', 
+              fontWeight: 800,
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.35)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              cursor: 'pointer'
+            }}
+          >
+            <span>{submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Save & Submit Assignment'}</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -237,6 +273,13 @@ function EditorComponent() {
   const docIdParam = searchParams ? searchParams.get('docId') : null;
 
   const { user, isAuthenticated, openAuthModal } = useAuth();
+
+  // Lecturers do not edit student documents; redirect to supervision dashboard
+  useEffect(() => {
+    if (user?.role === 'lecturer') {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
 
   const [socket, setSocket] = useState<any>(null);
   const [availableDocs, setAvailableDocs] = useState<any[]>([]);
@@ -402,7 +445,7 @@ function EditorComponent() {
 
   const fetchDocs = () => {
     if (!user) return;
-    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
     fetch(`${getSocketUrl()}/api/documents?${query}`)
       .then(res => res.json())
       .then(data => {
@@ -410,12 +453,7 @@ function EditorComponent() {
         setAvailableDocs(docs);
         if (docs.length > 0) {
           if (docIdParam) {
-            const hasParam = docs.some((d: any) => d._id === docIdParam);
-            if (hasParam) {
-              setSelectedDocId(docIdParam);
-            } else {
-              setSelectedDocId(docs[0]._id);
-            }
+            setSelectedDocId(docIdParam);
           } else {
             setSelectedDocId(prev => {
               const stillValid = docs.some((d: any) => d._id === prev);
@@ -439,7 +477,7 @@ function EditorComponent() {
     if (!selectedDocId || !user) return;
     setAccessDenied(false);
 
-    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
     fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`)
       .then(async res => {
         const data = await res.json();
@@ -494,6 +532,13 @@ function EditorComponent() {
       Highlight
     ],
     content: '<p></p>',
+    editorProps: {
+      attributes: {
+        spellcheck: 'true',
+        autocorrect: 'on',
+        autocapitalize: 'sentences'
+      }
+    },
     onUpdate: ({ editor }) => {
       if (!isAuthenticated || accessDenied) return;
       const html = editor.getHTML();
@@ -565,6 +610,7 @@ function EditorComponent() {
         documentId: selectedDocId,
         username: user.username,
         studentId: user.studentId,
+        email: user.email,
         name: user.name,
         role: user.role
       });
@@ -834,6 +880,46 @@ function EditorComponent() {
     saveContentAndNotify();
   };
 
+  const handleSubmitAssignment = () => {
+    if (!selectedDocId || !user) return;
+    
+    // First save content
+    saveContentAndNotify();
+
+    const currentTitle = docDetails?.title || 'this assignment';
+    setConfirmDialog({
+      isOpen: true,
+      title: "Submit Assignment to Lecturer",
+      message: `Are you ready to submit "${currentTitle}" to your lecturer? Your collaborative contribution heatmap, revision flow timeline, and authorship attribution will be submitted for evaluation.`,
+      confirmLabel: "Yes, Submit Assignment",
+      cancelLabel: "Continue Editing",
+      isDanger: false,
+      onConfirm: async () => {
+        setConfirmDialog((prev: any) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              submittedBy: user.name || user.username,
+              studentId: user.studentId
+            })
+          });
+
+          if (res.ok) {
+            setDocDetails((prev: any) => prev ? { ...prev, submissionStatus: 'submitted', submittedAt: new Date() } : null);
+            showToast("Assignment submitted successfully to Lecturer! Telemetry locked for academic evaluation.", "success", "Assignment Submitted");
+          } else {
+            const data = await res.json();
+            showToast(data.error || "Failed to submit assignment", "error", "Submission Failed");
+          }
+        } catch (err: any) {
+          showToast(err.message || "Failed to submit assignment", "error", "Submission Error");
+        }
+      }
+    });
+  };
+
   const handleSaveAndRename = () => {
     if (!selectedDocId || !user) return;
     const currentTitle = docDetails?.title || selectedDocId;
@@ -870,7 +956,7 @@ function EditorComponent() {
       onConfirm: async () => {
         setConfirmDialog((prev: any) => ({ ...prev, isOpen: false }));
         try {
-          const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+          const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
           const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`, {
             method: 'DELETE'
           });
@@ -1702,6 +1788,67 @@ function EditorComponent() {
                 &bull; In-Built Collaborative Workspace
               </span>
             </div>
+
+            {/* Assignment Metadata Chips */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginTop: '0.45rem', flexWrap: 'wrap' }}>
+              <span style={{
+                fontSize: '0.74rem',
+                background: docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.14)' : 'rgba(245, 158, 11, 0.14)',
+                border: `1px solid ${docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                color: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
+                padding: '0.15rem 0.65rem',
+                borderRadius: '9999px',
+                fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}>
+                <span style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
+                }} />
+                <span>{docDetails?.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}</span>
+              </span>
+
+              {docDetails?.course && (
+                <span style={{
+                  fontSize: '0.74rem',
+                  background: '#f1f5f9',
+                  color: '#0f172a',
+                  padding: '0.15rem 0.55rem',
+                  borderRadius: '6px',
+                  fontWeight: 700
+                }}>
+                  {docDetails.course}
+                </span>
+              )}
+
+              <span style={{
+                fontSize: '0.74rem',
+                background: docDetails?.assignmentType === 'individual' ? 'rgba(14, 165, 233, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+                color: docDetails?.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
+                padding: '0.15rem 0.55rem',
+                borderRadius: '6px',
+                fontWeight: 800
+              }}>
+                {docDetails?.assignmentType === 'individual' ? 'Individual Project' : 'Group Collaborative Project'}
+              </span>
+
+              {docDetails?.grade && (
+                <span style={{
+                  fontSize: '0.74rem',
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  color: '#16a34a',
+                  padding: '0.15rem 0.55rem',
+                  borderRadius: '6px',
+                  fontWeight: 800
+                }}>
+                  Grade Awarded: {docDetails.grade}
+                </span>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -1809,6 +1956,8 @@ function EditorComponent() {
         toggleOffline={toggleOffline} 
         onSave={handleSave}
         onSaveAndRename={handleSaveAndRename}
+        onSubmitAssignment={handleSubmitAssignment}
+        submissionStatus={docDetails?.submissionStatus}
         onPromptImage={() => {
           setPromptDialog({
             isOpen: true,
