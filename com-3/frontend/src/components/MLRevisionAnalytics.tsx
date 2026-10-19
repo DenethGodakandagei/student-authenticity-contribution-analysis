@@ -176,7 +176,7 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
               textTransform: 'uppercase',
               letterSpacing: '0.05em'
             }}>
-              Component 3 ML Pipeline
+              ML Revision Pipeline
             </span>
           </div>
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

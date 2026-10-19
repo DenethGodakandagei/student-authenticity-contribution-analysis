@@ -334,7 +334,7 @@ function DashboardComponent() {
     return true;
   });
 
-  // Dynamic Component 3 Research Metrics
+  // Dynamic Document Evolution & Research Metrics
   const rawDocWords = selectedDocObj?.content
     ? selectedDocObj.content.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length
     : 0;
@@ -527,7 +527,7 @@ function DashboardComponent() {
   // Process Evolution & Growth Tracking Score
   const processEvolutionScore = Math.round(Math.max(45, Math.min(98, 68 + Math.min(26, revisionsCount * 3) - (pasteAnomaliesCount * 8))));
 
-  // Weighted Component 3 Standing Index
+  // Weighted Standing Index
   const weightedCompositeIndex = Math.round(
     0.35 * processEvolutionScore +
     0.25 * workloadEquityScore +
@@ -562,7 +562,7 @@ function DashboardComponent() {
 
       <div className="dashboard-container">
         
-        {/* 1. Top Success Notification Banner tailored to Component 3 */}
+        {/* 1. Top Success Notification Banner */}
         <div style={{
           background: 'rgba(163, 230, 53, 0.16)',
           border: '1px solid rgba(163, 230, 53, 0.35)',
@@ -577,7 +577,7 @@ function DashboardComponent() {
         }}>
           <span>Document Evolution Pipeline Active: Real-time multi-author contributions, collaborative revision history, and ML intent classifications are synchronized.</span>
           <span style={{ fontSize: '0.78rem', background: '#275306', color: '#ffffff', padding: '0.15rem 0.6rem', borderRadius: '9999px', fontWeight: 700 }}>
-            Component 3
+            Live Telemetry
           </span>
         </div>
 
@@ -697,13 +697,13 @@ function DashboardComponent() {
           </button>
         </div>
 
-        {/* 3. Two Research-Aligned Cards Grid (Component 3 Document Evolution & ML Taxonomy) */}
+        {/* 3. Two Research-Aligned Cards Grid (Document Evolution & ML Taxonomy) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
           gap: '1.5rem'
         }}>
-          {/* Card 1: Document Evolution & Contribution Authenticity (Component 3 Core Research) */}
+          {/* Card 1: Document Evolution & Contribution Authenticity (Core Research) */}
           <div style={{
             background: '#ffffff',
             border: '1px solid rgba(0, 0, 0, 0.06)',
@@ -778,7 +778,7 @@ function DashboardComponent() {
                 </p>
               </div>
 
-              {/* Three Component 3 Metric Mini Cards */}
+              {/* Metric Mini Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 0.5rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Incremental Drafting</div>
@@ -814,8 +814,8 @@ function DashboardComponent() {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', marginTop: '0.75rem' }}>
+            {/* Action Buttons - Compact Sleek Design */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '0.45rem', marginTop: '0.65rem' }}>
               <button
                 onClick={() => router.push(`/editor?docId=${selectedDocId}`)}
                 style={{
@@ -823,17 +823,25 @@ function DashboardComponent() {
                   color: '#121417',
                   border: 'none',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   textAlign: 'center',
-                  boxShadow: '0 2px 8px rgba(163, 230, 53, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  boxShadow: '0 2px 6px rgba(163, 230, 53, 0.25)',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
                 onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
               >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
                 Open in Editor
               </button>
 
@@ -844,16 +852,23 @@ function DashboardComponent() {
                   border: '1px solid #e2e8f0',
                   color: '#0f172a',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
                 onMouseOut={e => e.currentTarget.style.background = '#ffffff'}
               >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
                 Author Highlights
               </button>
 
@@ -864,22 +879,26 @@ function DashboardComponent() {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
+                  gap: '0.35rem',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#272b30'}
                 onMouseOut={e => e.currentTarget.style.background = '#121417'}
                 title="Download full document evolution telemetry as JSON"
               >
-                <span style={{ fontWeight: 800 }}>&#123;&nbsp;&#125;</span> Download JSON
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+                Download JSON
               </button>
 
               <button
@@ -889,23 +908,29 @@ function DashboardComponent() {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
-                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
+                  gap: '0.35rem',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#0369a1'}
                 onMouseOut={e => e.currentTarget.style.background = '#0284c7'}
                 title="Download ML training dataset as CSV (clean, flat tabular format for Pandas, PyTorch & Scikit-learn)"
               >
-                <span style={{ fontWeight: 800 }}>&#128202;</span> Download CSV
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="16" y2="17" />
+                </svg>
+                Download CSV
               </button>
             </div>
           </div>
@@ -950,7 +975,7 @@ function DashboardComponent() {
               }}>
                 <div>
                   <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                    WEIGHTED EVOLUTION SCORE (COMPONENT 3)
+                    WEIGHTED EVOLUTION SCORE
                   </div>
                   <div style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, marginTop: '0.15rem' }}>
                     Composite index across process velocity, co-author equity &amp; ML intent depth
@@ -961,7 +986,7 @@ function DashboardComponent() {
                 </div>
               </div>
 
-              {/* Progress Bars Breakdown for Component 3 Research Dimensions */}
+              {/* Progress Bars Breakdown for Research Dimensions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>

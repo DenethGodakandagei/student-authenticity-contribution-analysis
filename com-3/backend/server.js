@@ -2516,7 +2516,7 @@ app.get('/api/documents/cross-group-analysis', async (req, res) => {
 });
 
 // =========================================================================
-// Component 3: Intelligent Document Evolution & ML Revision Analytics APIs
+// Intelligent Document Evolution & ML Revision Analytics APIs
 // =========================================================================
 
 // 1. Get raw revisions with before/after diffs and ML classifications
@@ -2633,7 +2633,7 @@ app.get('/api/documents/:id/revision-analytics', async (req, res) => {
       timeline: timelineData,
       modelMetadata: {
         version: 'v1.0-rules-ml-ensemble',
-        framework: 'Component 3 ML Microservice (FastAPI on port 8002)',
+        framework: 'Intelligent ML Microservice (FastAPI on port 8002)',
         intentTaxonomy: Object.keys(intentCounts).filter(k => k !== 'Unclassified'),
         significanceCriteria: ['Minor', 'Moderate', 'Major']
       },
