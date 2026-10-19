@@ -14,30 +14,31 @@ COMPONENT1_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 WORKSPACE_ROOT = os.path.abspath(os.path.join(COMPONENT1_ROOT, ".."))
 
 # Data Paths
-DEFAULT_DATA_PATH = os.path.join(WORKSPACE_ROOT, "pilot_dataset.csv")
-FALLBACK_DATA_PATH = os.path.join(WORKSPACE_ROOT, "telemetry_dataset.csv")
+DEFAULT_DATA_PATH = os.path.join(BASE_DIR, "dataset.csv")
+FALLBACK_DATA_PATH = os.path.join(WORKSPACE_ROOT, "pilot_dataset.csv")
 ARTIFACTS_DIR = os.path.join(BASE_DIR, "model_artifacts")
 MODEL_SAVE_PATH = os.path.join(ARTIFACTS_DIR, "authenticity_classifier.joblib")
 METADATA_SAVE_PATH = os.path.join(ARTIFACTS_DIR, "model_metadata.json")
 
 # Ground Truth & Grouping Columns
-TARGET_COLUMN = "label"             # 0 = Manual Genuine, 1 = AI-Assisted
-GROUP_COLUMN = "participant_id"     # Grouping unit for GroupKFold (P01-P20)
+TARGET_COLUMN = "authenticity_label"  # 0 = Manual Genuine, 1 = AI-Assisted
+GROUP_COLUMN = "student_id"           # Grouping unit for GroupKFold (prevents biometric cross-contamination)
 
-# Feature Vector (12 Biometric & Behavioral Telemetry Features)
+# Feature Vector (13 Sensor-Agnostic Behavioral & Biometric Telemetry Features)
 FEATURE_COLUMNS = [
-    "keystroke_count",
-    "manual_chars_inserted",
-    "chars_added",
-    "chars_deleted",
-    "backspace_count",
+    "duration_minutes",
+    "keystrokes",
+    "lines_added",
+    "lines_removed",
+    "net_lines",
     "code_churn_ratio",
     "paste_count",
-    "pasted_chars",
-    "paste_velocity",
+    "characters_pasted",
     "typing_speed_cpm",
+    "keystroke_efficiency_keff",
     "paste_ratio",
-    "active_time_sec"
+    "is_offline",
+    "files_edited_count"
 ]
 
 # Validation Strategy (Zero Data Leakage)

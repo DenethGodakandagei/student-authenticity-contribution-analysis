@@ -1,18 +1,19 @@
 {
   "model_name": "Random Forest (Tuned)",
   "features": [
-    "keystroke_count",
-    "manual_chars_inserted",
-    "chars_added",
-    "chars_deleted",
-    "backspace_count",
+    "duration_minutes",
+    "keystrokes",
+    "lines_added",
+    "lines_removed",
+    "net_lines",
     "code_churn_ratio",
     "paste_count",
-    "pasted_chars",
-    "paste_velocity",
+    "characters_pasted",
     "typing_speed_cpm",
+    "keystroke_efficiency_keff",
     "paste_ratio",
-    "active_time_sec"
+    "is_offline",
+    "files_edited_count"
   ],
   "benchmark_summary": {
     "Random Forest (Tuned)": {

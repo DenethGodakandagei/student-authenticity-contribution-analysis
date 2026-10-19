@@ -1,2 +1,0 @@
-session_id,student_id,window_index,window_start_iso,window_end_iso,total_events,active_time_sec,keystroke_count,manual_chars_inserted,chars_deleted,paste_count,pasted_chars,paste_velocity,typing_speed_cpm,paste_ratio,label
-session-123,student-456,0,2026-09-22T15:47:29.802000+00:00,2026-09-22T15:52:29.802000+00:00,3,0.2,2,20,0,0,0,0.0,400.0,0.0,0
