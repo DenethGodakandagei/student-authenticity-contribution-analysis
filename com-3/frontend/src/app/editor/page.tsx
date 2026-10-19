@@ -142,6 +142,21 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
 
         <button onClick={() => document.querySelector('.ProseMirror')?.classList.toggle('page-border')} className="toolbar-btn">Page Border</button>
+        <button
+          onClick={(e) => {
+            const el = document.querySelector('.ProseMirror');
+            if (el) {
+              const current = el.getAttribute('spellcheck');
+              const next = current === 'false' ? 'true' : 'false';
+              el.setAttribute('spellcheck', next);
+              e.currentTarget.classList.toggle('active', next === 'true');
+            }
+          }}
+          className="toolbar-btn active"
+          title="Toggle browser spellcheck & correction suggestions"
+        >
+          Spellcheck
+        </button>
 
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
 
@@ -517,6 +532,13 @@ function EditorComponent() {
       Highlight
     ],
     content: '<p></p>',
+    editorProps: {
+      attributes: {
+        spellcheck: 'true',
+        autocorrect: 'on',
+        autocapitalize: 'sentences'
+      }
+    },
     onUpdate: ({ editor }) => {
       if (!isAuthenticated || accessDenied) return;
       const html = editor.getHTML();
