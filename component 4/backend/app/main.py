@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 from typing import List, Optional
 # pyrefly: ignore [missing-import]
@@ -8,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, HTTPException, status, Depends
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
@@ -16,17 +17,21 @@ from pydantic import BaseModel
 from app.pdf_processor import process_pdf
 from app.misconception_generator import generate_student_misconceptions
 from app.nova_agent import NovaStudentAgent
+from app.auth import router as auth_router, get_current_user
 
 
 app = FastAPI(title="AI-Based Virtual Student API")
 
+# Auth routes (registration, login, /me, logout)
+app.include_router(auth_router)
+
 # Setup CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,12 +51,17 @@ class CreateFromKbRequest(BaseModel):
     misconception_ids: Optional[List[str]] = None
     count: int = 2
 
+def _check_session_owner(nova: NovaStudentAgent, user: dict) -> None:
+    """Raises 403 if the session is owned by a different user. Unowned sessions stay open."""
+    if nova.state.owner_id and nova.state.owner_id != str(user["id"]):
+        raise HTTPException(status_code=403, detail="You do not own this session.")
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to AI-Based Virtual Student API"}
 
 @app.post("/upload-material")
-async def upload_material(file: UploadFile = File(...)):
+async def upload_material(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     # Validation 1: Check file extension
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -84,6 +94,7 @@ async def upload_material(file: UploadFile = File(...)):
 
         # 3. Automatically initialize Nova student agent session
         nova = NovaStudentAgent.from_atlas_output(misconception_result)
+        nova.state.owner_id = str(user["id"])
         session_file = os.path.join(SESSIONS_DIR, f"{nova.state.session_id}.json")
         nova.save_state(session_file)
 
@@ -113,9 +124,10 @@ async def upload_material(file: UploadFile = File(...)):
 # ============================================================================
 
 @app.post("/sessions/create-nova")
-def create_nova_session(req: CreateSessionRequest):
+def create_nova_session(req: CreateSessionRequest, user: dict = Depends(get_current_user)):
     try:
         nova = NovaStudentAgent.from_atlas_output(req.atlas_output)
+        nova.state.owner_id = str(user["id"])
         session_file = os.path.join(SESSIONS_DIR, f"{nova.state.session_id}.json")
         nova.save_state(session_file)
         return {
@@ -131,7 +143,7 @@ def create_nova_session(req: CreateSessionRequest):
         raise HTTPException(status_code=500, detail=f"Failed to create Nova session: {str(e)}")
 
 @app.post("/sessions/create-from-kb")
-def create_session_from_kb(req: CreateFromKbRequest):
+def create_session_from_kb(req: CreateFromKbRequest, user: dict = Depends(get_current_user)):
     """Creates a Nova session from a knowledge base's misconception repository."""
     try:
         nova = NovaStudentAgent.from_repository(
@@ -139,6 +151,7 @@ def create_session_from_kb(req: CreateFromKbRequest):
             misconception_ids=req.misconception_ids,
             count=req.count,
         )
+        nova.state.owner_id = str(user["id"])
         session_file = os.path.join(SESSIONS_DIR, f"{nova.state.session_id}.json")
         nova.save_state(session_file)
         return {
@@ -152,19 +165,51 @@ def create_session_from_kb(req: CreateFromKbRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create session from kb: {str(e)}")
 
+@app.get("/sessions")
+def list_sessions(user: dict = Depends(get_current_user)):
+    """Returns the current user's sessions."""
+    sessions = []
+    owner = str(user["id"])
+    if not os.path.isdir(SESSIONS_DIR):
+        return sessions
+    for fname in os.listdir(SESSIONS_DIR):
+        if not fname.endswith(".json"):
+            continue
+        path = os.path.join(SESSIONS_DIR, fname)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                state = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if state.get("owner_id") != owner:
+            continue
+        misconceptions = state.get("misconceptions", [])
+        sessions.append({
+            "session_id": state.get("session_id", fname[:-5]),
+            "topic": state.get("topic", ""),
+            "created_at": state.get("created_at"),
+            "updated_at": state.get("updated_at"),
+            "learned_count": sum(1 for m in misconceptions if m.get("is_corrected")),
+            "total_count": len(misconceptions),
+        })
+    return sessions
+
 @app.get("/sessions/{session_id}")
-def get_nova_session(session_id: str):
+def get_nova_session(session_id: str, user: dict = Depends(get_current_user)):
     session_file = os.path.join(SESSIONS_DIR, f"{session_id}.json")
     if not os.path.exists(session_file):
         raise HTTPException(status_code=404, detail="Session not found.")
     try:
         nova = NovaStudentAgent.load_state(session_file)
+        _check_session_owner(nova, user)
         return nova.to_dict()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load session: {str(e)}")
 
 @app.post("/sessions/{session_id}/exam")
-def run_exam(session_id: str):
+def run_exam(session_id: str, user: dict = Depends(get_current_user)):
     """Run an exam for the given Nova session.
 
     The exam generates assessment questions from Nova's misconceptions, asks Nova to answer them,
@@ -176,6 +221,7 @@ def run_exam(session_id: str):
     try:
         # Load Nova session
         nova = NovaStudentAgent.load_state(session_file)
+        _check_session_owner(nova, user)
 
         # -------------------------------------------------------------------
         # Generate assessment questions targeting current misconceptions
@@ -257,7 +303,7 @@ def run_exam(session_id: str):
 
 @app.post("/sessions/{session_id}/chat")
 @app.post("/teaching-session/{session_id}/chat")
-def chat_with_nova(session_id: str, req: ChatMessageRequest):
+def chat_with_nova(session_id: str, req: ChatMessageRequest, user: dict = Depends(get_current_user)):
     """
     Teaching session endpoint: University student teaches Nova.
     Nova responds based on current uncorrected misconceptions, acknowledges correct explanations,
@@ -269,6 +315,7 @@ def chat_with_nova(session_id: str, req: ChatMessageRequest):
 
     try:
         nova = NovaStudentAgent.load_state(session_file)
+        _check_session_owner(nova, user)
         result = nova.respond(req.message)
         nova.save_state(session_file)
         return {

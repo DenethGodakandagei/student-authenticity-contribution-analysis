@@ -49,6 +49,7 @@ class NovaState(BaseModel):
         description="How Nova behaves during teaching.",
     )
     kb_id: str = Field(default="", description="Knowledge base id this session was created from.")
+    owner_id: str = Field(default="", description="User id that owns this session; empty means legacy/unowned.")
     learning_objectives: List[str] = Field(default_factory=list, description="Learning objectives.")
     misconceptions: List[MisconceptionState] = Field(default_factory=list, description="Misconceptions and correction states.")
     conversation_history: List[Dict[str, str]] = Field(default_factory=list, description="Chat message history.")
@@ -253,15 +254,15 @@ TEACHER'S LATEST MESSAGE:
 "{user_message}"
 
 INSTRUCTIONS FOR NOVA:
-1. Reply in plain text only: 2-3 sentences, first person, no quotation marks around the whole reply,
+1. Reply in plain text only: 2-3 sentences, first person, no quotation marks around your reply,
    no placeholders like [Your Name].
 2. First, react directly to the teacher's latest message in your own words: repeat the idea back,
    ask a question about it, or say what is confusing about it.
 3. Only after that, if you still hold other active beliefs, you may briefly mention one of them.
-4. When you give an explanation or example, use MY CURRENT BELIEFS above, not the correct facts,
-   unless the concept is listed under CONCEPTS I HAVE ALREADY LEARNED.
-5. If the teacher's message is short, vague, or only partly correct, push back politely instead
+4. If the teacher's message is short, vague, or only partly correct, push back politely instead
    of accepting it, based on your current beliefs.
+5. When you give an explanation or example, use MY CURRENT BELIEFS above, not the correct facts,
+   unless the concept is listed under CONCEPTS I HAVE ALREADY LEARNED.
 6. When the teacher clearly and fully corrects one of your beliefs, show a realistic moment
    of understanding and restate the corrected idea in your own words.
 

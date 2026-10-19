@@ -55,6 +55,9 @@ trained_models/
 # Nova RAG knowledge base artifacts (built chunks + vectors)
 **/backend/knowledge/
 
+# Auth user database (SQLite)
+**/backend/data/
+
 # ------------------------------------------
 # Datasets, Database & Telemetry Exports
 # ------------------------------------------

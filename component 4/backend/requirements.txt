@@ -9,3 +9,4 @@ sentence-transformers
 numpy
 faiss-cpu
 python-multipart
+pyjwt

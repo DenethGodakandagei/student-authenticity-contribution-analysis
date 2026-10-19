@@ -3,24 +3,68 @@ Tests for KB-grounded Nova sessions:
 - NovaStudentAgent.from_repository (explicit ids and count-based selection)
 - Persona prompt rules (correct_concept never leaked for active misconceptions)
 - Event logging during a chat turn (mock provider)
-- POST /sessions/create-from-kb route (TestClient)
+- POST /sessions/create-from-kb route (TestClient, JWT protected)
 - Legacy session state compatibility
+
+Uses a temporary SQLite users database and a temporary JWT_SECRET, so the real
+backend/data/users.db and the real .env secret are untouched.
 
 Run:            python test_session.py
 With live LLM:  python test_session.py --live
 """
 import json
 import os
+import shutil
 import sys
+import tempfile
 import time
 
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, backend_dir)
 
+from app.config import settings
+
+# Temporary secret (>= 32 chars) applied BEFORE the auth module is imported,
+# so the startup guard in app/auth.py passes without touching the real .env.
+TEST_SECRET = "test-secret-" + "y" * 50
+settings.JWT_SECRET = TEST_SECRET
+settings.JWT_ALGORITHM = "HS256"
+
+from app import auth
 from app.llm import BaseLLMProvider
 from app.nova_agent import NovaStudentAgent
 
 KB_ID = "demo"
+
+# Temporary users database file for this test run only.
+_tmpdir = tempfile.mkdtemp(prefix="nova-session-test-")
+auth.DB_PATH = os.path.join(_tmpdir, "users.db")
+
+TEST_USER = {
+    "name": "Session Tester",
+    "email": "session-tester@example.com",
+    "password": "password123",
+    "consent": True,
+}
+
+
+def _auth_headers(token: str) -> dict:
+    """Bearer Authorization header for the JWT-protected routes."""
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _register_test_user(client) -> str:
+    """Registers the temporary test user and returns its access token."""
+    resp = client.post("/auth/register", json=TEST_USER)
+    if resp.status_code == 409:
+        resp = client.post(
+            "/auth/login",
+            json={"email": TEST_USER["email"], "password": TEST_USER["password"]},
+        )
+    assert resp.status_code == 200, resp.text
+    token = resp.json()["access_token"]
+    assert token
+    return token
 
 
 class MockProvider(BaseLLMProvider):
@@ -182,9 +226,18 @@ def test_create_from_kb_route():
     created_files = []
 
     try:
+        # Every route now needs a JWT: register a temporary test user first.
+        token = _register_test_user(client)
+        headers = _auth_headers(token)
+
+        assert client.post("/sessions/create-from-kb",
+                           json={"kb_id": KB_ID}).status_code == 401
+        print("  OK protected route without a token gives 401.")
+
         # Happy path: explicit ids
         resp = client.post("/sessions/create-from-kb",
-                           json={"kb_id": KB_ID, "misconception_ids": ["m1", "m3"]})
+                           json={"kb_id": KB_ID, "misconception_ids": ["m1", "m3"]},
+                           headers=headers)
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["session_id"]
@@ -195,22 +248,26 @@ def test_create_from_kb_route():
         assert os.path.exists(created_files[-1]), "session file not persisted"
 
         # GET roundtrip returns the same session
-        get_resp = client.get(f"/sessions/{body['session_id']}")
+        get_resp = client.get(f"/sessions/{body['session_id']}", headers=headers)
         assert get_resp.status_code == 200, get_resp.text
         assert get_resp.json()["session_id"] == body["session_id"]
 
         # Count-based default (2 items, distinct concepts)
-        resp2 = client.post("/sessions/create-from-kb", json={"kb_id": KB_ID})
+        resp2 = client.post("/sessions/create-from-kb", json={"kb_id": KB_ID},
+                            headers=headers)
         assert resp2.status_code == 200, resp2.text
         concepts = [m["concept"] for m in resp2.json()["state"]["misconceptions"]]
         assert len(concepts) == 2 and len(set(concepts)) == 2
         created_files.append(os.path.join(SESSIONS_DIR, f"{resp2.json()['session_id']}.json"))
 
         # Error paths
-        assert client.post("/sessions/create-from-kb", json={"kb_id": "nope"}).status_code == 404
+        assert client.post("/sessions/create-from-kb", json={"kb_id": "nope"},
+                           headers=headers).status_code == 404
         assert client.post("/sessions/create-from-kb",
-                           json={"kb_id": KB_ID, "misconception_ids": ["zzz"]}).status_code == 400
+                           json={"kb_id": KB_ID, "misconception_ids": ["zzz"]},
+                           headers=headers).status_code == 400
         print("  OK POST /sessions/create-from-kb (200/404/400) and GET roundtrip.")
+        print("  OK JWT Authorization header sent on every request.")
     finally:
         for path in created_files:
             if os.path.exists(path):
@@ -221,9 +278,11 @@ def run_test():
     print("==========================================================")
     print("TEST: KB-grounded Nova session (from_repository + route)")
     print("==========================================================")
+    print(f"  (temporary users DB: {auth.DB_PATH})")
 
     if not os.path.exists(os.path.join("knowledge", KB_ID, "misconceptions.json")):
         print(f"SKIP: knowledge/{KB_ID}/misconceptions.json not found.")
+        shutil.rmtree(_tmpdir, ignore_errors=True)
         return
 
     test_from_repository_explicit_ids()
@@ -256,10 +315,13 @@ def run_test():
             print(f"  Corrected ids: {result['newly_corrected_ids'] or 'none'}")
             for m in nova.state.misconceptions:
                 print(f"  [{m.id}] {m.concept}: {m.status}")
+            print(f"  Time taken: {elapsed:.1f}s")
         print(f"\n  Average seconds per turn: {sum(durations) / len(durations):.1f}s")
         print("  OK live chat turns.")
     else:
         print("  (add --live to run real LLM chat turns)")
+
+    shutil.rmtree(_tmpdir, ignore_errors=True)
 
     print("\n==========================================================")
     print("SUCCESS: KB-grounded Nova session verified working!")

@@ -1,0 +1,32 @@
+{
+  "session_id": "7e54d6d9-6718-401a-b220-f04b86c09151",
+  "topic": "OOP",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "1",
+  "learning_objectives": [
+    "Understand classes"
+  ],
+  "misconceptions": [
+    {
+      "id": "b519dd82",
+      "wrong_concept": "A class is an instance.",
+      "correct_concept": "A class is a blueprint.",
+      "reason": "r",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "created_at": "2026-10-18T11:50:29.958336",
+  "updated_at": "2026-10-18T11:50:29.958471"
+}
