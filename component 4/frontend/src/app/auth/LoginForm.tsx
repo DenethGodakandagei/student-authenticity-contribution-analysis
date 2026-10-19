@@ -11,7 +11,6 @@ import PasswordField from './PasswordField';
 import RoleSelector from './RoleSelector';
 import { delay } from './anim';
 import {
-  destinationFor,
   loadRememberedEmail,
   login,
   type AuthRole,
@@ -19,10 +18,28 @@ import {
 import {
   getAccessToken,
   getServerAuthSnapshot,
+  getStoredUserRaw,
   subscribeAuth,
 } from '../utils/api';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Students land on /dashboard, lecturers on /lecturer. */
+function destinationForRole(role: AuthRole | undefined): string {
+  return role === 'lecturer' ? '/lecturer' : '/dashboard';
+}
+
+/** Reads the role the API stored on the signed-in user. */
+function storedRole(): AuthRole | undefined {
+  const raw = getStoredUserRaw();
+  if (!raw) return undefined;
+  try {
+    const role = (JSON.parse(raw) as { role?: string }).role;
+    return role === 'student' || role === 'lecturer' ? role : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** The remembered-address snapshot never pushes events — it is read-only. */
 const subscribeNoop = () => () => {};
@@ -76,7 +93,9 @@ export default function LoginForm() {
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (token && !skipAutoRedirect.current) router.replace('/');
+    if (token && !skipAutoRedirect.current) {
+      router.replace(destinationForRole(storedRole()));
+    }
   }, [token, router]);
 
   useEffect(() => () => void (timerRef.current && window.clearTimeout(timerRef.current)), []);
@@ -116,7 +135,7 @@ export default function LoginForm() {
 
     setSuccess(true);
     timerRef.current = window.setTimeout(
-      () => router.push(destinationFor(outcome.role)),
+      () => router.push(destinationForRole(outcome.role)),
       650
     );
   };

@@ -32,7 +32,12 @@
 }
 
 /* ── 2. Tokens ──────────────────────────────────────────────────────────── */
-.auth-page {
+/*
+ * Declared on :root so the shared nav — which lives in the root layout and is
+ * therefore rendered outside .auth-page — resolves the same colours and nav
+ * height on every screen, not just the auth pages.
+ */
+:root {
   --nova-ink: #edf0fa;
   --nova-muted: #99a2c0;
   --nova-faint: #6f7796;
@@ -53,12 +58,13 @@
   --radius-card: 26px;
   --radius-field: 13px;
   --nova-nav-h: 68px;
+}
 
+.auth-page {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  min-height: 100dvh;
-  padding-top: var(--nova-nav-h);
+  min-height: calc(100dvh - var(--nova-nav-h));
   color: var(--nova-ink);
   font-family:
     "Inter", var(--font-geist-sans, system-ui), system-ui, sans-serif;
@@ -338,13 +344,11 @@
   animation: novaNodePulse 4.5s ease-in-out infinite;
 }
 
-/* Top navigation bar (logo on the left, links on the right — fixed, never scrolls) */
+/* Top navigation bar (logo on the left, links on the right — sticky, shared) */
 .auth-nav {
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  z-index: 3;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -415,6 +419,32 @@
 .auth-nav__link:focus-visible {
   outline: 2px solid rgba(160, 140, 255, 0.9);
   outline-offset: 2px;
+}
+
+/* Logout is a button but should read as just another nav link */
+.auth-nav button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.auth-nav__link:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-nav__user {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline: 0.2rem;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--nova-ink);
+  white-space: nowrap;
 }
 
 .nova-logo {
@@ -872,7 +902,7 @@
 /* ── 6. Auth pane (right column — sticky card, stays centred on scroll) ── */
 .auth-pane {
   position: sticky;
-  top: var(--nova-nav-h);
+  top: 0;
   align-self: start;
   z-index: 1;
   display: flex;
@@ -1715,7 +1745,7 @@
  */
 @media (min-width: 1024px) {
   .auth-page {
-    height: 100dvh;
+    height: calc(100dvh - var(--nova-nav-h));
     min-height: 0;
     overflow: hidden;
   }

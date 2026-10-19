@@ -3,7 +3,6 @@
 
 import type { ReactNode } from 'react';
 import './auth.css';
-import AuthNav from './AuthNav';
 import NovaBrandPanel from './NovaBrandPanel';
 import { delay } from './anim';
 
@@ -97,11 +96,10 @@ function AuthFx() {
   );
 }
 
-/** Split-shell auth layout: fixed nav, full-screen fx layer, brand column + card. */
+/** Split-shell auth layout: shared nav lives in the root layout. */
 export default function AuthLayout({ mode, children }: AuthLayoutProps) {
   return (
     <main className="auth-page" data-mode={mode}>
-      <AuthNav />
       <AuthFx />
       <NovaBrandPanel />
 

@@ -3,7 +3,6 @@
 
 import { useEffect, useSyncExternalStore, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Navbar from '../../../components/Navbar';
 import ChatBox, { ChatTurn } from '../../../components/ChatBox';
 import ProgressCard from '../../../components/ProgressCard';
 import ResearcherPanel from '../../../components/ResearcherPanel';
@@ -68,8 +67,6 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
-
       <main className="mx-auto w-full max-w-6xl px-4 py-6">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0">

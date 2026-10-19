@@ -3,7 +3,6 @@
 
 import { useEffect, useSyncExternalStore, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Navbar from './components/Navbar';
 import {
   apiRequest,
   getAccessToken,
@@ -96,8 +95,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      <Navbar />
-
       <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
         <p className="text-lg text-gray-200">
           Welcome{userName ? <>, <strong className="text-white">{userName}</strong></> : ''} —
