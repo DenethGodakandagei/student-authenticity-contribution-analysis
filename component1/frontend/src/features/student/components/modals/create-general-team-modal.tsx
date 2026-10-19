@@ -74,10 +74,11 @@ export const CreateGeneralTeamModal: React.FC<CreateGeneralTeamModalProps> = ({
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            GitHub Repository URL <span className="text-slate-400 font-normal">(Optional)</span>
+            GitHub Repository URL <span className="text-rose-500">*</span>
           </label>
           <input
             type="url"
+            required
             value={repoUrl}
             onChange={(e) => setRepoUrl && setRepoUrl(e.target.value)}
             placeholder="e.g. https://github.com/organization/project"

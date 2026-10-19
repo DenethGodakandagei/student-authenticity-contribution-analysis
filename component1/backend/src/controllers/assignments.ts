@@ -125,7 +125,9 @@ export const getAssignmentByInviteCode = async (req: Request, res: Response): Pr
         res.status(404).json({ error: 'Invalid invitation code' });
         return;
       }
-      const teams = mockDb.mockTeams.filter(t => t.assignment === assignment._id);
+      const teams = assignment.assignmentType === 'individual'
+        ? []
+        : mockDb.mockTeams.filter(t => t.assignment === assignment._id);
       res.status(200).json({ assignment, teams });
       return;
     }
@@ -135,7 +137,9 @@ export const getAssignmentByInviteCode = async (req: Request, res: Response): Pr
       res.status(404).json({ error: 'Invalid invitation code' });
       return;
     }
-    const teams = await Team.find({ assignment: assignment._id }).select('name inviteCode');
+    const teams = assignment.assignmentType === 'individual'
+      ? []
+      : await Team.find({ assignment: assignment._id }).select('name inviteCode');
     res.status(200).json({ assignment, teams });
   } catch (error: any) {
     console.error('Get Assignment By Invite Code Error:', error);

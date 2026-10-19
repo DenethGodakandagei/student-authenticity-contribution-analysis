@@ -68,6 +68,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               t.leader === student?.id || (student && t.leader?.toString() === student.id);
             const isEditingThisRepo = editingRepoTeamId === t._id;
 
+            const isSolo = t.inviteCode?.startsWith('IND-') || t.assignment?.assignmentType === 'individual';
+
             return (
               <div
                 key={t._id}
@@ -76,18 +78,24 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-[10px] uppercase font-mono font-medium border border-slate-200 px-2 py-0.5 rounded-md bg-slate-50 text-slate-800 block w-max mb-2">
-                      {isLeader ? 'Leader' : 'Member'}
+                      {isSolo ? 'Solo Contributor' : isLeader ? 'Leader' : 'Member'}
                     </span>
                     <h3 className="text-base font-semibold text-slate-900">{t.name}</h3>
                   </div>
-                  <span className="text-xs font-mono bg-slate-50 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-lg">
-                    Invite Code: <strong className="text-slate-900">{t.inviteCode}</strong>
-                  </span>
+                  {isSolo ? (
+                    <span className="text-xs font-mono bg-[#EFF8F3] border border-[#6FAF9A]/30 text-[#2d5849] px-2.5 py-1 rounded-lg font-semibold">
+                      Individual Project
+                    </span>
+                  ) : (
+                    <span className="text-xs font-mono bg-slate-50 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-lg">
+                      Invite Code: <strong className="text-slate-900">{t.inviteCode}</strong>
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-2 border-t border-slate-100 pt-4">
                   <span className="text-[10px] uppercase font-mono text-slate-400 tracking-wider">
-                    Team Members
+                    {isSolo ? 'Student' : 'Team Members'}
                   </span>
                   <div className="space-y-1.5">
                     {t.members?.map((m: any) => (

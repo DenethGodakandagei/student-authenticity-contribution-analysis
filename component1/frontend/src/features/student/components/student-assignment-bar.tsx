@@ -39,6 +39,15 @@ export const StudentAssignmentBar: React.FC<StudentAssignmentBarProps> = ({
             </option>
           ))}
         </select>
+        {selectedAssignment && (
+          <span className={`text-[10px] uppercase font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+            selectedAssignment.assignmentType === 'individual'
+              ? 'bg-[#EFF8F3] text-[#2d5849] border-[#6FAF9A]/30'
+              : 'bg-slate-100 text-slate-700 border-slate-200'
+          }`}>
+            {selectedAssignment.assignmentType === 'individual' ? 'Individual' : 'Team'}
+          </span>
+        )}
         <button
           onClick={onOpenJoinCohort}
           className="px-3.5 py-1.5 rounded-full bg-[#0D1110] hover:bg-[#1a2220] text-white text-xs font-medium transition shadow-xs flex items-center gap-1 cursor-pointer"

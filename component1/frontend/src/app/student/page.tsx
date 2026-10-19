@@ -465,19 +465,52 @@ export default function StudentDashboard() {
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const trimmedRepo = repoUrl.trim();
+    if (!trimmedRepo) {
+      setError('GitHub Repository URL is required when creating a team.');
+      return;
+    }
     try {
       const res = await api.teams.create({
         name: teamName,
         assignmentId: searchedAssignment._id,
-        repositoryUrl: repoUrl,
+        repositoryUrl: trimmedRepo,
         gitUsername,
         memberIds: selectedMembers
       });
+      setTeam(res.team);
+      setRepoUrl(res.team?.repositoryUrl || trimmedRepo);
       setSuccess(`Team created successfully! Invite code: ${res.team.inviteCode}`);
       setShowJoinModal(false);
       await fetchData(searchedAssignment?._id);
     } catch (err: any) {
       setError(err.message || 'Failed to create team');
+    }
+  };
+
+  const handleJoinIndividual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const trimmedRepo = repoUrl.trim();
+    if (!trimmedRepo) {
+      setError('GitHub Repository URL is required for individual assignments.');
+      return;
+    }
+    try {
+      const res = await api.teams.create({
+        name: student?.name ? `${student.name} (Individual)` : 'Individual Submission',
+        assignmentId: searchedAssignment._id,
+        repositoryUrl: trimmedRepo,
+        gitUsername,
+        memberIds: []
+      });
+      setTeam(res.team);
+      setRepoUrl(res.team?.repositoryUrl || trimmedRepo);
+      setSuccess('Started individual assignment successfully!');
+      setShowJoinModal(false);
+      await fetchData(searchedAssignment?._id);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start individual assignment');
     }
   };
 
@@ -534,11 +567,16 @@ export default function StudentDashboard() {
   const handleCreateGeneralTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const trimmedRepo = generalTeamRepo.trim();
+    if (!trimmedRepo) {
+      setError('GitHub Repository URL is required when creating a team.');
+      return;
+    }
     try {
       await api.teams.createGeneral({
         name: generalTeamName,
         gitUsername: generalTeamGit,
-        repositoryUrl: generalTeamRepo,
+        repositoryUrl: trimmedRepo,
         memberIds: selectedMembers
       });
       setSuccess('General team template created successfully!');
@@ -1081,6 +1119,7 @@ export default function StudentDashboard() {
         onSearchInvite={handleSearchInvite}
         onCreateTeam={handleCreateTeam}
         onJoinTeam={handleJoinTeam}
+        onJoinIndividual={handleJoinIndividual}
       />
 
       <CreateGeneralTeamModal
