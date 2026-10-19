@@ -2,8 +2,9 @@
 Tests for KB-grounded Nova sessions:
 - NovaStudentAgent.from_repository (explicit ids and count-based selection)
 - Persona prompt rules (correct_concept never leaked for active misconceptions)
+- Adaptive question gate: correction check -> testing -> questions -> answer judging
 - Event logging during a chat turn (mock provider)
-- POST /sessions/create-from-kb route (TestClient, JWT protected)
+- POST /sessions/create-from-kb route and GET /sessions/{id}/summary (TestClient, JWT)
 - Legacy session state compatibility
 
 Uses a temporary SQLite users database and a temporary JWT_SECRET, so the real
@@ -32,7 +33,7 @@ settings.JWT_ALGORITHM = "HS256"
 
 from app import auth
 from app.llm import BaseLLMProvider
-from app.nova_agent import NovaStudentAgent
+from app.nova_agent import NovaStudentAgent, understanding_summary
 
 KB_ID = "demo"
 
@@ -67,19 +68,66 @@ def _register_test_user(client) -> str:
     return token
 
 
-class MockProvider(BaseLLMProvider):
-    """Deterministic provider: JSON correction verdict + fixed plain-text reply."""
+CLEAR_CONSTRUCTOR_MSG = (
+    "A constructor is a special method that runs when you create an object with new. "
+    "It initialises the object's fields. It has no return type."
+)
+VAGUE_CONSTRUCTOR_MSG = "A constructor is something that runs at some point."
 
-    def __init__(self, corrected_ids=None, reply="I still think a class is an instance of an object."):
-        self.corrected_ids = corrected_ids or []
+
+def _mock_questions():
+    """Three different check questions (definition / scenario / statement)."""
+    return [
+        {"question": "What is a constructor used for when an object is declared?",
+         "expected_answer": "It initializes the object when it is declared."},
+        {"question": "What happens to an object's fields when its constructor runs?",
+         "expected_answer": "They are initialized."},
+        {"question": "Which statement is true about a constructor?",
+         "expected_answer": "It initializes the object when it is declared."},
+    ]
+
+
+class MockProvider(BaseLLMProvider):
+    """
+    Deterministic provider for the adaptive question gate: canned JSON for the
+    correction check / question bank / answer judgement + a fixed plain-text reply.
+    """
+
+    def __init__(self, check_results=None, questions=None, verdict=None,
+                 reply="Okay, let me think about that."):
+        self.check_results = check_results if check_results is not None else []
+        self.questions = questions or _mock_questions()
+        self.verdict = verdict if verdict is not None else {
+            "passed": False, "reasoning_ok": False, "feedback": "Not quite right."
+        }
         self.reply = reply
         self.calls = []
 
     def generate(self, prompt: str, json_mode: bool = False) -> str:
         self.calls.append({"json_mode": json_mode, "prompt": prompt})
-        if json_mode:
-            return json.dumps({"corrected_ids": self.corrected_ids})
-        return self.reply
+        if not json_mode:
+            return self.reply
+        if "reasoning_ok" in prompt:
+            return json.dumps(self.verdict)
+        if "EXACTLY 3 check questions" in prompt:
+            return json.dumps({"questions": self.questions})
+        return json.dumps({"results": self.check_results})
+
+
+def _assert_learned_only_after_passed_answer(nova):
+    """'learned' may only ever follow a logged answer_judged event with passed=true."""
+    events = nova.state.events
+    for i, event in enumerate(events):
+        if event["type"] == "status_change" and event.get("to") == "learned":
+            previous = events[i - 1] if i else None
+            assert previous and previous["type"] == "answer_judged" and previous.get("passed") is True, \
+                f"status_change to learned without a logged passed answer: {event}"
+    for m in nova.state.misconceptions:
+        if m.status == "learned":
+            assert m.is_corrected is True
+            assert any(a.get("passed") for a in m.attempts), f"{m.id} learned with no passed attempt"
+            assert any(e["type"] == "answer_judged" and e.get("passed") and e.get("id") == m.id
+                       for e in events), f"{m.id} learned with no passed answer event"
 
 
 def test_from_repository_explicit_ids():
@@ -142,11 +190,24 @@ def test_persona_prompt_never_leaks_active_correct_concept():
     prompt_after = nova._build_student_persona_prompt("Any questions?")
     assert m1.correct_concept in prompt_after
     assert nova.state.misconceptions[1].correct_concept not in prompt_after
+
+    # Persona fix: talk straight to the other person with "you", 2-3 sentences.
+    assert 'use "you" for them' in prompt, "persona must address the other person as you"
+    assert '"the teacher"' in prompt and '"the student"' in prompt, "persona must forbid those labels"
+    assert "2-3 sentences" in prompt, "persona must cap replies at 2-3 sentences"
     print("  OK persona prompt: no leak while active, learned concepts included.")
 
 
-def test_chat_turn_events_and_state(mock_corrected_ids=("m1",), check=True):
-    provider = MockProvider(corrected_ids=list(mock_corrected_ids))
+def test_chat_turn_events_and_state(check=True):
+    questions = _mock_questions()
+    provider = MockProvider(
+        check_results=[
+            {"id": "m1", "addressed": True, "quality": "clear"},
+            {"id": "m3", "addressed": False, "quality": "vague"},
+        ],
+        questions=questions,
+        reply=f"Thanks, that helps! I want to be sure I really get it: {questions[0]['question']}",
+    )
     nova = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m1", "m3"], provider=provider)
 
     result = nova.respond("A class is just a blueprint, and an object is a specific instance of that class.")
@@ -156,29 +217,41 @@ def test_chat_turn_events_and_state(mock_corrected_ids=("m1",), check=True):
                 "unresolved_misconceptions_count", "learned_misconceptions_count",
                 "unresolved_misconceptions", "learned_misconceptions", "state"):
         assert key in result, f"missing response key: {key}"
-    assert result["nova_response"] == provider.reply
-    assert set(result["newly_corrected_ids"]) == set(mock_corrected_ids)
+    # New adaptive-gate keys.
+    for key in ("check_question", "check_result", "check_feedback", "understanding"):
+        assert key in result, f"missing gate response key: {key}"
 
-    # Events: one teacher_message, one correction_check, one nova_reply, in order.
+    assert result["nova_response"] == provider.reply
+    # A correction check NEVER marks anything learned - it only opens the gate.
+    assert result["newly_corrected_ids"] == []
+    assert result["check_question"] == questions[0]["question"]
+    assert result["check_result"] is None
+    assert result["check_feedback"] is None
+    assert result["understanding"]["overall_score"] is None
+
+    # Events: teacher_message, check_result, status_change, question_asked, nova_reply.
     types = [e["type"] for e in nova.state.events]
-    assert types == ["teacher_message", "correction_check", "nova_reply"], types
+    assert types == ["teacher_message", "check_result", "status_change", "question_asked", "nova_reply"], types
     for e in nova.state.events:
         assert e["time"], "event missing time"
-    assert nova.state.events[1]["corrected_ids"] == list(mock_corrected_ids)
+    assert nova.state.events[1]["results"][0]["id"] == "m1"
+    assert nova.state.events[2]["to"] == "testing"
+    assert nova.state.events[3]["question"] == questions[0]["question"]
 
-    # State: learned misconceptions are synced, history has teacher + nova turns.
+    # State: addressed+clear -> testing, vague stays active, nothing learned.
     m1 = next(m for m in nova.state.misconceptions if m.id == "m1")
     m3 = next(m for m in nova.state.misconceptions if m.id == "m3")
-    assert m1.status == "learned" and m1.is_corrected is True
+    assert m1.status == "testing" and m1.is_corrected is False
     assert m3.status == "active" and m3.is_corrected is False
-    assert m1.user_explanation
+    assert len(m1.questions) == 3 and m1.question_index == 0 and m1.attempts == []
     assert len(nova.state.conversation_history) == 2
 
-    # JSON-mode used only for the correction check, plain text for the chat reply.
+    # JSON-mode used for the correction check + question bank, plain text for the reply.
     modes = [c["json_mode"] for c in provider.calls]
-    assert modes == [True, False], modes
+    assert modes == [True, True, False], modes
+    _assert_learned_only_after_passed_answer(nova)
     if check:
-        print("  OK chat turn: events, state update, history, json_mode usage.")
+        print("  OK chat turn: gate events, testing status, history, json_mode usage.")
 
 
 def test_correction_check_failure_is_non_fatal():
@@ -191,9 +264,136 @@ def test_correction_check_failure_is_non_fatal():
     nova = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m1"], provider=BrokenProvider())
     result = nova.respond("Here is a full explanation of class and object.")
     assert result["newly_corrected_ids"] == []
+    assert result["check_question"] is None and result["check_result"] is None
     assert all(m.status == "active" for m in nova.state.misconceptions)
-    assert [e["type"] for e in nova.state.events] == ["teacher_message", "correction_check", "nova_reply"]
+    assert [e["type"] for e in nova.state.events] == ["teacher_message", "check_result", "nova_reply"]
+    assert nova.state.events[1]["error"], "failed check must log the error"
     print("  OK broken correction-check JSON is tolerated (no state change, event logged).")
+
+
+def test_vague_or_wrong_message_never_reaches_learned():
+    """A vague or wrong explanation changes nothing and can never mark learned."""
+    for quality in ("vague", "wrong"):
+        provider = MockProvider(
+            check_results=[{"id": "m3", "addressed": True, "quality": quality}],
+            reply="Hmm, runs at some point? I still think it destroys the object.",
+        )
+        nova = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m3"], provider=provider)
+        result = nova.respond(VAGUE_CONSTRUCTOR_MSG)
+        m = nova.state.misconceptions[0]
+
+        assert m.status == "active" and m.is_corrected is False, f"{quality} explanation changed status"
+        assert result["newly_corrected_ids"] == []
+        assert result["check_question"] is None
+        assert result["check_result"] is None
+        assert result["understanding"]["overall_score"] is None
+        assert [e["type"] for e in nova.state.events] == ["teacher_message", "check_result", "nova_reply"]
+        assert not any(e["type"] == "status_change" for e in nova.state.events)
+        assert nova.state.events[1]["results"][0]["quality"] == quality
+        _assert_learned_only_after_passed_answer(nova)
+    print("  OK vague/wrong explanations cannot reach 'learned' (no status change at all).")
+
+
+def test_gate_flow_needs_review_and_passed_answer():
+    questions = _mock_questions()
+
+    # (a) clear teaching -> testing -> three wrong answers -> needs_review.
+    provider = MockProvider(
+        check_results=[{"id": "m3", "addressed": True, "quality": "clear"}],
+        questions=questions,
+        verdict={"passed": False, "reasoning_ok": False, "feedback": "That is not right."},
+    )
+    nova = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m3"], provider=provider)
+    first = nova.respond(CLEAR_CONSTRUCTOR_MSG)
+    m = nova.state.misconceptions[0]
+
+    assert m.status == "testing" and m.is_corrected is False
+    assert first["check_question"] == questions[0]["question"]
+    assert first["check_question"] in first["nova_response"], "reply must ask the first question"
+    assert first["newly_corrected_ids"] == []
+
+    second = nova.respond("A constructor deletes the object.")
+    assert m.status == "testing" and m.question_index == 1
+    assert second["check_result"] == "failed"
+    assert second["check_question"] == questions[1]["question"]
+    assert second["check_question"] != questions[0]["question"], "second question must be different"
+    assert second["check_question"] in second["nova_response"], "reply must ask the next question"
+    assert "still not sure" in second["nova_response"].lower()
+
+    third = nova.respond("It wipes all the memory away.")
+    assert m.status == "testing" and m.question_index == 2
+    assert third["check_result"] == "failed"
+    assert third["check_question"] == questions[2]["question"]
+
+    fourth = nova.respond("No idea, maybe it prints the object.")
+    assert m.status == "needs_review" and m.is_corrected is False
+    assert fourth["check_result"] == "needs_review"
+    assert fourth["check_question"] is None
+    assert len(m.attempts) == 3
+    assert [a["passed"] for a in m.attempts] == [False, False, False]
+    assert "34" in fourth["nova_response"], "needs_review reply must cite the lecture page"
+    assert not any(e["type"] == "status_change" and e.get("to") == "learned"
+                   for e in nova.state.events)
+    summary = understanding_summary(nova.state)["misconceptions"][0]
+    assert summary["status"] == "needs_review" and summary["tries"] == 3 and summary["score"] == 0.0
+    assert summary["source_pages"] == [34]
+    _assert_learned_only_after_passed_answer(nova)
+
+    # (b) a passed answer is the only path to learned.
+    provider2 = MockProvider(
+        check_results=[{"id": "m3", "addressed": True, "quality": "clear"}],
+        questions=questions,
+        verdict={"passed": True, "reasoning_ok": True, "feedback": "Correct."},
+    )
+    nova2 = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m3"], provider=provider2)
+    nova2.respond(CLEAR_CONSTRUCTOR_MSG)
+    result = nova2.respond(
+        "It initialises the object's fields when the object is created and has no return type."
+    )
+    m2 = nova2.state.misconceptions[0]
+    assert m2.status == "learned" and m2.is_corrected is True
+    assert result["newly_corrected_ids"] == ["m3"]
+    assert result["check_result"] == "passed"
+    assert result["check_feedback"] == "Correct."
+    assert result["check_question"] is None
+    row = result["understanding"]["misconceptions"][0]
+    assert row["tries"] == 1 and row["score"] == 1.0
+    assert result["understanding"]["overall_score"] == 1.0
+    _assert_learned_only_after_passed_answer(nova2)
+
+    # Event order for the answering turns.
+    assert [e["type"] for e in nova2.state.events] == [
+        "teacher_message", "check_result", "status_change", "question_asked", "nova_reply",
+        "teacher_message", "answer_judged", "status_change", "nova_reply",
+    ]
+    print("  OK gate: three wrong answers -> needs_review, passed answer -> learned.")
+
+
+def test_understanding_summary_second_try_score():
+    questions = _mock_questions()
+    provider = MockProvider(
+        check_results=[{"id": "m3", "addressed": True, "quality": "clear"}],
+        questions=questions,
+        verdict={"passed": False, "reasoning_ok": False, "feedback": "Not yet."},
+    )
+    nova = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m3"], provider=provider)
+    nova.respond(CLEAR_CONSTRUCTOR_MSG)
+    nova.respond("A constructor removes the object.")
+
+    provider.verdict = {"passed": True, "reasoning_ok": True, "feedback": "Exactly."}
+    result = nova.respond(
+        "It initialises the object's fields when the object is created and has no return type."
+    )
+
+    summary = result["understanding"]
+    row = summary["misconceptions"][0]
+    assert row["concept"] == "constructor"
+    assert row["status"] == "learned"
+    assert row["tries"] == 2 and row["score"] == 0.67, row
+    assert abs(summary["overall_score"] - 0.67) < 1e-9
+    assert row["source_pages"] == [34]
+    _assert_learned_only_after_passed_answer(nova)
+    print("  OK understanding_summary: 2nd-try pass scores 0.67, source_pages reported.")
 
 
 def test_legacy_state_backwards_compatible():
@@ -252,6 +452,27 @@ def test_create_from_kb_route():
         assert get_resp.status_code == 200, get_resp.text
         assert get_resp.json()["session_id"] == body["session_id"]
 
+        # Understanding summary route (same ownership rule as the other session routes)
+        summary_resp = client.get(f"/sessions/{body['session_id']}/summary", headers=headers)
+        assert summary_resp.status_code == 200, summary_resp.text
+        summary = summary_resp.json()
+        assert summary["overall_score"] is None
+        assert len(summary["misconceptions"]) == 2
+        for row in summary["misconceptions"]:
+            assert set(row) == {"concept", "status", "tries", "score", "source_pages"}, row
+            assert row["status"] == "active" and row["tries"] == 0 and row["score"] is None
+        assert client.get(f"/sessions/{body['session_id']}/summary").status_code == 401
+        assert client.get("/sessions/no-such-session/summary", headers=headers).status_code == 404
+
+        # A second user gets 403 on someone else's summary.
+        other = dict(TEST_USER, email="session-tester-2@example.com")
+        other_resp = client.post("/auth/register", json=other)
+        assert other_resp.status_code == 200, other_resp.text
+        other_headers = _auth_headers(other_resp.json()["access_token"])
+        assert client.get(f"/sessions/{body['session_id']}/summary",
+                          headers=other_headers).status_code == 403
+        print("  OK GET /sessions/{id}/summary (200/401/404/403).")
+
         # Count-based default (2 items, distinct concepts)
         resp2 = client.post("/sessions/create-from-kb", json={"kb_id": KB_ID},
                             headers=headers)
@@ -274,6 +495,77 @@ def test_create_from_kb_route():
                 os.remove(path)
 
 
+def _run_live_scenario():
+    """Scripted --live run: vague -> clear -> wrong answer -> right answer (m3, constructor)."""
+    print("  Running scripted live scenario on one session (kb_id 'demo', misconception m3)...")
+    nova = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m3"])
+    fixed_answer = ("It initialises the object's fields when the object is created "
+                    "and has no return type.")
+    scenario = [
+        ("1 vague explanation", VAGUE_CONSTRUCTOR_MSG, "active", None, False),
+        ("2 clear explanation", CLEAR_CONSTRUCTOR_MSG, "testing", None, True),
+        ("3 wrong answer", "A constructor deletes the object.", "testing", "failed", True),
+        ("4 right answer", fixed_answer, "learned", "passed", False),
+    ]
+
+    checks = []
+    durations = []
+    first_question = None
+
+    def note(label, ok, detail):
+        checks.append(bool(ok))
+        print(f"    [{'OK  ' if ok else 'MISS'}] {label}: {detail}")
+
+    for i, (label, message, expected_status, expected_result, expect_question) in enumerate(scenario, 1):
+        start = time.perf_counter()
+        result = nova.respond(message)
+        elapsed = time.perf_counter() - start
+        durations.append(elapsed)
+        m = nova.state.misconceptions[0]
+
+        print(f"\n  --- Turn {i}: {label} ({elapsed:.1f}s) ---")
+        print(f"  Message:             {message}")
+        print(f"  Nova:                {result['nova_response']}")
+        print(f"  Status:              {m.status}")
+        print(f"  check_question:      {result['check_question']}")
+        print(f"  check_result:        {result['check_result']}")
+        print(f"  check_feedback:      {result['check_feedback']}")
+        print(f"  newly_corrected_ids: {result['newly_corrected_ids'] or 'none'}")
+        for row in result["understanding"]["misconceptions"]:
+            print(f"  understanding:       {row['concept']} | status={row['status']} "
+                  f"| tries={row['tries']} | score={row['score']} | pages={row['source_pages']}")
+        print(f"  overall_score:       {result['understanding']['overall_score']}")
+        print(f"  Time taken:          {elapsed:.1f}s")
+
+        note(f"turn {i} status", m.status == expected_status,
+             f"expected {expected_status}, got {m.status}")
+        note(f"turn {i} check_result", result["check_result"] == expected_result,
+             f"expected {expected_result}, got {result['check_result']}")
+        if expect_question:
+            note(f"turn {i} asks a check question", bool(result["check_question"]),
+                 str(result["check_question"]))
+        else:
+            note(f"turn {i} asks no question", result["check_question"] is None,
+                 str(result["check_question"]))
+
+        if i == 2:
+            first_question = result["check_question"]
+        elif i == 3:
+            note("turn 3 question differs from turn 2",
+                 bool(result["check_question"]) and result["check_question"] != first_question,
+                 f"{first_question!r} -> {result['check_question']!r}")
+
+    print("\n  Understanding summary:")
+    print(json.dumps(understanding_summary(nova.state), indent=2))
+    print(f"\n  Average seconds per turn: {sum(durations) / len(durations):.1f}s")
+    met = sum(1 for c in checks if c)
+    print(f"  Live scenario expectations: {met}/{len(checks)} met.")
+    if met == len(checks):
+        print("  OK live scripted scenario.")
+    else:
+        print("  WARN live scripted scenario had mismatches (LLM variance).")
+
+
 def run_test():
     print("==========================================================")
     print("TEST: KB-grounded Nova session (from_repository + route)")
@@ -291,33 +583,14 @@ def run_test():
     test_persona_prompt_never_leaks_active_correct_concept()
     test_chat_turn_events_and_state()
     test_correction_check_failure_is_non_fatal()
+    test_vague_or_wrong_message_never_reaches_learned()
+    test_gate_flow_needs_review_and_passed_answer()
+    test_understanding_summary_second_try_score()
     test_legacy_state_backwards_compatible()
     test_create_from_kb_route()
 
     if "--live" in sys.argv:
-        print("  Running three live LLM turns on one session (Ollama)...")
-        nova = NovaStudentAgent.from_repository(KB_ID, misconception_ids=["m1", "m3"])
-        turns = [
-            "A constructor is something that runs at some point.",
-            "A constructor is a special method that runs when you create an object with new. "
-            "It initialises the object's fields. It has no return type.",
-            "A class is a blueprint, and an object is one instance made from that blueprint.",
-        ]
-        durations = []
-        for i, teacher_msg in enumerate(turns, 1):
-            start = time.perf_counter()
-            result = nova.respond(teacher_msg)
-            elapsed = time.perf_counter() - start
-            durations.append(elapsed)
-            print(f"\n  --- Turn {i} ({elapsed:.1f}s) ---")
-            print(f"  Teacher: {teacher_msg}")
-            print(f"  Nova:    {result['nova_response']}")
-            print(f"  Corrected ids: {result['newly_corrected_ids'] or 'none'}")
-            for m in nova.state.misconceptions:
-                print(f"  [{m.id}] {m.concept}: {m.status}")
-            print(f"  Time taken: {elapsed:.1f}s")
-        print(f"\n  Average seconds per turn: {sum(durations) / len(durations):.1f}s")
-        print("  OK live chat turns.")
+        _run_live_scenario()
     else:
         print("  (add --live to run real LLM chat turns)")
 

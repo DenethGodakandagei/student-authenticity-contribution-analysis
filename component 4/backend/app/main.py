@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.pdf_processor import process_pdf
 from app.misconception_generator import generate_student_misconceptions
-from app.nova_agent import NovaStudentAgent
+from app.nova_agent import NovaStudentAgent, understanding_summary
 from app.auth import router as auth_router, get_current_user
 
 
@@ -208,6 +208,21 @@ def get_nova_session(session_id: str, user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load session: {str(e)}")
 
+@app.get("/sessions/{session_id}/summary")
+def get_session_summary(session_id: str, user: dict = Depends(get_current_user)):
+    """Returns the understanding summary of the current user's own session."""
+    session_file = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+    if not os.path.exists(session_file):
+        raise HTTPException(status_code=404, detail="Session not found.")
+    try:
+        nova = NovaStudentAgent.load_state(session_file)
+        _check_session_owner(nova, user)
+        return understanding_summary(nova.state)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load session summary: {str(e)}")
+
 @app.post("/sessions/{session_id}/exam")
 def run_exam(session_id: str, user: dict = Depends(get_current_user)):
     """Run an exam for the given Nova session.
@@ -327,6 +342,10 @@ def chat_with_nova(session_id: str, req: ChatMessageRequest, user: dict = Depend
             "learning_progress": result["learning_progress"],
             "unresolved_misconceptions_count": result["unresolved_misconceptions_count"],
             "learned_misconceptions_count": result["learned_misconceptions_count"],
+            "check_question": result["check_question"],
+            "check_result": result["check_result"],
+            "check_feedback": result["check_feedback"],
+            "understanding": result["understanding"],
             "conversation_history": nova.state.conversation_history,
             "updated_state": nova.to_dict()
         }
