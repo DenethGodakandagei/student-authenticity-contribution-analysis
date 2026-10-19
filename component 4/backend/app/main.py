@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+from contextlib import asynccontextmanager
 from typing import List, Optional
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
@@ -17,10 +18,17 @@ from pydantic import BaseModel
 from app.pdf_processor import process_pdf
 from app.misconception_generator import generate_student_misconceptions
 from app.nova_agent import NovaStudentAgent, understanding_summary
-from app.auth import router as auth_router, get_current_user
+from app.auth import router as auth_router, get_current_user, check_connection
 
 
-app = FastAPI(title="AI-Based Virtual Student API")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Fail fast if MongoDB (used for authentication) is unreachable.
+    check_connection()
+    yield
+
+
+app = FastAPI(title="AI-Based Virtual Student API", lifespan=lifespan)
 
 # Auth routes (registration, login, /me, logout)
 app.include_router(auth_router)

@@ -3,27 +3,40 @@ Authentication: user registration/login with stateless JWT access tokens.
 
 - Passwords: PBKDF2-HMAC-SHA256 (hashlib) with a per-user random salt;
   constant-time comparison via hmac.compare_digest.
-- Users: SQLite at backend/data/users.db. There is NO tokens table because
-  JWTs are stateless - the token itself carries the identity.
+- Users: MongoDB collection `users` in the database named by MONGO_DB_NAME.
+  There is NO tokens collection because JWTs are stateless - the token itself
+  carries the identity.
 - Tokens: signed with PyJWT (HS256); verified by the get_current_user dependency.
+
+MongoDB is used for authentication only. All other application data (sessions,
+uploads, knowledge bases) keeps its existing file-based storage.
 """
 import hashlib
 import hmac
-import os
 import re
 import secrets
-import sqlite3
-import time
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 # pyrefly: ignore [missing-import]
 import jwt
+from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from pymongo import ASCENDING, MongoClient, ReturnDocument
+from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from app.config import settings
+
+DEFAULT_ROLE = "student"
+DEFAULT_COHORT_ID = "OOP-2026"
+DEFAULT_CONSENT_VERSION = "v1"
+VALID_ROLES = ("student", "lecturer")
+_ANONYMOUS_ID_COUNTER = "anonymous_id"
 
 # ---------------------------------------------------------------------------
 # Startup guard: refuse to run with a missing or weak JWT secret.
@@ -36,14 +49,69 @@ if len(settings.JWT_SECRET or "") < 32:
         "JWT_SECRET=<64 random characters> (e.g. output of python -c \"import secrets; print(secrets.token_urlsafe(48))\")"
     )
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-DB_PATH = os.path.join(DATA_DIR, "users.db")
-
 PBKDF2_ITERATIONS = 200_000
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 _bearer = HTTPBearer(auto_error=False)
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# ---------------------------------------------------------------------------
+# MongoDB connection (lazy, thread-safe, reused across requests)
+# ---------------------------------------------------------------------------
+_client: Optional[MongoClient] = None
+_client_lock = threading.Lock()
+_indexed_collections: set = set()
+
+
+def _get_client() -> MongoClient:
+    """Returns the shared MongoClient, creating it on first use."""
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                if not settings.MONGO_URI:
+                    raise RuntimeError(
+                        "MONGO_URI is missing. Set MONGO_URI in backend/.env to your "
+                        "MongoDB connection string."
+                    )
+                _client = MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=5000)
+    return _client
+
+
+def _get_users() -> Collection:
+    """Returns the users collection, ensuring its unique email index exists."""
+    collection = _get_client()[settings.MONGO_DB_NAME]["users"]
+    key = f"{settings.MONGO_DB_NAME}.users"
+    if key not in _indexed_collections:
+        with _client_lock:
+            if key not in _indexed_collections:
+                collection.create_index(
+                    [("email", ASCENDING)],
+                    unique=True,
+                    name="uniq_email",
+                )
+                _indexed_collections.add(key)
+    return collection
+
+
+def _next_anonymous_id() -> str:
+    """Atomically increments the counter and returns an id like ``P-0001``."""
+    counters = _get_client()[settings.MONGO_DB_NAME]["counters"]
+    counter = counters.find_one_and_update(
+        {"_id": _ANONYMOUS_ID_COUNTER},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return f"P-{int(counter['seq']):04d}"
+
+
+def check_connection() -> None:
+    """Pings MongoDB so configuration problems surface early."""
+    try:
+        _get_client().admin.command("ping")
+    except PyMongoError as exc:
+        raise RuntimeError(f"Unable to connect to MongoDB: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +124,8 @@ class RegisterRequest(BaseModel):
     password: str
     student_id: Optional[str] = None
     consent: bool = False
+    role: Optional[str] = None
+    lecturer_code: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -64,65 +134,44 @@ class LoginRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# SQLite storage
+# MongoDB helpers
 # ---------------------------------------------------------------------------
 
-def _get_conn() -> sqlite3.Connection:
-    """Opens a connection to the users database, creating folder/table if needed."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            student_id TEXT,
-            password_hash TEXT NOT NULL,
-            salt TEXT NOT NULL,
-            consent_at TEXT,
-            created_at TEXT NOT NULL
-        )
-        """
-    )
-    conn.commit()
-    return conn
-
-
-def _public_user(row: sqlite3.Row) -> Dict[str, Any]:
-    """Converts a users row to a public dict (never includes password_hash or salt)."""
+def _public_user(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Converts a users document to a public dict (never includes password_hash or salt)."""
     return {
-        "id": row["id"],
-        "name": row["name"],
-        "email": row["email"],
-        "student_id": row["student_id"],
-        "consent_at": row["consent_at"],
-        "created_at": row["created_at"],
+        "id": str(doc["_id"]),
+        "name": doc["name"],
+        "email": doc["email"],
+        "student_id": doc.get("student_id"),
+        "role": doc.get("role", DEFAULT_ROLE),
+        "anonymous_id": doc.get("anonymous_id"),
+        "cohort_id": doc.get("cohort_id", DEFAULT_COHORT_ID),
+        "consent_version": doc.get("consent_version", DEFAULT_CONSENT_VERSION),
+        "consent_at": doc.get("consent_at"),
+        "last_login_at": doc.get("last_login_at"),
+        "created_at": doc.get("created_at"),
     }
 
 
 def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     """Fetches a user by lowercase email; returns a public dict or None."""
-    with _get_conn() as conn:
-        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    return _public_user(row) if row else None
+    doc = _get_users().find_one({"email": email})
+    return _public_user(doc) if doc else None
 
 
 def get_user_by_id(user_id: Any) -> Optional[Dict[str, Any]]:
-    """Fetches a user by id; returns a public dict or None."""
+    """Fetches a user by id (ObjectId string); returns a public dict or None."""
     try:
-        uid = int(user_id)
-    except (TypeError, ValueError):
+        oid = ObjectId(str(user_id))
+    except (InvalidId, TypeError, ValueError):
         return None
-    with _get_conn() as conn:
-        row = conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
-    return _public_user(row) if row else None
+    doc = _get_users().find_one({"_id": oid})
+    return _public_user(doc) if doc else None
 
 
-def _get_credentials_by_id(user_id: int) -> Optional[sqlite3.Row]:
-    with _get_conn() as conn:
-        return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+def _get_credentials_by_id(user_id: ObjectId) -> Optional[Dict[str, Any]]:
+    return _get_users().find_one({"_id": user_id})
 
 
 # ---------------------------------------------------------------------------
@@ -144,19 +193,32 @@ def verify_password(password: str, password_hash: str, salt_hex: str) -> bool:
 # User registration / lookup
 # ---------------------------------------------------------------------------
 
-def create_user(name: str, email: str, password: str, student_id: Optional[str] = None) -> Dict[str, Any]:
+def create_user(
+    name: str,
+    email: str,
+    password: str,
+    student_id: Optional[str] = None,
+    role: str = DEFAULT_ROLE,
+) -> Dict[str, Any]:
     """Inserts a new user and returns the public user dict. Email must be unique."""
     salt = secrets.token_bytes(16)
     now = datetime.now(timezone.utc).isoformat()
-    with _get_conn() as conn:
-        cur = conn.execute(
-            "INSERT INTO users (name, email, student_id, password_hash, salt, consent_at, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (name, email, student_id, _hash_password(password, salt), salt.hex(), now, now),
-        )
-        conn.commit()
-        user_id = cur.lastrowid
-    return _public_user(_get_credentials_by_id(user_id))
+    doc = {
+        "name": name,
+        "email": email,
+        "student_id": student_id,
+        "role": role,
+        "anonymous_id": _next_anonymous_id(),
+        "cohort_id": DEFAULT_COHORT_ID,
+        "consent_version": DEFAULT_CONSENT_VERSION,
+        "password_hash": _hash_password(password, salt),
+        "salt": salt.hex(),
+        "consent_at": now,
+        "last_login_at": None,
+        "created_at": now,
+    }
+    result = _get_users().insert_one(doc)
+    return _public_user(_get_credentials_by_id(result.inserted_id))
 
 
 # ---------------------------------------------------------------------------
@@ -164,11 +226,12 @@ def create_user(name: str, email: str, password: str, student_id: Optional[str] 
 # ---------------------------------------------------------------------------
 
 def create_access_token(user: Dict[str, Any]) -> str:
-    """Returns a signed JWT with claims: sub, email, iat, exp (UTC)."""
+    """Returns a signed JWT with claims: sub, email, role, iat, exp (UTC)."""
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(user["id"]),
         "email": user["email"],
+        "role": user.get("role", DEFAULT_ROLE),
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)).timestamp()),
     }
@@ -183,7 +246,7 @@ def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
 ) -> Dict[str, Any]:
     """
-    Decodes and verifies the bearer JWT, then loads the user from the database.
+    Decodes and verifies the bearer JWT, then loads the user from MongoDB.
     Raises 401 for missing, invalid, tampered or expired tokens and unknown users.
     """
     if credentials is None or not credentials.credentials:
@@ -209,6 +272,15 @@ def get_current_user(
     return user
 
 
+def require_lecturer(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Returns the current user only when their role is ``lecturer``; otherwise 403."""
+    if current_user.get("role") != "lecturer":
+        raise HTTPException(status_code=403, detail="Lecturer access required.")
+    return current_user
+
+
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
@@ -230,7 +302,27 @@ def register(req: RegisterRequest) -> Dict[str, Any]:
     if get_user_by_email(email) is not None:
         raise HTTPException(status_code=409, detail="Email is already registered.")
 
-    user = create_user(name, email, req.password, req.student_id)
+    role = (req.role or DEFAULT_ROLE).strip().lower()
+    if role not in VALID_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail="Role must be either 'student' or 'lecturer'.",
+        )
+    if role == "lecturer":
+        if not settings.LECTURER_CODE:
+            raise HTTPException(
+                status_code=403,
+                detail="Lecturer registration is disabled: LECTURER_CODE is not configured.",
+            )
+        if not req.lecturer_code or not hmac.compare_digest(
+            req.lecturer_code, settings.LECTURER_CODE
+        ):
+            raise HTTPException(status_code=403, detail="Invalid lecturer code.")
+
+    try:
+        user = create_user(name, email, req.password, req.student_id, role=role)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="Email is already registered.")
     return {"access_token": create_access_token(user), "token_type": "bearer", "user": user}
 
 
@@ -238,14 +330,16 @@ def register(req: RegisterRequest) -> Dict[str, Any]:
 def login(req: LoginRequest) -> Dict[str, Any]:
     """Logs in a user; returns a bearer token. One generic error for bad credentials."""
     email = req.email.strip().lower()
-    row = None
-    with _get_conn() as conn:
-        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    doc = _get_users().find_one({"email": email})
 
-    if row is None or not verify_password(req.password, row["password_hash"], row["salt"]):
+    if doc is None or not verify_password(req.password, doc["password_hash"], doc["salt"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
 
-    user = _public_user(row)
+    login_at = datetime.now(timezone.utc).isoformat()
+    _get_users().update_one({"_id": doc["_id"]}, {"$set": {"last_login_at": login_at}})
+    doc["last_login_at"] = login_at
+
+    user = _public_user(doc)
     return {"access_token": create_access_token(user), "token_type": "bearer", "user": user}
 
 

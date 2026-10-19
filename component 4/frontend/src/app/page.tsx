@@ -4,7 +4,6 @@
 import { useEffect, useSyncExternalStore, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from './components/Navbar';
-import AnimatedLearningScene from './auth/AnimatedLearningScene';
 import {
   apiRequest,
   getAccessToken,
@@ -164,16 +163,6 @@ export default function Dashboard() {
               ))}
             </ul>
           )}
-        </section>
-
-        {/* ── Demo: animated learning loop ─────────────────────────────── */}
-        <section className="card">
-          <h2 className="mb-2 text-lg font-semibold">See the learning loop in action</h2>
-          <p className="mb-4 text-sm text-gray-400">
-            A short illustration of how teaching exposes misconceptions and turns them into
-            understanding.
-          </p>
-          <AnimatedLearningScene />
         </section>
       </main>
     </div>

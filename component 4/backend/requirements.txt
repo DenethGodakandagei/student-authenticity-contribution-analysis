@@ -10,3 +10,5 @@ numpy
 faiss-cpu
 python-multipart
 pyjwt
+pymongo
+dnspython

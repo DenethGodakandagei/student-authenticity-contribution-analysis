@@ -1706,6 +1706,31 @@
 }
 
 /* ── 13. Responsive ─────────────────────────────────────────────────────── */
+/*
+ * Desktop split view: the page itself must never scroll. Otherwise the tall
+ * brand column produces a page scrollbar while the auth card produces its own
+ * one inside .auth-pane, so users see two scrollbars. Keep a single scroll
+ * container (.auth-pane) and let the decorative brand column scroll silently
+ * when the viewport is short.
+ */
+@media (min-width: 1024px) {
+  .auth-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .auth-brand {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .auth-brand::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @media (max-width: 1023px) {
   .auth-page {
     grid-template-columns: 1fr;

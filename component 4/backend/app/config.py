@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 720
+
+    # Lecturer registration code (empty disables lecturer registration)
+    LECTURER_CODE: str = ""
+
+    # MongoDB Settings (authentication only)
+    MONGO_URI: str = ""
+    MONGO_DB_NAME: str = "nova"
     
     model_config = SettingsConfigDict(
         env_file=".env",

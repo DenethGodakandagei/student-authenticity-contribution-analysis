@@ -1,14 +1,17 @@
 """
 Tests for JWT auth: registration, login, protected routes, session ownership.
 
-Uses a temporary SQLite database file and a temporary JWT_SECRET, so the real
-backend/data/users.db and the real .env secret are untouched.
+Uses a temporary MongoDB database and a temporary JWT_SECRET, so the real
+Nova database and the real .env secret are untouched.
+
+Requires MONGO_URI to point at a reachable MongoDB instance (it may be the same
+cluster as production; a throwaway database name is used and dropped afterwards).
 
 Run: python test_auth.py
 """
 import os
+import secrets
 import sys
-import tempfile
 from datetime import datetime, timedelta, timezone
 
 backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,13 +28,14 @@ from app.config import settings
 TEST_SECRET = "test-secret-" + "x" * 50
 settings.JWT_SECRET = TEST_SECRET
 settings.JWT_ALGORITHM = "HS256"
+settings.LECTURER_CODE = "test-lecturer-code"
 
 from app import auth
 from app.main import app
 
-# Temporary database file for this test run only.
-_tmpdir = tempfile.mkdtemp(prefix="nova-auth-test-")
-auth.DB_PATH = os.path.join(_tmpdir, "users.db")
+# Temporary MongoDB database for this test run only.
+TEST_DB_NAME = f"nova_auth_test_{secrets.token_hex(6)}"
+settings.MONGO_DB_NAME = TEST_DB_NAME
 
 client = TestClient(app)
 
@@ -51,11 +55,48 @@ def test_register_and_duplicate_email():
     assert body["access_token"]
     assert body["user"]["email"] == USER_A["email"]
     assert "password_hash" not in body["user"] and "salt" not in body["user"]
-    print("  OK register works and returns an access_token.")
+    assert body["user"]["role"] == "student", body["user"]
+    assert body["user"]["anonymous_id"], body["user"]
+    assert body["user"]["anonymous_id"].startswith("P-"), body["user"]
+    assert body["user"]["cohort_id"] == "OOP-2026", body["user"]
+    print("  OK register works and returns an access_token with role and anonymous_id.")
+
+    second_user = dict(USER_A, name="Second", email="second@example.com")
+    second_resp = client.post("/auth/register", json=second_user)
+    assert second_resp.status_code == 200, second_resp.text
+    assert second_resp.json()["user"]["anonymous_id"] != body["user"]["anonymous_id"]
+    print("  OK two users get different anonymous_ids.")
 
     dup = client.post("/auth/register", json=USER_A)
     assert dup.status_code == 409, dup.text
     print("  OK duplicate email gives 409.")
+
+
+def test_lecturer_registration():
+    wrong = dict(
+        USER_A,
+        name="Lecturer Wrong",
+        email="lecturer-wrong@example.com",
+        role="lecturer",
+        lecturer_code="wrong-code",
+    )
+    resp = client.post("/auth/register", json=wrong)
+    assert resp.status_code == 403, resp.text
+    print("  OK lecturer registration with a wrong code gives 403.")
+
+    valid = dict(
+        USER_A,
+        name="Lecturer Valid",
+        email="lecturer-valid@example.com",
+        role="lecturer",
+        lecturer_code=settings.LECTURER_CODE,
+    )
+    resp = client.post("/auth/register", json=valid)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["user"]["role"] == "lecturer", resp.text
+    claims = pyjwt.decode(resp.json()["access_token"], TEST_SECRET, algorithms=["HS256"])
+    assert claims["role"] == "lecturer", claims
+    print("  OK lecturer registration with the correct code works and role is in the JWT.")
 
 
 def test_register_validation():
@@ -77,8 +118,13 @@ def test_login():
 
     resp = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"]})
     assert resp.status_code == 200, resp.text
-    assert resp.json()["access_token"]
-    print("  OK login works.")
+    body = resp.json()
+    assert body["access_token"]
+    assert body["user"].get("last_login_at"), body["user"]
+    me = client.get("/auth/me", headers=_auth_headers(body["access_token"]))
+    assert me.status_code == 200, me.text
+    assert me.json().get("last_login_at"), me.text
+    print("  OK login works and sets last_login_at.")
 
 
 def test_me_and_protected_route():
@@ -183,17 +229,24 @@ def run_test():
     print("==========================================================")
     print("TEST: JWT authentication (register/login/protected routes)")
     print("==========================================================")
-    print(f"  (temporary DB: {auth.DB_PATH})")
+    print(f"  (temporary MongoDB database: {TEST_DB_NAME})")
 
     test_register_and_duplicate_email()
+    test_lecturer_registration()
     test_register_validation()
     test_login()
     test_me_and_protected_route()
     test_bad_tokens()
     test_session_ownership()
 
-    import shutil
-    shutil.rmtree(_tmpdir, ignore_errors=True)
+    # Atlas users often cannot drop a whole database; removing the collection
+    # is enough and is permitted for the database's own user.
+    try:
+        database = auth._get_client()[TEST_DB_NAME]
+        database["users"].drop()
+        database["counters"].drop()
+    except Exception as exc:  # pragma: no cover - cleanup only
+        print(f"  (warning: could not drop test collections: {exc})")
 
     print("\n==========================================================")
     print("SUCCESS: JWT authentication verified working!")
