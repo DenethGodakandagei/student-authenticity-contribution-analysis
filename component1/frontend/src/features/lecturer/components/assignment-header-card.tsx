@@ -43,7 +43,7 @@ export const AssignmentHeaderCard: React.FC<AssignmentHeaderCardProps> = ({ assi
             </span>
             <div className="flex gap-2 text-xs font-mono">
               <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">Git {weights.git}%</span>
-              <span className="px-2 py-0.5 rounded bg-[#A3E635]/20 text-slate-900 font-bold">VSCode {weights.vscode}%</span>
+              <span className="px-2 py-0.5 rounded bg-[#EFF8F3] text-[#0D1110] border border-[#6FAF9A]/30 font-bold">VSCode {weights.vscode}%</span>
               <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">Task {weights.task}%</span>
               <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">Collab {weights.collab}%</span>
             </div>

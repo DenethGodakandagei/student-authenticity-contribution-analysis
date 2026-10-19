@@ -92,7 +92,7 @@ export const SimulatorEditor: React.FC<SimulatorEditorProps> = ({
           value={fileContent}
           onChange={onContentChange}
           placeholder="// Type code here or use the injection triggers above..."
-          className="flex-grow p-4 resize-none outline-none leading-6 font-mono text-slate-800 bg-transparent selection:bg-[#A3E635] selection:text-slate-950"
+          className="flex-grow p-4 resize-none outline-none leading-6 font-mono text-[#0D1110] bg-transparent selection:bg-[#6FAF9A] selection:text-white"
         />
       </div>
     </div>

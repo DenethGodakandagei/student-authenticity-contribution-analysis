@@ -2,32 +2,38 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f8fa;
-  --foreground: #0f172a;
+  --background: #ffffff;
+  --foreground: #0D1110;
   
-  --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.06);
+  --card-bg: rgba(255, 255, 255, 0.88);
+  --card-border: rgba(111, 175, 154, 0.2);
   
-  --accent-lime: #a3e635;
-  --accent-lime-hover: #8ee01d;
-  --accent-lime-light: rgba(163, 230, 53, 0.16);
-  --accent-lime-dark: #275306;
+  --theme-dark: #0D1110;
+  --theme-white: #FFFFFF;
+  --theme-sage: #6FAF9A;
+  --theme-sage-hover: #5d9884;
+  --theme-sage-light: #EFF8F3;
+  --theme-sage-border: rgba(111, 175, 154, 0.25);
   
-  --accent-dark: #121417;
-  --accent-dark-hover: #1e2227;
+  --accent-blue: #6FAF9A;
+  --accent-blue-hover: #5d9884;
+  --accent-blue-light: #EFF8F3;
   
-  --success: #22c55e;
+  --accent-dark: #0D1110;
+  --accent-dark-hover: #1a2220;
+  
+  --success: #6FAF9A;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --info: #0ea5e9;
+  --info: #6FAF9A;
   
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
+  --text-primary: #0D1110;
+  --text-secondary: #576561;
+  --text-tertiary: #8fa099;
   
   --surface: #ffffff;
-  --surface-secondary: #f1f5f9;
-  --surface-tertiary: #e2e8f0;
+  --surface-secondary: #EFF8F3;
+  --surface-tertiary: #e2ece7;
   
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
@@ -39,8 +45,8 @@
 }
 
 body {
-  background-color: #f6f8fa;
-  color: #0f172a;
+  background-color: #ffffff;
+  color: #0D1110;
   font-family: var(--font-sans);
   min-height: 100vh;
   overflow-x: hidden;
@@ -48,45 +54,67 @@ body {
   letter-spacing: -0.015em;
 }
 
-/* Subtle lime ambient light at top-left matching Monetra */
+/* Subtle soft sage ambient blur lighting — mainly pure white with very gentle tints */
 body::before {
   content: '';
   position: fixed;
   top: -100px;
-  left: -80px;
-  width: 700px;
-  height: 500px;
+  left: 20%;
+  width: 650px;
+  height: 420px;
   background: radial-gradient(
-    circle at 30% 30%,
-    rgba(163, 230, 53, 0.12) 0%,
-    rgba(163, 230, 53, 0.04) 40%,
+    circle at 50% 50%,
+    rgba(111, 175, 154, 0.08) 0%,
+    rgba(239, 248, 243, 0.5) 45%,
     transparent 70%
   );
   pointer-events: none;
   z-index: -10;
-  filter: blur(60px);
+  filter: blur(80px);
 }
 
-/* Crisp Monetra Card */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -80px;
+  right: 15%;
+  width: 600px;
+  height: 380px;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(111, 175, 154, 0.06) 0%,
+    rgba(239, 248, 243, 0.4) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: -10;
+  filter: blur(90px);
+}
+
+/* Modern Frosted Glass with subtle sage border */
 .glass-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(111, 175, 154, 0.2);
   border-radius: 1.5rem;
-  box-shadow: 0 2px 16px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02);
+  box-shadow: 0 4px 20px -2px rgba(13, 17, 16, 0.03), 0 1px 3px 0 rgba(13, 17, 16, 0.02);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card-interactive {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(111, 175, 154, 0.2);
   border-radius: 1.5rem;
-  box-shadow: 0 2px 16px -2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 20px -2px rgba(13, 17, 16, 0.03);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card-interactive:hover {
-  border-color: rgba(163, 230, 53, 0.45);
-  box-shadow: 0 8px 30px -4px rgba(15, 23, 42, 0.07);
+  border-color: rgba(111, 175, 154, 0.5);
+  box-shadow: 0 8px 30px -4px rgba(111, 175, 154, 0.12);
   transform: translateY(-2px);
 }
 
@@ -94,18 +122,30 @@ body::before {
   font-family: var(--font-mono);
 }
 
-/* Monetra Lime Solid Button */
-.btn-lime {
-  background-color: #a3e635;
-  color: #0f172a;
+/* Primary Theme Button (#0D1110) */
+.btn-primary {
+  background-color: #0D1110;
+  color: #FFFFFF;
   font-weight: 600;
   border-radius: 9999px;
   transition: all 0.15s ease;
 }
 
-.btn-lime:hover {
-  background-color: #8ee01d;
-  box-shadow: 0 4px 14px rgba(163, 230, 53, 0.35);
+.btn-primary:hover {
+  background-color: #1a2220;
+}
+
+/* Sage Accent Button (#6FAF9A) */
+.btn-sage {
+  background-color: #6FAF9A;
+  color: #FFFFFF;
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: all 0.15s ease;
+}
+
+.btn-sage:hover {
+  background-color: #5d9884;
 }
 
 /* Monetra Dark Solid Button */

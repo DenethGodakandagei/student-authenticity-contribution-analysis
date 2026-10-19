@@ -267,7 +267,7 @@ export default function VSCodeSimulator() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#F6F8FA] text-slate-900 flex flex-col font-sans selection:bg-[#A3E635] selection:text-slate-950">
+    <div className="min-h-screen bg-[#F6F8FA] text-slate-900 flex flex-col font-sans selection:bg-[#6FAF9A] selection:text-white">
       {/* Top Navbar */}
       <header className="border-b border-black/[0.06] bg-white/90 backdrop-blur-xl sticky top-0 z-40 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -329,7 +329,7 @@ export default function VSCodeSimulator() {
               onClick={handleStartCoding}
               className="px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs"
             >
-              <Play className="w-3.5 h-3.5 text-[#A3E635]" />
+              <Play className="w-3.5 h-3.5 text-[#6FAF9A]" />
               <span>Start Tracking</span>
             </button>
           )}
@@ -338,9 +338,9 @@ export default function VSCodeSimulator() {
           <button
             onClick={handleSyncToCloud}
             disabled={syncing}
-            className="px-4 py-1.5 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+            className="px-4 py-1.5 rounded-xl bg-[#0D1110] hover:bg-[#1a2220] text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-3.5 h-3.5 text-[#6FAF9A]" />
             <span>{syncing ? 'Syncing...' : 'Sync Telemetry'}</span>
           </button>
         </div>

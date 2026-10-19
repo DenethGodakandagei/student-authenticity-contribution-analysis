@@ -8,22 +8,27 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #06070a;
-      --card-bg: rgba(14, 20, 32, 0.55);
-      --card-subtle: rgba(12, 17, 28, 0.4);
-      --border: rgba(255, 255, 255, 0.08);
-      --border-hover: rgba(56, 189, 248, 0.28);
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-sub: #64748b;
-      --blue: #38bdf8;
-      --green: #4ade80;
+      --bg: #FFFFFF;
+      --card-bg: rgba(255, 255, 255, 0.92);
+      --card-subtle: #EFF8F3;
+      --border: rgba(111, 175, 154, 0.22);
+      --border-hover: rgba(111, 175, 154, 0.45);
+      --text: #0D1110;
+      --text-muted: #576561;
+      --text-sub: #8fa099;
+      --sage: #6FAF9A;
+      --sage-tint: #EFF8F3;
+      --blue: #6FAF9A;
+      --green: #6FAF9A;
       --red: #f87171;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
-      background: radial-gradient(ellipse 100% 45% at 50% 0%, #0d1629 0%, #06070a 75%);
+      background-color: #FFFFFF;
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(111, 175, 154, 0.08) 0%, rgba(239, 248, 243, 0.5) 35%, transparent 60%),
+        radial-gradient(circle at 85% 85%, rgba(111, 175, 154, 0.06) 0%, rgba(239, 248, 243, 0.4) 40%, transparent 65%);
       background-attachment: fixed;
       color: var(--text);
       padding: 24px 20px;
@@ -45,7 +50,7 @@
     }
     .brand-title h1 {
       font-size: 20px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: -0.02em;
       color: var(--text);
     }
@@ -58,22 +63,22 @@
     /* ── Tabs (Frosted Glass Segmented Control) ── */
     .nav-tabs {
       display: flex;
-      gap: 3px;
-      background: rgba(14, 20, 32, 0.55);
+      gap: 4px;
+      background: var(--sage-tint);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 3px;
+      border-radius: 9999px;
+      padding: 4px;
       margin-bottom: 20px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      box-shadow: 0 2px 8px rgba(13, 17, 16, 0.03);
       overflow-x: auto;
     }
     .tab-btn {
-      padding: 6px 14px;
+      padding: 6px 16px;
       background: transparent;
       border: 1px solid transparent;
-      border-radius: 6px;
+      border-radius: 9999px;
       color: var(--text-muted);
       font-size: 12px;
       font-weight: 500;
@@ -84,125 +89,124 @@
       transition: all 0.15s ease;
       white-space: nowrap;
     }
-    .tab-btn svg { width: 13px; height: 13px; opacity: 0.6; }
+    .tab-btn svg { width: 13px; height: 13px; opacity: 0.7; }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active {
-      background: rgba(56, 189, 248, 0.12);
-      border-color: rgba(56, 189, 248, 0.25);
-      color: #7dd3fc;
-      box-shadow: inset 0 1px 0 rgba(56, 189, 248, 0.15);
+      background: #0D1110;
+      border-color: #0D1110;
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(13, 17, 16, 0.12);
       font-weight: 600;
     }
-    .tab-btn.active svg { opacity: 1; color: var(--blue); }
+    .tab-btn.active svg { opacity: 1; color: var(--sage); }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* ── Cards (Dark Glassmorphic Blur) ── */
+    /* ── Cards (Modern Clean Frosted Glass) ── */
     .glass-card {
       background: var(--card-bg);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 14px;
       padding: 16px;
       margin-bottom: 14px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 16px rgba(13, 17, 16, 0.03);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
     .glass-card:hover {
       border-color: var(--border-hover);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+      box-shadow: 0 6px 20px rgba(111, 175, 154, 0.1);
     }
 
     /* ── Metrics Grid ── */
     .metrics-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 8px;
+      gap: 10px;
       margin-bottom: 14px;
     }
     .card-title {
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--text-muted);
       margin-bottom: 6px;
     }
     .card-value {
       font-size: 24px;
-      font-weight: 700;
+      font-weight: 800;
       font-variant-numeric: tabular-nums;
       letter-spacing: -0.02em;
       color: var(--text);
     }
-    .val-green { color: var(--green); }
+    .val-green { color: var(--sage); }
     .val-red { color: var(--red); }
 
     /* ── Status Banner (Glass) ── */
     .status-banner {
-      background: rgba(14, 20, 32, 0.55);
+      background: var(--card-bg);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 16px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      box-shadow: 0 2px 10px rgba(13, 17, 16, 0.02);
     }
     .status-pill {
-      padding: 2px 8px;
-      border-radius: 100px;
-      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-weight: 600;
       font-size: 11px;
-      background: rgba(74, 222, 128, 0.1);
-      border: 1px solid rgba(74, 222, 128, 0.25);
-      color: var(--green);
+      background: var(--sage-tint);
+      border: 1px solid rgba(111, 175, 154, 0.3);
+      color: #2d5849;
     }
 
     /* ── Highlight Stat Boxes ── */
     .highlight-stat {
-      background: var(--card-subtle);
+      background: var(--sage-tint);
       padding: 10px 12px;
-      border-radius: 6px;
+      border-radius: 10px;
       border: 1px solid var(--border);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
-    .highlight-stat .hl-label { font-size: 10px; color: var(--text-sub); }
-    .highlight-stat .hl-value { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 2px; }
+    .highlight-stat .hl-label { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+    .highlight-stat .hl-value { font-size: 16px; font-weight: 700; color: var(--text); margin-top: 2px; }
 
     /* ── ML Feature Cards (Glass Effect) ── */
     .ml-features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 8px;
+      gap: 10px;
       margin-top: 12px;
     }
     .ml-card {
-      background: rgba(14, 20, 32, 0.5);
+      background: var(--card-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: 12px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      box-shadow: 0 2px 8px rgba(13, 17, 16, 0.02);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
     .ml-card:hover {
       border-color: var(--border-hover);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      box-shadow: 0 4px 14px rgba(111, 175, 154, 0.12);
     }
-    .ml-num { font-size: 9.5px; color: var(--blue); font-weight: 600; letter-spacing: 0.5px; opacity: 0.85; }
-    .ml-title { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 2px; }
-    .ml-desc { font-size: 10.5px; color: var(--text-sub); margin: 3px 0 8px 0; }
+    .ml-num { font-size: 9.5px; color: var(--sage); font-weight: 700; letter-spacing: 0.5px; }
+    .ml-title { font-size: 12px; font-weight: 700; color: var(--text); margin-top: 2px; }
+    .ml-desc { font-size: 10.5px; color: var(--text-muted); margin: 3px 0 8px 0; }
     .ml-val {
       font-size: 18px;
-      font-weight: 600;
+      font-weight: 700;
       font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
       color: var(--text);
     }
@@ -210,55 +214,53 @@
     /* ── Form Inputs ── */
     .form-group { margin-bottom: 16px; }
     label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
-    .hint { font-size: 11px; color: var(--text-sub); margin-bottom: 6px; }
+    .hint { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
     input[type="text"], input[type="password"], input[type="number"] {
       width: 100%;
-      padding: 8px 12px;
-      background: var(--card-subtle);
+      padding: 9px 12px;
+      background: var(--sage-tint);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 10px;
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
       font-size: 12px;
       outline: none;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
     }
     input:focus {
-      border-color: rgba(56, 189, 248, 0.45);
+      border-color: var(--sage);
+      background: #FFFFFF;
     }
 
     /* ── Buttons (Frosted Glass) ── */
     .btn {
-      padding: 7px 14px;
-      background: rgba(14, 116, 144, 0.16);
-      border: 1px solid rgba(56, 189, 248, 0.28);
-      color: #7dd3fc;
-      border-radius: 6px;
-      font-weight: 500;
+      padding: 7px 16px;
+      background: #0D1110;
+      border: 1px solid #0D1110;
+      color: #FFFFFF;
+      border-radius: 9999px;
+      font-weight: 600;
       font-size: 12px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      box-shadow: inset 0 1px 0 rgba(56, 189, 248, 0.14), 0 2px 8px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 2px 6px rgba(13, 17, 16, 0.1);
       transition: background 0.15s ease, border-color 0.15s ease;
     }
     .btn:hover {
-      background: rgba(14, 116, 144, 0.28);
-      border-color: rgba(56, 189, 248, 0.5);
+      background: #1a2220;
+      border-color: #1a2220;
     }
     .btn:active { transform: scale(0.99); }
     .btn-secondary {
-      background: rgba(18, 25, 40, 0.55);
+      background: var(--sage-tint);
       border: 1px solid var(--border);
-      color: var(--text-muted);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      box-shadow: none;
     }
     .btn-secondary:hover {
-      background: rgba(28, 40, 64, 0.65);
+      background: #e2ece7;
       border-color: var(--border-hover);
       color: var(--text);
     }
@@ -272,16 +274,16 @@
       background: var(--card-bg);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
       border: 1px solid var(--border);
     }
     th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--card-subtle); }
+    th { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--sage-tint); }
     td:last-child { font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace; font-size: 11px; }
 
-    .test-box { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 11.5px; display: none; font-weight: 500; }
-    .test-box.success { display: block; background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.2); color: var(--green); }
+    .test-box { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 11.5px; display: none; font-weight: 500; }
+    .test-box.success { display: block; background: var(--sage-tint); border: 1px solid rgba(111, 175, 154, 0.3); color: #2d5849; }
     .test-box.error { display: block; background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.2); color: var(--red); }
   </style>
 </head>

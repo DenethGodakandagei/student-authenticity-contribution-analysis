@@ -7,15 +7,36 @@ export const createTeam = async (req: any, res: Response): Promise<void> => {
     const { name, assignmentId, gitUsername, memberIds, repositoryUrl, repoUrl } = req.body;
     const studentId = req.user.id;
 
-    if (!name || !assignmentId || !gitUsername) {
-      res.status(400).json({ error: 'Team name, assignment ID, and git username are required' });
+    let assignmentObj: any = null;
+    if (!mockDb.isDbConnected()) {
+      assignmentObj = mockDb.mockAssignments.find(a => a._id === assignmentId);
+    } else {
+      assignmentObj = await Assignment.findById(assignmentId);
+    }
+
+    const isIndividual = assignmentObj?.assignmentType === 'individual';
+    const finalName = name || (isIndividual ? `${req.user.name || 'Student'} (Individual)` : '');
+
+    const effectiveRepoUrl = (repositoryUrl || repoUrl || '').trim();
+
+    if (!finalName || !assignmentId || !gitUsername) {
+      res.status(400).json({ error: isIndividual ? 'GitHub username is required' : 'Team name, assignment ID, and git username are required' });
       return;
     }
 
-    const inviteCode = `TEAM-${Math.floor(1000 + Math.random() * 9000)}`;
+    if (!effectiveRepoUrl) {
+      res.status(400).json({ 
+        error: isIndividual 
+          ? 'GitHub repository URL is required for individual assignments' 
+          : 'GitHub repository URL is required when creating a team' 
+      });
+      return;
+    }
+
+    const inviteCode = isIndividual ? `IND-${Math.floor(1000 + Math.random() * 9000)}` : `TEAM-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const membersList: any[] = [{ student: studentId, gitUsername }];
-    if (Array.isArray(memberIds)) {
+    if (!isIndividual && Array.isArray(memberIds)) {
       memberIds.forEach((id: string) => {
         if (id && id !== studentId) {
           membersList.push({ student: id, gitUsername: `git-${id.slice(-4)}` });
@@ -24,7 +45,7 @@ export const createTeam = async (req: any, res: Response): Promise<void> => {
     }
 
     const teamData = {
-      name,
+      name: finalName,
       assignment: assignmentId,
       leader: studentId,
       inviteCode,
@@ -39,7 +60,7 @@ export const createTeam = async (req: any, res: Response): Promise<void> => {
         t.assignment === assignmentId && t.members.some((m: any) => m.student === studentId)
       );
       if (alreadyHasTeam) {
-        res.status(400).json({ error: 'You are already registered in a team for this assignment' });
+        res.status(400).json({ error: isIndividual ? 'You have already started this individual assignment' : 'You are already registered in a team for this assignment' });
         return;
       }
 
@@ -100,6 +121,12 @@ export const joinTeam = async (req: any, res: Response): Promise<void> => {
         return;
       }
 
+      const assignment = mockDb.mockAssignments.find(a => a._id === team.assignment);
+      if (assignment?.assignmentType === 'individual') {
+        res.status(400).json({ error: 'This is an individual assignment. Multiple members cannot join the same workspace.' });
+        return;
+      }
+
       // Check if already in this team
       if (team.members.some((m: any) => m.student === studentId)) {
         res.status(400).json({ error: 'You are already a member of this team' });
@@ -123,6 +150,12 @@ export const joinTeam = async (req: any, res: Response): Promise<void> => {
     const team = await Team.findOne({ inviteCode: inviteCode.trim() });
     if (!team) {
       res.status(404).json({ error: 'Invalid team invite code' });
+      return;
+    }
+
+    const assignment = await Assignment.findById(team.assignment);
+    if (assignment?.assignmentType === 'individual') {
+      res.status(400).json({ error: 'This is an individual assignment. Multiple members cannot join the same workspace.' });
       return;
     }
 
@@ -257,8 +290,10 @@ export const createGeneralTeam = async (req: any, res: Response): Promise<void> 
     const { name, gitUsername, memberIds, repositoryUrl } = req.body;
     const studentId = req.user.id;
 
-    if (!name || !gitUsername) {
-      res.status(400).json({ error: 'Team name and GitHub username are required' });
+    const effectiveRepoUrl = (repositoryUrl || '').trim();
+
+    if (!name || !gitUsername || !effectiveRepoUrl) {
+      res.status(400).json({ error: 'Team name, GitHub username, and repository URL are required' });
       return;
     }
 

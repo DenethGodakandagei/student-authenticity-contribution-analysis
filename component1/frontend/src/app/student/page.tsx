@@ -458,26 +458,59 @@ export default function StudentDashboard() {
         setError('No assignment found with this invite code.');
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid cohort invite code');
+      setError(err.message || 'Invalid assignment invite code');
     }
   };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const trimmedRepo = repoUrl.trim();
+    if (!trimmedRepo) {
+      setError('GitHub Repository URL is required when creating a team.');
+      return;
+    }
     try {
       const res = await api.teams.create({
         name: teamName,
         assignmentId: searchedAssignment._id,
-        repositoryUrl: repoUrl,
+        repositoryUrl: trimmedRepo,
         gitUsername,
         memberIds: selectedMembers
       });
+      setTeam(res.team);
+      setRepoUrl(res.team?.repositoryUrl || trimmedRepo);
       setSuccess(`Team created successfully! Invite code: ${res.team.inviteCode}`);
       setShowJoinModal(false);
       await fetchData(searchedAssignment?._id);
     } catch (err: any) {
       setError(err.message || 'Failed to create team');
+    }
+  };
+
+  const handleJoinIndividual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const trimmedRepo = repoUrl.trim();
+    if (!trimmedRepo) {
+      setError('GitHub Repository URL is required for individual assignments.');
+      return;
+    }
+    try {
+      const res = await api.teams.create({
+        name: student?.name ? `${student.name} (Individual)` : 'Individual Submission',
+        assignmentId: searchedAssignment._id,
+        repositoryUrl: trimmedRepo,
+        gitUsername,
+        memberIds: []
+      });
+      setTeam(res.team);
+      setRepoUrl(res.team?.repositoryUrl || trimmedRepo);
+      setSuccess('Started individual assignment successfully!');
+      setShowJoinModal(false);
+      await fetchData(searchedAssignment?._id);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start individual assignment');
     }
   };
 
@@ -534,11 +567,16 @@ export default function StudentDashboard() {
   const handleCreateGeneralTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const trimmedRepo = generalTeamRepo.trim();
+    if (!trimmedRepo) {
+      setError('GitHub Repository URL is required when creating a team.');
+      return;
+    }
     try {
       await api.teams.createGeneral({
         name: generalTeamName,
         gitUsername: generalTeamGit,
-        repositoryUrl: generalTeamRepo,
+        repositoryUrl: trimmedRepo,
         memberIds: selectedMembers
       });
       setSuccess('General team template created successfully!');
@@ -665,8 +703,8 @@ export default function StudentDashboard() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#F6F8FA] text-slate-900 flex flex-col font-sans selection:bg-[#A3E635] selection:text-slate-950">
-      <AppHeader user={student} roleTitle="Student Node" badgeVariant="lime" />
+    <div className="min-h-screen bg-transparent text-[#0D1110] flex flex-col font-sans selection:bg-[#6FAF9A] selection:text-white relative">
+      <AppHeader user={student} roleTitle="Student Node" badgeVariant="info" />
 
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {error && (
@@ -675,7 +713,7 @@ export default function StudentDashboard() {
           </div>
         )}
         {success && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-medium">
+          <div className="p-4 bg-[#EFF8F3] border border-[#6FAF9A]/30 text-[#2d5849] rounded-2xl text-xs font-medium">
             {success}
           </div>
         )}
@@ -701,25 +739,25 @@ export default function StudentDashboard() {
         ========================================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
           {/* Left: Authenticity & Biometric Scorecard (7 of 12 cols) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-5">
+          <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-[#6FAF9A]/20 shadow-xs flex flex-col justify-between space-y-5">
             <div>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Integrity & Coding Authenticity</h3>
-                  <p className="text-xs text-slate-500 font-normal mt-0.5">
+                  <h3 className="text-sm font-bold text-[#0D1110]">Integrity & Coding Authenticity</h3>
+                  <p className="text-xs text-[#576561] font-normal mt-0.5">
                     Biometric typing telemetry & repository provenance analysis
                   </p>
                 </div>
                 <span
                   className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-mono ${
                     report?.scores?.final != null
-                      ? 'text-emerald-800 bg-emerald-50 border border-emerald-200'
-                      : 'text-slate-500 bg-slate-100'
+                      ? 'text-[#2d5849] bg-[#EFF8F3] border border-[#6FAF9A]/30'
+                      : 'text-[#576561] bg-[#EFF8F3]/60'
                   }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      report?.scores?.final != null ? 'bg-emerald-500' : 'bg-slate-400'
+                      report?.scores?.final != null ? 'bg-[#6FAF9A]' : 'bg-slate-400'
                     }`}
                   />
                   {report?.scores?.final != null ? 'Verified Authentic' : 'Pending Baseline'}
@@ -728,14 +766,14 @@ export default function StudentDashboard() {
 
               <div className="my-4">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-slate-900 tracking-tight font-mono">
+                  <span className="text-4xl font-black text-[#0D1110] tracking-tight font-mono">
                     {report?.scores?.final != null ? `${report.scores.final}%` : '0%'}
                   </span>
-                  <span className="text-xs uppercase text-slate-400 font-bold tracking-wider">
+                  <span className="text-xs uppercase text-[#8fa099] font-bold tracking-wider">
                     AUTHENTICITY SCORE
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 font-normal mt-1">
+                <p className="text-xs text-[#576561] font-normal mt-1">
                   {report?.scores?.final
                     ? 'Genuine human keystroke rhythm verified against local & remote Git history.'
                     : 'Awaiting telemetry sync to establish organic typing baseline.'}
@@ -745,26 +783,26 @@ export default function StudentDashboard() {
 
             {/* 3 Metric Pills: Manual % vs AI % vs Pasted % */}
             <div className="grid grid-cols-3 gap-2.5 pt-1">
-              <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-2.5 text-center flex flex-col items-center justify-center">
-                <Laptop className="w-4 h-4 text-slate-600 mb-1" />
-                <span className="text-[10px] text-slate-500 leading-tight">Manual</span>
-                <span className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+              <div className="bg-[#EFF8F3]/60 border border-[#6FAF9A]/20 rounded-2xl p-2.5 text-center flex flex-col items-center justify-center">
+                <Laptop className="w-4 h-4 text-[#6FAF9A] mb-1" />
+                <span className="text-[10px] text-[#576561] leading-tight">Manual</span>
+                <span className="text-xs font-bold text-[#0D1110] mt-0.5 font-mono">
                   {report?.metrics?.codingProvenance?.manualPercent ?? 88}%
                 </span>
               </div>
 
               <div className="bg-purple-50/50 border border-purple-100 rounded-2xl p-2.5 text-center flex flex-col items-center justify-center">
                 <Bot className="w-4 h-4 text-purple-600 mb-1" />
-                <span className="text-[10px] text-slate-500 leading-tight">AI Assist</span>
-                <span className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+                <span className="text-[10px] text-[#576561] leading-tight">AI Assist</span>
+                <span className="text-xs font-bold text-[#0D1110] mt-0.5 font-mono">
                   {report?.metrics?.codingProvenance?.aiPercent ?? 8}%
                 </span>
               </div>
 
               <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-2.5 text-center flex flex-col items-center justify-center">
                 <ClipboardCheck className="w-4 h-4 text-rose-500 mb-1" />
-                <span className="text-[10px] text-slate-500 leading-tight">External Paste</span>
-                <span className="text-xs font-bold text-slate-900 mt-0.5 font-mono">
+                <span className="text-[10px] text-[#576561] leading-tight">External Paste</span>
+                <span className="text-xs font-bold text-[#0D1110] mt-0.5 font-mono">
                   {report?.metrics?.codingProvenance?.externalPercent ??
                     report?.metrics?.codingProvenance?.pastePercent ??
                     4}%
@@ -781,7 +819,7 @@ export default function StudentDashboard() {
                     : handleResumeSavedWorkspace()
                 }
                 disabled={autoSyncInProgress || scanning}
-                className="w-full py-2.5 rounded-xl bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 rounded-xl bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${autoSyncInProgress || scanning ? 'animate-spin' : ''}`}
@@ -790,40 +828,40 @@ export default function StudentDashboard() {
               </button>
               <button
                 onClick={() => setShowAuditModal(true)}
-                className="w-full py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs border border-slate-200/80 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-white hover:bg-[#EFF8F3] text-[#0D1110] font-semibold text-xs border border-[#6FAF9A]/25 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5 text-slate-600" />
+                <FileText className="w-3.5 h-3.5 text-[#6FAF9A]" />
                 <span>Audit Report</span>
               </button>
               <button
                 onClick={handleDownloadCsv}
-                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-[#EFF8F3] hover:bg-[#e2ece7] text-[#0D1110] font-semibold text-xs border border-[#6FAF9A]/20 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-[#A3E635]" />
+                <Download className="w-3.5 h-3.5 text-[#6FAF9A]" />
                 <span>Dataset CSV</span>
               </button>
             </div>
           </div>
 
           {/* Right: Workspace Standing Evaluation (5 of 12 cols) */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-[#6FAF9A]/20 shadow-xs space-y-4 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">Workspace Standing</h3>
-                <span className="text-xs font-semibold text-slate-500 font-mono">
+                <h3 className="text-sm font-bold text-[#0D1110]">Workspace Standing</h3>
+                <span className="text-xs font-semibold text-[#576561] font-mono">
                   Total {report?.metrics?.codingHours ? Number(report.metrics.codingHours).toFixed(1) : '0.0'}h
                 </span>
               </div>
 
-              {/* Blue Weighted Standing Banner */}
-              <div className="bg-[#EFF6FF] border border-blue-100 rounded-2xl p-4 flex items-center justify-between my-3">
+              {/* Sage Weighted Standing Banner */}
+              <div className="bg-[#EFF8F3] border border-[#6FAF9A]/25 rounded-2xl p-4 flex items-center justify-between my-3">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 font-mono">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#2d5849] font-mono">
                     WEIGHTED SCORE
                   </div>
-                  <div className="text-xs text-blue-900 font-medium mt-0.5">Calculated Authenticity</div>
+                  <div className="text-xs text-[#0D1110] font-medium mt-0.5">Calculated Authenticity</div>
                 </div>
-                <div className="text-3xl font-black text-blue-600 font-mono">
+                <div className="text-3xl font-black text-[#2d5849] font-mono">
                   {report?.scores?.final ?? 94}%
                 </div>
               </div>
@@ -832,53 +870,53 @@ export default function StudentDashboard() {
             {/* 4 Evaluation Progress Bars */}
             <div className="space-y-2.5 text-xs">
               <div>
-                <div className="flex justify-between items-center text-slate-600 mb-1">
+                <div className="flex justify-between items-center text-[#576561] mb-1">
                   <span className="font-medium">Git Mining (40%)</span>
-                  <span className="font-mono font-bold text-slate-900">{report?.scores?.git ?? 92}%</span>
+                  <span className="font-mono font-bold text-[#0D1110]">{report?.scores?.git ?? 92}%</span>
                 </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-[#EFF8F3] h-2 rounded-full overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, Math.max(0, report?.scores?.git ?? 92))}%` }}
-                    className="h-full bg-[#A3E635] transition-all duration-500"
+                    className="h-full bg-[#6FAF9A] transition-all duration-500"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between items-center text-slate-600 mb-1">
+                <div className="flex justify-between items-center text-[#576561] mb-1">
                   <span className="font-medium">VS Code Telemetry (30%)</span>
-                  <span className="font-mono font-bold text-slate-900">{report?.scores?.vscode ?? 95}%</span>
+                  <span className="font-mono font-bold text-[#0D1110]">{report?.scores?.vscode ?? 95}%</span>
                 </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-[#EFF8F3] h-2 rounded-full overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, Math.max(0, report?.scores?.vscode ?? 95))}%` }}
-                    className="h-full bg-slate-900 transition-all duration-500"
+                    className="h-full bg-[#0D1110] transition-all duration-500"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between items-center text-slate-600 mb-1">
+                <div className="flex justify-between items-center text-[#576561] mb-1">
                   <span className="font-medium">Keystroke Cadence (20%)</span>
-                  <span className="font-mono font-bold text-slate-900">{report?.scores?.keystroke ?? 90}%</span>
+                  <span className="font-mono font-bold text-[#0D1110]">{report?.scores?.keystroke ?? 90}%</span>
                 </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-[#EFF8F3] h-2 rounded-full overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, Math.max(0, report?.scores?.keystroke ?? 90))}%` }}
-                    className="h-full bg-emerald-500 transition-all duration-500"
+                    className="h-full bg-[#6FAF9A] transition-all duration-500"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between items-center text-slate-600 mb-1">
+                <div className="flex justify-between items-center text-[#576561] mb-1">
                   <span className="font-medium">Provenance Attestation (10%)</span>
-                  <span className="font-mono font-bold text-slate-900">{report?.scores?.peer ?? 98}%</span>
+                  <span className="font-mono font-bold text-[#0D1110]">{report?.scores?.peer ?? 98}%</span>
                 </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-[#EFF8F3] h-2 rounded-full overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, Math.max(0, report?.scores?.peer ?? 98))}%` }}
-                    className="h-full bg-blue-500 transition-all duration-500"
+                    className="h-full bg-[#6FAF9A] transition-all duration-500"
                   />
                 </div>
               </div>
@@ -1022,7 +1060,7 @@ export default function StudentDashboard() {
 
               <div className="space-y-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/60">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Assigned Cohort:</span>
+                  <span className="text-slate-500">Assignment:</span>
                   <span className="font-bold text-slate-900">{selectedAssignment?.title || 'SSD Practical'}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1081,6 +1119,7 @@ export default function StudentDashboard() {
         onSearchInvite={handleSearchInvite}
         onCreateTeam={handleCreateTeam}
         onJoinTeam={handleJoinTeam}
+        onJoinIndividual={handleJoinIndividual}
       />
 
       <CreateGeneralTeamModal

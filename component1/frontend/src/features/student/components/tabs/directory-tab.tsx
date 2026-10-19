@@ -54,14 +54,14 @@ export const DirectoryTab: React.FC<DirectoryTabProps> = ({
               {filteredStudents.length > 0 ? (
                 filteredStudents.map((s) => (
                   <tr key={s.id || s.email} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3.5 px-4 font-medium text-slate-900 flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#A3E635]/25 text-[#2D6606] border border-[#A3E635]/30 text-xs font-bold flex items-center justify-center">
+                    <td className="py-3.5 px-4 font-medium text-[#0D1110] flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-[#EFF8F3] text-[#0D1110] border border-[#6FAF9A]/30 text-xs font-bold flex items-center justify-center">
                         {s.name?.charAt(0) || 'S'}
                       </div>
                       <span>{s.name}</span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-mono">{s.email}</td>
-                    <td className="py-3.5 px-4 text-right font-mono text-[10px] uppercase text-emerald-600 font-bold">
+                    <td className="py-3.5 px-4 text-[#576561] font-mono">{s.email}</td>
+                    <td className="py-3.5 px-4 text-right font-mono text-[10px] uppercase text-[#2d5849] font-bold">
                       Active Student
                     </td>
                   </tr>

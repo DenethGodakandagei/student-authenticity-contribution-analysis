@@ -289,7 +289,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
               href={repoUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-slate-900 hover:underline flex items-center gap-1 font-mono border border-lime-300 bg-lime-50 px-2.5 py-1 rounded-lg transition"
+              className="text-xs text-[#0D1110] hover:underline flex items-center gap-1 font-mono border border-[#6FAF9A]/30 bg-[#EFF8F3] px-2.5 py-1 rounded-lg transition"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               View on GitHub
@@ -321,15 +321,15 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
 
       {/* 2. Re-Connect Banner if saved directory is detected in persistent storage */}
       {savedFolderPrompt && !localDirHandle && (
-        <div className="bg-emerald-50/70 border border-emerald-200 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-left shadow-xs animate-fade-in">
+        <div className="bg-[#EFF8F3] border border-[#6FAF9A]/30 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-left shadow-xs animate-fade-in">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-mono text-emerald-800 font-bold">
-              <HardDrive className="w-4 h-4 text-emerald-700" />
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0D1110] font-bold">
+              <HardDrive className="w-4 h-4 text-[#6FAF9A]" />
               <span>Saved Project Folder Detected</span>
             </div>
-            <p className="text-xs text-slate-600 font-light">
+            <p className="text-xs text-[#576561] font-normal">
               You previously linked project folder{' '}
-              <strong className="text-slate-900 font-mono bg-white/80 px-1.5 py-0.5 rounded border border-emerald-200">
+              <strong className="text-[#0D1110] font-mono bg-white px-1.5 py-0.5 rounded border border-[#6FAF9A]/30">
                 {savedFolderPrompt.folderName}/
               </strong>
               . Click below to reconnect and automatically sync your files.
@@ -338,14 +338,14 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
           <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={onResumeSavedWorkspace}
-              className="px-4 py-2 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold rounded-xl text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
             >
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              Resume & Auto-Sync
+              <Zap className="w-3.5 h-3.5 text-[#6FAF9A] fill-[#6FAF9A]" />
+              <span>Resume & Auto-Sync</span>
             </button>
             <button
               onClick={onConnectFolder}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs rounded-xl border border-slate-200 transition cursor-pointer"
+              className="px-3.5 py-2 bg-white hover:bg-[#EFF8F3] text-[#0D1110] text-xs rounded-xl border border-[#6FAF9A]/25 transition cursor-pointer font-medium"
             >
               Choose Different
             </button>
@@ -354,16 +354,16 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
       )}
 
       {/* 3. Physical Project Workspace Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden text-left">
-        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-3xl border border-[#6FAF9A]/20 shadow-xs overflow-hidden text-left">
+        <div className="p-5 border-b border-[#6FAF9A]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-emerald-700" />
-              <h3 className="text-xs font-mono uppercase tracking-wider text-emerald-800 font-bold">
+              <HardDrive className="w-4 h-4 text-[#6FAF9A]" />
+              <h3 className="text-xs font-mono uppercase tracking-wider text-[#0D1110] font-bold">
                 Local Project Folder (Linked to Git)
               </h3>
             </div>
-            <p className="text-xs text-slate-500 font-light mt-1">
+            <p className="text-xs text-[#576561] font-normal mt-1">
               Connect your local cloned repository once. INCODE checks your Git repository configuration to verify project authenticity.
             </p>
           </div>
@@ -373,16 +373,16 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
               <button
                 onClick={onManualSync}
                 disabled={scanning || autoSyncInProgress}
-                className="px-3 py-1.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-semibold shadow-xs text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold shadow-xs text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw
-                  className={`w-3.5 h-3.5 ${scanning || autoSyncInProgress ? 'animate-spin' : ''}`}
+                  className={`w-3.5 h-3.5 text-[#6FAF9A] ${scanning || autoSyncInProgress ? 'animate-spin' : ''}`}
                 />
                 <span>{scanning || autoSyncInProgress ? 'Scanning...' : 'Rescan & Sync'}</span>
               </button>
               <button
                 onClick={onDisconnectWorkspace}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-xs rounded-xl border border-slate-200 transition cursor-pointer"
+                className="px-3 py-1.5 bg-[#EFF8F3] hover:bg-[#e2ece7] text-[#0D1110] text-xs rounded-xl border border-[#6FAF9A]/20 transition cursor-pointer font-medium"
               >
                 Disconnect
               </button>
@@ -390,10 +390,10 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
           ) : (
             <button
               onClick={onConnectFolder}
-              className="px-4 py-2 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-4 py-2 bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
-              <FolderCheck className="w-4 h-4" />
-              Connect Local Repo Folder
+              <FolderCheck className="w-4 h-4 text-[#6FAF9A]" />
+              <span>Connect Local Repo Folder</span>
             </button>
           )}
         </div>
@@ -555,13 +555,13 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
 
               {/* Folder filter badge if active */}
               {selectedFolderFilter && offlineFilter !== 'folders' && (
-                <div className="px-3.5 py-1.5 bg-lime-50 border-b border-lime-200 flex items-center justify-between text-[11px] font-mono text-lime-900">
+                <div className="px-3.5 py-1.5 bg-[#EFF8F3] border-b border-[#6FAF9A]/30 flex items-center justify-between text-[11px] font-mono text-[#0D1110]">
                   <span className="truncate">
                     Folder: <strong>{selectedFolderFilter}/</strong>
                   </span>
                   <button
                     onClick={() => setSelectedFolderFilter(null)}
-                    className="text-slate-500 hover:text-slate-800 font-bold ml-2 cursor-pointer"
+                    className="text-slate-500 hover:text-[#0D1110] font-bold ml-2 cursor-pointer"
                   >
                     ✕ Clear
                   </button>
@@ -607,12 +607,12 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                         onClick={() => onSelectOfflineFile(file)}
                         className={`w-full text-left p-3 transition cursor-pointer flex items-center justify-between gap-2 ${
                           isSelected
-                            ? 'bg-lime-50 border-l-4 border-lime-500 text-slate-900'
+                            ? 'bg-[#EFF8F3] border-l-4 border-[#6FAF9A] text-[#0D1110]'
                             : 'hover:bg-slate-100/70 text-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <FileCode className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-lime-700' : 'text-slate-400'}`} />
+                          <FileCode className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#6FAF9A]' : 'text-slate-400'}`} />
                           <div className="min-w-0">
                             <span className="text-xs font-mono font-medium block truncate">
                               {file.name}
@@ -1013,24 +1013,24 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
           </div>
         ) : (
           <div className="p-12 text-center space-y-4">
-            <div className="w-12 h-12 rounded-3xl bg-lime-50 border border-lime-200 flex items-center justify-center mx-auto text-emerald-800">
+            <div className="w-12 h-12 rounded-3xl bg-[#EFF8F3] border border-[#6FAF9A]/30 flex items-center justify-center mx-auto text-[#6FAF9A]">
               <Folder className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900">
+              <h4 className="text-sm font-bold text-[#0D1110]">
                 No Local Project Workspace Connected
               </h4>
-              <p className="text-xs text-slate-500 font-light max-w-md mx-auto mt-1">
+              <p className="text-xs text-[#576561] font-normal max-w-md mx-auto mt-1">
                 Link your local cloned repository directory. INCODE verifies the hidden{' '}
-                <code className="text-emerald-800 font-mono">.git/config</code> remote path to ensure authentic provenance.
+                <code className="text-[#2d5849] font-mono bg-[#EFF8F3] px-1.5 py-0.5 rounded border border-[#6FAF9A]/25">.git/config</code> remote path to ensure authentic provenance.
               </p>
             </div>
             <button
               onClick={onConnectFolder}
-              className="px-5 py-2.5 bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold rounded-xl text-xs transition inline-flex items-center gap-2 cursor-pointer shadow-xs"
+              className="px-5 py-2.5 bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold rounded-xl text-xs transition inline-flex items-center gap-2 cursor-pointer shadow-xs"
             >
-              <FolderCheck className="w-4 h-4" />
-              Connect Cloned Project Folder
+              <FolderCheck className="w-4 h-4 text-[#6FAF9A]" />
+              <span>Connect Cloned Project Folder</span>
             </button>
           </div>
         )}

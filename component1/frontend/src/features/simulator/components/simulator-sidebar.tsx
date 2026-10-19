@@ -47,7 +47,7 @@ export const SimulatorSidebar: React.FC<SimulatorSidebarProps> = ({
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                <FileCode className={`w-3.5 h-3.5 ${isSelected ? 'text-[#A3E635]' : 'text-slate-400'}`} />
+                <FileCode className={`w-3.5 h-3.5 ${isSelected ? 'text-[#6FAF9A]' : 'text-slate-400'}`} />
                 <span className="truncate">{fileName}</span>
               </button>
             );

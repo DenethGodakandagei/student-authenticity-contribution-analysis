@@ -43,7 +43,7 @@ export const SimulatorMetrics: React.FC<SimulatorMetricsProps> = ({
 
       {/* Provenance bar */}
       <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden flex">
-        <div style={{ width: `${manualPct}%` }} className="bg-[#A3E635] h-full" />
+        <div style={{ width: `${manualPct}%` }} className="bg-[#6FAF9A] h-full" />
         <div style={{ width: `${aiPct}%` }} className="bg-purple-600 h-full" />
         <div style={{ width: `${pastePct}%` }} className="bg-rose-500 h-full" />
       </div>
