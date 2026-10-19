@@ -119,6 +119,11 @@ export default function StudentDashboard() {
     const targetAssignId = assignmentId || selectedAssignment?._id;
     if (!targetAssignId || !handle) return;
 
+    if (checkResult && checkResult.status === 'mismatch') {
+      setError(checkResult.message || 'Repository Mismatch: Access blocked.');
+      return;
+    }
+
     setScanning(true);
     setAutoSyncInProgress(true);
 
@@ -305,10 +310,22 @@ export default function StudentDashboard() {
         if (saved.handle) {
           const hasPermission = await verifyHandlePermission(saved.handle, false);
           if (hasPermission) {
-            setLocalDirHandle(saved.handle);
-            setSavedFolderPrompt(null);
             const check = await verifyLocalGitRepository(saved.handle, teamObj?.repositoryUrl || repoUrl);
             setGitVerification(check);
+            if (check.status === 'mismatch') {
+              setLocalDirHandle(null);
+              setLocalDirName('');
+              setScannedFiles([]);
+              setOfflineEdits([]);
+              setSavedFolderPrompt(null);
+              if (assignmentId) {
+                await deleteWorkspaceHandle(assignmentId);
+                clearWorkspaceSnapshot(assignmentId);
+              }
+              return;
+            }
+            setLocalDirHandle(saved.handle);
+            setSavedFolderPrompt(null);
             await scanAndAutoSync(saved.handle, assignmentId, teamObj, check);
           } else {
             // Need user interaction to re-request browser permission
@@ -633,6 +650,19 @@ export default function StudentDashboard() {
       const check = await verifyLocalGitRepository(handle, team?.repositoryUrl || repoUrl);
       setGitVerification(check);
 
+      if (check.status === 'mismatch') {
+        setLocalDirHandle(null);
+        setLocalDirName('');
+        setScannedFiles([]);
+        setOfflineEdits([]);
+        if (selectedAssignment) {
+          await deleteWorkspaceHandle(selectedAssignment._id);
+          clearWorkspaceSnapshot(selectedAssignment._id);
+        }
+        setError(check.message || 'Repository Mismatch: Access denied. The selected folder does not match the assignment repository.');
+        return;
+      }
+
       if (selectedAssignment) {
         await saveWorkspaceHandle(selectedAssignment._id, handle, handle.name);
       }
@@ -659,12 +689,26 @@ export default function StudentDashboard() {
       setError('');
       const granted = await verifyHandlePermission(savedFolderPrompt.handle, true);
       if (granted) {
+        const check = await verifyLocalGitRepository(savedFolderPrompt.handle, team?.repositoryUrl || repoUrl);
+        setGitVerification(check);
+
+        if (check.status === 'mismatch') {
+          setLocalDirHandle(null);
+          setLocalDirName('');
+          setScannedFiles([]);
+          setOfflineEdits([]);
+          setSavedFolderPrompt(null);
+          if (selectedAssignment) {
+            await deleteWorkspaceHandle(selectedAssignment._id);
+            clearWorkspaceSnapshot(selectedAssignment._id);
+          }
+          setError(check.message || 'Repository Mismatch: Access denied. The selected folder does not match the assignment repository.');
+          return;
+        }
+
         setLocalDirHandle(savedFolderPrompt.handle);
         setLocalDirName(savedFolderPrompt.folderName);
         setSavedFolderPrompt(null);
-
-        const check = await verifyLocalGitRepository(savedFolderPrompt.handle, team?.repositoryUrl || repoUrl);
-        setGitVerification(check);
         await scanAndAutoSync(savedFolderPrompt.handle, selectedAssignment._id, team, check);
       } else {
         setError('Permission to read local folder was not granted.');
@@ -750,17 +794,27 @@ export default function StudentDashboard() {
                 </div>
                 <span
                   className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-mono ${
-                    report?.scores?.final != null
+                    (report?.scores?.final ?? 0) >= 70
                       ? 'text-[#2d5849] bg-[#EFF8F3] border border-[#6FAF9A]/30'
-                      : 'text-[#576561] bg-[#EFF8F3]/60'
+                      : (report?.scores?.final ?? 0) >= 40
+                      ? 'text-amber-800 bg-amber-50 border border-amber-200'
+                      : 'text-[#576561] bg-slate-100 border border-slate-200'
                   }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      report?.scores?.final != null ? 'bg-[#6FAF9A]' : 'bg-slate-400'
+                      (report?.scores?.final ?? 0) >= 70
+                        ? 'bg-[#6FAF9A]'
+                        : (report?.scores?.final ?? 0) >= 40
+                        ? 'bg-amber-500'
+                        : 'bg-slate-400'
                     }`}
                   />
-                  {report?.scores?.final != null ? 'Verified Authentic' : 'Pending Baseline'}
+                  {(report?.scores?.final ?? 0) >= 70
+                    ? 'Verified Authentic'
+                    : (report?.scores?.final ?? 0) >= 40
+                    ? 'In Progress'
+                    : 'Awaiting Telemetry'}
                 </span>
               </div>
 
@@ -774,9 +828,11 @@ export default function StudentDashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-[#576561] font-normal mt-1">
-                  {report?.scores?.final
+                  {(report?.scores?.final ?? 0) >= 70
                     ? 'Genuine human keystroke rhythm verified against local & remote Git history.'
-                    : 'Awaiting telemetry sync to establish organic typing baseline.'}
+                    : (report?.scores?.final ?? 0) >= 40
+                    ? 'Telemetry actively syncing. Push more commits to complete authenticity verification.'
+                    : 'New workspace detected. Start coding in VS Code and push Git commits to establish authentic score.'}
                 </p>
               </div>
             </div>

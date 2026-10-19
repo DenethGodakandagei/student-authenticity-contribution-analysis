@@ -1011,6 +1011,41 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
               )}
             </div>
           </div>
+        ) : gitVerification?.status === 'mismatch' ? (
+          <div className="p-10 text-center space-y-4 bg-rose-50/40">
+            <div className="w-14 h-14 rounded-3xl bg-rose-100/70 border border-rose-200 flex items-center justify-center mx-auto text-rose-600 shadow-xs">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-slate-900">
+                Repository Mismatch — Access Blocked
+              </h4>
+              <p className="text-xs text-rose-700 max-w-lg mx-auto mt-1 leading-relaxed">
+                {gitVerification.message || 'The selected folder is linked to a different Git repository. INCODE has blocked access to protect assignment integrity.'}
+              </p>
+            </div>
+            <div className="p-3.5 bg-white border border-rose-200/80 rounded-2xl text-left font-mono text-[11px] space-y-1.5 max-w-lg mx-auto shadow-xs">
+              <div className="flex justify-between gap-3 text-slate-600">
+                <span className="text-slate-400">Expected Repo:</span>
+                <span className="text-[#2d5849] font-bold truncate max-w-[280px]">
+                  {gitVerification.expectedRepoUrl || repoUrl || 'Not set'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3 text-slate-600">
+                <span className="text-slate-400">Selected Folder:</span>
+                <span className="text-rose-600 font-bold truncate max-w-[280px]">
+                  {gitVerification.localRemoteUrl || 'Unspecified'}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={onConnectFolder}
+              className="px-5 py-2.5 bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold rounded-xl text-xs transition inline-flex items-center gap-2 cursor-pointer shadow-xs"
+            >
+              <FolderCheck className="w-4 h-4 text-[#6FAF9A]" />
+              <span>Connect Correct Cloned Repository Folder</span>
+            </button>
+          </div>
         ) : (
           <div className="p-12 text-center space-y-4">
             <div className="w-12 h-12 rounded-3xl bg-[#EFF8F3] border border-[#6FAF9A]/30 flex items-center justify-center mx-auto text-[#6FAF9A]">
