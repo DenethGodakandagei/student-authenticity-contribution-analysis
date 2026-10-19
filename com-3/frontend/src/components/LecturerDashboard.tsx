@@ -98,7 +98,11 @@ export default function LecturerDashboard({ onSwitchToStudentView }: LecturerDas
       const res = await fetch(`${getBackendUrl()}/api/auth/users`);
       if (res.ok) {
         const users = await res.json();
-        const studentsOnly = (users || []).filter((u: any) => u.role !== 'lecturer');
+        const studentsOnly = (users || []).filter((u: any) => {
+          const r = (u.role || '').toLowerCase();
+          const un = (u.username || '').toLowerCase();
+          return r !== 'lecturer' && r !== 'teacher' && r !== 'evaluator' && r !== 'admin' && un !== 'admin' && un !== 'sansala';
+        });
         setRegisteredStudents(studentsOnly);
         // Default select all students
         setSelectedAssignedStudents(studentsOnly.map((s: any) => s.username || s.studentId));

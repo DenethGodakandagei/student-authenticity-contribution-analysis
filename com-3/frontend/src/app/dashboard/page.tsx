@@ -86,12 +86,17 @@ function DashboardComponent() {
     }
   }, [user?.role]);
 
-  // Load registered students
+  // Load registered students (Classmates only - strictly excludes Admin & Lecturers)
   const loadStudents = async () => {
     try {
       const res = await fetch(`${getBackendUrl()}/api/auth/users`);
       const data = await res.json();
-      setRegisteredStudents(data || []);
+      const studentsOnly = (data || []).filter((u: any) => {
+        const r = (u.role || '').toLowerCase();
+        const un = (u.username || '').toLowerCase();
+        return r !== 'admin' && r !== 'lecturer' && r !== 'teacher' && r !== 'evaluator' && un !== 'admin' && un !== 'sansala';
+      });
+      setRegisteredStudents(studentsOnly);
     } catch (err) {
       console.error("Failed to fetch registered students", err);
     }
@@ -697,12 +702,105 @@ function DashboardComponent() {
           </button>
         </div>
 
-        {/* 3. Two Research-Aligned Cards Grid (Document Evolution & ML Taxonomy) */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
-          gap: '1.5rem'
-        }}>
+        {/* 3. Two Research-Aligned Cards Grid or Empty Welcome State */}
+        {availableDocs.length === 0 ? (
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '16px',
+            padding: '2.5rem 2rem',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(163, 230, 53, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#121417'
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                Welcome to DocuTrace, {user?.name || user?.username}!
+              </h3>
+              <p style={{ margin: '0.4rem auto 0 auto', fontSize: '0.88rem', color: '#64748b', maxWidth: '580px', lineHeight: 1.5 }}>
+                You do not have any assignments or collaborative documents yet. You can create your first document as a group leader, or have your project leader invite your Student ID (<strong>{user?.studentId || 'N/A'}</strong>) to join an active group assignment.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                onClick={() => setActiveTab('create')}
+                style={{
+                  background: '#a3e635',
+                  color: '#121417',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.55rem 1.4rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  boxShadow: '0 2px 8px rgba(163, 230, 53, 0.3)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
+                onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Create New Assignment
+              </button>
+
+              <button
+                onClick={() => setActiveTab('team')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
+                  borderRadius: '9999px',
+                  padding: '0.55rem 1.25rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem'
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                View Student Directory
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
+            gap: '1.5rem'
+          }}>
           {/* Card 1: Document Evolution & Contribution Authenticity (Core Research) */}
           <div style={{
             background: '#ffffff',
@@ -1031,6 +1129,7 @@ function DashboardComponent() {
             </div>
           </div>
         </div>
+      )}
 
         {/* 4. Tab Navigation Bar matching Component 1 in photo */}
         <div style={{
@@ -1663,12 +1762,19 @@ function DashboardComponent() {
                   </thead>
                   <tbody>
                     {registeredStudents
-                      .filter(s =>
-                        !studentSearch ||
-                        (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
-                        (s.studentId || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
-                        (s.email || '').toLowerCase().includes(studentSearch.toLowerCase())
-                      )
+                      .filter(s => {
+                        const r = (s.role || '').toLowerCase();
+                        const un = (s.username || '').toLowerCase();
+                        if (r === 'admin' || r === 'lecturer' || r === 'teacher' || r === 'evaluator' || un === 'admin' || un === 'sansala') {
+                          return false;
+                        }
+                        return (
+                          !studentSearch ||
+                          (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                          (s.studentId || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                          (s.email || '').toLowerCase().includes(studentSearch.toLowerCase())
+                        );
+                      })
                       .map((st: any) => (
                         <tr key={st._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '0.85rem 0.5rem', fontWeight: 700, color: '#0f172a' }}>
@@ -1682,14 +1788,14 @@ function DashboardComponent() {
                           </td>
                           <td style={{ padding: '0.85rem 0.5rem' }}>
                             <span style={{
-                              background: st.role === 'group_leader' ? 'rgba(163, 230, 53, 0.16)' : st.role === 'lecturer' ? '#e8f0fe' : '#f1f5f9',
-                              color: st.role === 'group_leader' ? '#275306' : st.role === 'lecturer' ? '#1a73e8' : '#64748b',
+                              background: st.role === 'group_leader' ? 'rgba(163, 230, 53, 0.16)' : st.role === 'admin' ? '#fef3c7' : st.role === 'lecturer' ? '#e8f0fe' : '#f1f5f9',
+                              color: st.role === 'group_leader' ? '#275306' : st.role === 'admin' ? '#b45309' : st.role === 'lecturer' ? '#1a73e8' : '#64748b',
                               padding: '0.15rem 0.55rem',
                               borderRadius: '9999px',
                               fontSize: '0.72rem',
                               fontWeight: 700
                             }}>
-                              {st.role === 'group_leader' ? 'Group Leader' : st.role === 'lecturer' ? 'Lecturer' : 'Student Member'}
+                              {st.role === 'group_leader' ? 'Group Leader' : st.role === 'admin' ? 'Administrator' : st.role === 'lecturer' ? 'Lecturer' : 'Student Member'}
                             </span>
                           </td>
                           <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>

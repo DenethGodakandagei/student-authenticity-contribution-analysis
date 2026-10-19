@@ -21,7 +21,14 @@ export default function ShareModal({ isOpen, onClose, documentId, docDetails, on
       setSuccessMsg('');
       fetch(`${getBackendUrl()}/api/auth/users`)
         .then(res => res.json())
-        .then(data => setRegisteredUsers(data || []))
+        .then(data => {
+          const studentsOnly = (data || []).filter((u: any) => {
+            const r = (u.role || '').toLowerCase();
+            const un = (u.username || '').toLowerCase();
+            return r !== 'admin' && r !== 'lecturer' && r !== 'teacher' && r !== 'evaluator' && un !== 'admin' && un !== 'sansala';
+          });
+          setRegisteredUsers(studentsOnly);
+        })
         .catch(err => console.error("Failed to load registered users", err));
     }
   }, [isOpen]);

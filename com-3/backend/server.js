@@ -32,7 +32,7 @@ function hashPassword(password) {
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
   name: { type: String, required: true, trim: true },
-  studentId: { type: String, required: true, trim: true },
+  studentId: { type: String, required: true, unique: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['student', 'group_leader', 'lecturer', 'admin'], default: 'student' },
@@ -134,25 +134,25 @@ function hasDocumentAccess(doc, username, studentId, role, email, userObj = null
   const docOwner = (doc.owner || '').toLowerCase().trim();
   const docOwnerName = (doc.ownerName || '').toLowerCase().trim();
 
-  // 1. Check Owner match
+  // 1. Check Owner match (exact owner username or parenthesized student ID)
   for (const id of idList) {
-    if (docOwner === id || docOwner.includes(id) || docOwnerName.includes(id)) {
+    if (docOwner === id || docOwnerName === id || docOwnerName.includes(`(${id})`)) {
       return true;
     }
   }
 
-  // 2. Check Allowed Users array
+  // 2. Check Allowed Users array (exact match against stored username, student ID, or email)
   const allowed = (doc.allowedUsers || []).map(u => (u || '').toLowerCase().trim()).filter(Boolean);
   for (const id of idList) {
-    if (allowed.some(u => u === id || u.includes(id) || id.includes(u))) {
+    if (allowed.includes(id)) {
       return true;
     }
   }
 
-  // 3. Check Collaborators array
+  // 3. Check Collaborators array (exact match or parenthesized student ID e.g. "Name (IT...)")
   const collabs = (doc.collaborators || []).map(c => (c || '').toLowerCase().trim()).filter(Boolean);
   for (const id of idList) {
-    if (collabs.some(c => c === id || c.includes(id) || id.includes(c))) {
+    if (collabs.some(c => c === id || c.includes(`(${id})`) || (id.length >= 4 && c.includes(id)))) {
       return true;
     }
   }
@@ -564,6 +564,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const cleanUsername = username.toLowerCase().trim();
     const cleanEmail = email.toLowerCase().trim();
+    const cleanStudentId = studentId.trim();
 
     const existingUsername = await User.findOne({ username: cleanUsername });
     if (existingUsername) {
@@ -573,6 +574,13 @@ app.post('/api/auth/register', async (req, res) => {
     const existingEmail = await User.findOne({ email: cleanEmail });
     if (existingEmail) {
       return res.status(400).json({ error: 'Email is already registered.' });
+    }
+
+    const existingStudentId = await User.findOne({
+      studentId: new RegExp('^' + cleanStudentId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i')
+    });
+    if (existingStudentId) {
+      return res.status(400).json({ error: `Student ID / IT number (${cleanStudentId}) is already registered to another account.` });
     }
 
     const passwordHash = hashPassword(password);
@@ -646,7 +654,17 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/users', async (req, res) => {
   try {
-    const users = await User.find({}, '-passwordHash').sort('name').lean();
+    const { role, studentsOnly } = req.query;
+    let query = {};
+    if (studentsOnly === 'true' || role === 'student') {
+      query = {
+        role: { $in: ['student', 'group_leader'] },
+        username: { $nin: ['admin', 'sansala'] }
+      };
+    } else if (role) {
+      query = { role };
+    }
+    const users = await User.find(query, '-passwordHash').sort('name').lean();
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -851,13 +869,17 @@ app.get('/api/documents', async (req, res) => {
     const cleanStudentId = studentId ? studentId.trim() : '';
     const cleanEmail = email ? email.toLowerCase().trim() : '';
 
-    if (cleanUser || cleanStudentId || cleanEmail) {
+    if (cleanUser || cleanEmail) {
       userObj = await User.findOne({
         $or: [
           cleanUser ? { username: cleanUser } : null,
-          cleanStudentId ? { studentId: cleanStudentId } : null,
           cleanEmail ? { email: cleanEmail } : null
         ].filter(Boolean)
+      }).lean();
+    }
+    if (!userObj && cleanStudentId) {
+      userObj = await User.findOne({
+        studentId: new RegExp('^' + cleanStudentId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i')
       }).lean();
     }
 
