@@ -25,7 +25,7 @@ export default function HomePage() {
           <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
           <span>Verified Student Code Contributions</span>
           <span className="text-slate-300">•</span>
-          <span className="text-slate-500 font-normal">Offline Telemetry & Git Proof</span>
+          <span className="text-slate-500 font-normal">Offline Tracking & Git Verification</span>
         </div>
 
         {/* Hero Title */}
@@ -38,7 +38,7 @@ export default function HomePage() {
 
         {/* Subtitle */}
         <p className="text-slate-600 text-base sm:text-lg max-w-2xl font-normal leading-relaxed mb-8">
-          INCODE records keystroke cadence and AST file diffs inside VS Code, proving authentic human work and preventing unfair group project grades.
+          INCODE tracks typing rhythm and code changes inside VS Code, proving authentic student work and ensuring fair grades for group projects.
         </p>
 
         {/* CTAs */}
@@ -47,7 +47,7 @@ export default function HomePage() {
             href="/login?tab=register&role=student"
             className="px-6 py-3 rounded-full bg-[#A3E635] hover:bg-[#8EE01D] text-slate-950 font-bold text-xs shadow-xs transition flex items-center justify-center gap-2 group cursor-pointer"
           >
-            <span>Launch Student Workspace</span>
+            <span>Open Student Workspace</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
 

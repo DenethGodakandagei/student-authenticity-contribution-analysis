@@ -20,9 +20,9 @@ export const ReportsTable: React.FC<ReportsTableProps> = ({
     <div className="bg-white rounded-3xl border border-slate-200/80 p-6 text-left space-y-4 shadow-xs">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-900">Student Contributions & Gradebook</h3>
+          <h3 className="text-sm font-bold text-slate-900">Student Contributions & Results</h3>
           <p className="text-xs text-slate-500 font-normal mt-0.5">
-            Automated multi-factor score calculated from Git commits, telemetry, and task velocity.
+            Automated scores calculated from Git commits, typing activity, and completed tasks.
           </p>
         </div>
         <button
@@ -41,10 +41,10 @@ export const ReportsTable: React.FC<ReportsTableProps> = ({
             <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px] bg-slate-50/50">
               <th className="py-3 px-4">Student</th>
               <th className="py-3 px-4">Team</th>
-              <th className="py-3 px-4">Coding Provenance</th>
+              <th className="py-3 px-4">Work Breakdown</th>
               <th className="py-3 px-3 text-center">Git</th>
               <th className="py-3 px-3 text-center">VSCode</th>
-              <th className="py-3 px-3 text-center">Task</th>
+              <th className="py-3 px-3 text-center">Tasks</th>
               <th className="py-3 px-3 text-center">Collab</th>
               <th className="py-3 px-4 text-right">Final Score</th>
               <th className="py-3 px-3 text-center">Action</th>
@@ -72,11 +72,11 @@ export const ReportsTable: React.FC<ReportsTableProps> = ({
                   <td className="py-3.5 px-4 font-mono">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-[10px]">
-                        <span className="text-slate-800 font-medium">✍️ {r.metrics?.manualPercent ?? 100}%</span>
+                        <span className="text-slate-800 font-medium">Typed {r.metrics?.manualPercent ?? 100}%</span>
                         <span className="text-slate-300">|</span>
-                        <span className="text-purple-600 font-medium">🤖 {r.metrics?.aiPercent ?? 0}%</span>
+                        <span className="text-purple-600 font-medium">AI {r.metrics?.aiPercent ?? 0}%</span>
                         <span className="text-slate-300">|</span>
-                        <span className="text-rose-600 font-medium">📋 {r.metrics?.pastePercent ?? 0}%</span>
+                        <span className="text-rose-600 font-medium">Pasted {r.metrics?.pastePercent ?? 0}%</span>
                       </div>
                       <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
                         <div

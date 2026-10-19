@@ -325,14 +325,14 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs font-mono text-emerald-800 font-bold">
               <HardDrive className="w-4 h-4 text-emerald-700" />
-              <span>Saved Physical Workspace Detected</span>
+              <span>Saved Project Folder Detected</span>
             </div>
             <p className="text-xs text-slate-600 font-light">
               You previously linked project folder{' '}
               <strong className="text-slate-900 font-mono bg-white/80 px-1.5 py-0.5 rounded border border-emerald-200">
                 {savedFolderPrompt.folderName}/
               </strong>
-              . Click below to re-authenticate and automatically sync files & Git attestation.
+              . Click below to reconnect and automatically sync your files.
             </p>
           </div>
           <div className="flex items-center gap-2.5 shrink-0">
@@ -360,15 +360,11 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
             <div className="flex items-center gap-2">
               <HardDrive className="w-4 h-4 text-emerald-700" />
               <h3 className="text-xs font-mono uppercase tracking-wider text-emerald-800 font-bold">
-                Physical Project Workspace (Auto-Saved & Git Attested)
+                Local Project Folder (Linked to Git)
               </h3>
             </div>
             <p className="text-xs text-slate-500 font-light mt-1">
-              Connect your local cloned repository once. INCODE inspects the hidden{' '}
-              <code className="text-emerald-800 bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">
-                .git/config
-              </code>{' '}
-              to attest provenance and file integrity.
+              Connect your local cloned repository once. INCODE checks your Git repository configuration to verify project authenticity.
             </p>
           </div>
 
@@ -421,7 +417,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
               )}
               <span>
                 {gitVerification.status === 'matched'
-                  ? `Git Remote Verified: Authenticity Attested (${localDirName || 'workspace'})`
+                  ? `Git Remote Verified: Repository Matched (${localDirName || 'workspace'})`
                   : gitVerification.message || 'Git Remote Mismatch Detected'}
               </span>
             </div>
@@ -454,11 +450,11 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
             </div>
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60">
               <span className="text-[10px] uppercase font-mono text-slate-400 block mb-1">
-                Attestation Engine
+                Security Status
               </span>
               <span className="text-sm font-bold font-mono text-emerald-700 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Real-Time Hash Active
+                Protection Active
               </span>
             </div>
           </div>
@@ -474,7 +470,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] uppercase font-mono text-emerald-600 font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Attested Workspace
+                    Connected Folder
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono truncate max-w-[130px]">
                     {localDirName}/
@@ -681,7 +677,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                           }`}
                         >
                           <Fingerprint className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Forensics</span>
+                          <span>Activity</span>
                         </button>
                         <button
                           onClick={() => setWorkspaceFileViewTab('blame')}
@@ -692,7 +688,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                           }`}
                         >
                           <Split className="w-3.5 h-3.5 text-purple-600" />
-                          <span>Blame ({intel?.collaborators?.length || 1})</span>
+                          <span>Authors ({intel?.collaborators?.length || 1})</span>
                         </button>
                         <button
                           onClick={() => setWorkspaceFileViewTab('diff')}
@@ -703,7 +699,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                           }`}
                         >
                           <GitBranch className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Live Diff</span>
+                          <span>Changes</span>
                         </button>
                         <button
                           onClick={() => setWorkspaceFileViewTab('code')}
@@ -714,7 +710,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                           }`}
                         >
                           <FileCode className="w-3.5 h-3.5 text-slate-700" />
-                          <span>Code View</span>
+                          <span>Source Code</span>
                         </button>
                       </div>
 

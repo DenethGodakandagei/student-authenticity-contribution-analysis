@@ -26,7 +26,7 @@ export const LandingHowItWorks: React.FC = () => {
           </div>
           <h3 className="text-base font-bold text-slate-900 mb-2">Code in VS Code</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Students write code normally. The lightweight sensor records typing rhythm and active sessions without capturing private text.
+            Write code normally. The lightweight extension tracks typing rhythm and session duration without recording private passwords or sensitive content.
           </p>
         </div>
 
@@ -35,9 +35,9 @@ export const LandingHowItWorks: React.FC = () => {
           <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-3">
             <Lock className="w-4 h-4" />
           </div>
-          <h3 className="text-base font-bold text-slate-900 mb-2">Cryptographic Attestation</h3>
+          <h3 className="text-base font-bold text-slate-900 mb-2">Secure Local Records</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Telemetry events are hashed locally so past timestamps and contribution records cannot be altered or fabricated.
+            Your activity is protected locally on your computer, ensuring timestamps and work logs are accurate, trustworthy, and cannot be altered.
           </p>
         </div>
 
@@ -46,9 +46,9 @@ export const LandingHowItWorks: React.FC = () => {
           <div className="w-9 h-9 rounded-xl bg-[#A3E635]/25 text-slate-900 flex items-center justify-center mb-3">
             <CheckCircle2 className="w-4 h-4" />
           </div>
-          <h3 className="text-base font-bold text-slate-900 mb-2">Reconcile & Assess</h3>
+          <h3 className="text-base font-bold text-slate-900 mb-2">Automatic Verification</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            When pushing code to GitHub, INCODE matches commits against telemetry to produce an objective, fair contribution score.
+            When you push your work to GitHub, INCODE matches commits with your actual coding activity to give teachers a clear, fair authenticity report.
           </p>
         </div>
       </div>

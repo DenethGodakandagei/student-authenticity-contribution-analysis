@@ -32,16 +32,16 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Clock className="w-4 h-4 text-emerald-600" />
-              Real-Time Contribution & Provenance Timeline
+              Activity & Contribution Timeline
             </h2>
             <p className="text-xs text-slate-500 font-light mt-0.5">
-              Continuous chronological ledger tracking manual keystrokes, AI assistance, paste anomalies, and timestamps.
+              A clear chronological view of your typing activity, AI suggestions, pasted code, and work sessions.
             </p>
           </div>
 
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-mono text-emerald-700">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Autonomous Background Tracker Active</span>
+            <span>Activity Tracker Active</span>
           </div>
         </div>
 
@@ -49,7 +49,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60 space-y-1">
             <div className="text-[10px] uppercase font-mono text-[#2D6606] flex items-center justify-between font-bold">
-              <span>✍️ Manual Typed</span>
+              <span>Typed Code</span>
               <span>{report?.metrics?.codingProvenance?.manualPercent ?? 0}%</span>
             </div>
             <div className="text-lg font-bold text-slate-900">
@@ -66,7 +66,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-purple-200/60 space-y-1">
             <div className="text-[10px] uppercase font-mono text-purple-700 flex items-center justify-between font-bold">
-              <span>🤖 AI-Assisted</span>
+              <span>AI Assisted</span>
               <span>{report?.metrics?.codingProvenance?.aiPercent ?? 0}%</span>
             </div>
             <div className="text-lg font-bold text-slate-900">
@@ -83,7 +83,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-rose-200/60 space-y-1">
             <div className="text-[10px] uppercase font-mono text-rose-600 flex items-center justify-between font-bold">
-              <span>📋 Pasted Block</span>
+              <span>Pasted Code</span>
               <span>{report?.metrics?.codingProvenance?.pastePercent ?? 0}%</span>
             </div>
             <div className="text-lg font-bold text-slate-900">
@@ -100,7 +100,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-emerald-200/60 space-y-1">
             <div className="text-[10px] uppercase font-mono text-emerald-700 flex items-center justify-between font-bold">
-              <span>🛡️ Authenticity</span>
+              <span>Authenticity</span>
               <span>{report?.scores?.final != null ? `${report.scores.final}%` : '0%'}</span>
             </div>
             <div className="text-lg font-bold text-emerald-700">
@@ -108,7 +108,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
               <span className="text-[10px] text-emerald-600 font-normal ml-1">✓</span>
             </div>
             <div className="text-[10px] text-slate-400 truncate">
-              {report?.scores?.final ? 'Genuine human cadence' : 'Awaiting sync'}
+              {report?.scores?.final ? 'Consistent human rhythm' : 'Awaiting sync'}
             </div>
           </div>
         </div>
@@ -118,7 +118,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
       <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xs font-mono uppercase tracking-wider text-slate-800 font-bold">
-            Cadence Frequency Distribution
+            Coding Activity Over Time
           </h3>
           <div className="flex gap-2 text-xs">
             <button
@@ -149,7 +149,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              AST Nodes
+              Code Edits
             </button>
           </div>
         </div>

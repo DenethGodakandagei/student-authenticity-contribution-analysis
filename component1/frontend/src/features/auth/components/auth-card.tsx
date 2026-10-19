@@ -79,12 +79,7 @@ export const AuthCard: React.FC = () => {
         >
           <Code2 className="w-6 h-6 stroke-[2.2]" />
         </Link>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-extrabold text-xl tracking-tight text-slate-900">INCODE</span>
-          <span className="text-[10px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-full border border-slate-200">
-            Academic Node
-          </span>
-        </div>
+
         <h2 className="text-sm font-semibold text-slate-700">
           {tab === 'login' ? 'Sign in to your account' : 'Create your account'}
         </h2>
@@ -173,8 +168,8 @@ export const AuthCard: React.FC = () => {
                 type="button"
                 onClick={() => setRole('student')}
                 className={`p-3 rounded-2xl border text-xs text-left transition cursor-pointer ${role === 'student'
-                    ? 'border-[#A3E635] bg-[#A3E635]/15 text-slate-900 font-semibold shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  ? 'border-[#A3E635] bg-[#A3E635]/15 text-slate-900 font-semibold shadow-xs'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
               >
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -188,8 +183,8 @@ export const AuthCard: React.FC = () => {
                 type="button"
                 onClick={() => setRole('lecturer')}
                 className={`p-3 rounded-2xl border text-xs text-left transition cursor-pointer ${role === 'lecturer'
-                    ? 'border-[#A3E635] bg-[#A3E635]/15 text-slate-900 font-semibold shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  ? 'border-[#A3E635] bg-[#A3E635]/15 text-slate-900 font-semibold shadow-xs'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
               >
                 <div className="flex items-center gap-1.5 mb-0.5">

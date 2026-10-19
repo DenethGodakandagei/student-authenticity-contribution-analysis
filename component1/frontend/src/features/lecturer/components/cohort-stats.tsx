@@ -45,7 +45,7 @@ export const CohortStats: React.FC<CohortStatsProps> = ({
       <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
         <div className="space-y-1">
           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
-            Anomaly Alerts
+            Flags & Warnings
           </span>
           <h3 className={`text-3xl font-extrabold font-mono ${anomalyCount > 0 ? 'text-rose-600' : 'text-[#15803D]'}`}>
             {anomalyCount}
@@ -63,7 +63,7 @@ export const CohortStats: React.FC<CohortStatsProps> = ({
       <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
         <div className="space-y-1">
           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
-            Cohort Average
+            Class Average
           </span>
           <h3 className="text-3xl font-extrabold text-slate-900 font-mono">{averageCohortScore}%</h3>
         </div>

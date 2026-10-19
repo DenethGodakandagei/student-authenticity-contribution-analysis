@@ -29,7 +29,7 @@ export const CommitsTab: React.FC<CommitsTabProps> = ({
       {/* Active Coding Chart */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
         <h3 className="text-xs font-mono uppercase tracking-wider text-[#2D6606] font-bold">
-          Active Coding Timeline (Last 7 Days)
+          Coding Activity (Last 7 Days)
         </h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -74,7 +74,7 @@ export const CommitsTab: React.FC<CommitsTabProps> = ({
       {/* Teammate shares */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
         <h3 className="text-xs font-mono uppercase tracking-wider text-[#2D6606] font-bold">
-          Teammate Commit Collaboration Shares
+          Team Contribution Comparison
         </h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -92,7 +92,7 @@ export const CommitsTab: React.FC<CommitsTabProps> = ({
       {/* Commits Log */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
         <h3 className="text-xs font-mono uppercase tracking-wider text-[#2D6606] font-bold">
-          Repository Commits Log Details
+          Recent Commits
         </h3>
         <div className="max-h-[350px] overflow-y-auto space-y-3 pr-2">
           {commitsList.length > 0 ? (
@@ -127,7 +127,7 @@ export const CommitsTab: React.FC<CommitsTabProps> = ({
             ))
           ) : (
             <div className="text-center text-xs text-slate-400 py-12">
-              No commit logs recorded yet. Push commits to GitHub and click &quot;Sync Git&quot;.
+              No commits recorded yet. Push your commits to GitHub and click &quot;Sync Commits&quot;.
             </div>
           )}
         </div>

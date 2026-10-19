@@ -35,10 +35,10 @@ export const KanbanTab: React.FC<KanbanTabProps> = ({
       <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-6">
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-[#2D6606] font-bold">
-            Team Kanban Task Manager (20% Weight)
+            Team Tasks & Kanban (20% of Grade)
           </h3>
           <p className="text-xs text-slate-500 font-light mt-1">
-            Assign deliverables to team members to boost collaboration scores.
+            Track tasks and share deliverables with teammates for fair collaboration marks.
           </p>
         </div>
 

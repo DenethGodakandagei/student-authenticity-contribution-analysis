@@ -39,7 +39,7 @@ export const AssignmentHeaderCard: React.FC<AssignmentHeaderCardProps> = ({ assi
 
           <div className="text-right">
             <span className="text-[10px] block uppercase text-slate-400 font-bold tracking-wider mb-1 font-mono">
-              Weights Allocation
+              Grading Weights
             </span>
             <div className="flex gap-2 text-xs font-mono">
               <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">Git {weights.git}%</span>
