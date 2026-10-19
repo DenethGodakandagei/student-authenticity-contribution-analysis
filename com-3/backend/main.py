@@ -17,7 +17,7 @@ from ml_engine import classify_intent_and_significance, calculate_cohens_kappa
 
 app = FastAPI(
     title="Intelligent Document Evolution & Revision Analytics ML Service",
-    description="Machine Learning Microservice for Component 3 - Classifies revision intent, significance, and semantic distance.",
+    description="Machine Learning Microservice - Classifies revision intent, significance, and semantic distance.",
     version="1.0.0"
 )
 
@@ -47,7 +47,7 @@ class AgreementEvaluationRequest(BaseModel):
 @app.get("/")
 def read_root():
     return {
-        "service": "Component 3: Intelligent Document Evolution and Revision Analytics ML Service",
+        "service": "Intelligent Document Evolution and Revision Analytics ML Service",
         "author": "R.R.S. Ranadewa (IT23217522)",
         "project": "Transparent Multi-Modal Student Work Tracking",
         "status": "online",

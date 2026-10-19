@@ -11,6 +11,9 @@ import ShareModal from '../../components/ShareModal';
 import { useAuth } from '../../context/AuthContext';
 import { getApiBase, getBackendUrl } from '../../utils/apiConfig';
 import { ToastContainer, ToastItem } from '../../components/CustomDialog';
+import LecturerDashboard from '../../components/LecturerDashboard';
+import AdminDashboard from '../../components/AdminDashboard';
+import GuestDashboardView from '../../components/GuestDashboardView';
 
 const API_BASE = getApiBase();
 
@@ -53,12 +56,14 @@ function DashboardComponent() {
   const [studentSearch, setStudentSearch] = useState('');
   const [teamTargetDocId, setTeamTargetDocId] = useState<string>('');
   const [selectedStudentForAdd, setSelectedStudentForAdd] = useState<string>('');
+  const [manualStudentInput, setManualStudentInput] = useState<string>('');
 
   // Create Assignment / Document states
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocPrompt, setNewDocPrompt] = useState('');
   const [newDocSource, setNewDocSource] = useState('in_built');
   const [selectedNewMembers, setSelectedNewMembers] = useState<string[]>([]);
+  const [customMemberInput, setCustomMemberInput] = useState<string>('');
   const [createLoading, setCreateLoading] = useState(false);
 
   // Share Modal State
@@ -70,13 +75,28 @@ function DashboardComponent() {
   const [compareLoading, setCompareLoading] = useState(false);
 
   const isUserLeader = user?.role === 'group_leader' || user?.role === 'lecturer' || user?.isLeader || false;
+  const isUserLecturer = user?.role === 'lecturer';
+  const [viewMode, setViewMode] = useState<'lecturer' | 'student'>('student');
 
-  // Load registered students
+  useEffect(() => {
+    if (user?.role === 'lecturer') {
+      setViewMode('lecturer');
+    } else {
+      setViewMode('student');
+    }
+  }, [user?.role]);
+
+  // Load registered students (Classmates only - strictly excludes Admin & Lecturers)
   const loadStudents = async () => {
     try {
       const res = await fetch(`${getBackendUrl()}/api/auth/users`);
       const data = await res.json();
-      setRegisteredStudents(data || []);
+      const studentsOnly = (data || []).filter((u: any) => {
+        const r = (u.role || '').toLowerCase();
+        const un = (u.username || '').toLowerCase();
+        return r !== 'admin' && r !== 'lecturer' && r !== 'teacher' && r !== 'evaluator' && un !== 'admin' && un !== 'sansala';
+      });
+      setRegisteredStudents(studentsOnly);
     } catch (err) {
       console.error("Failed to fetch registered students", err);
     }
@@ -84,26 +104,32 @@ function DashboardComponent() {
 
   // Load documents accessible to user
   const loadDocuments = async () => {
+    if (!user) {
+      setAvailableDocs([]);
+      return;
+    }
     try {
       let url = API_BASE;
-      if (user) {
-        const params = new URLSearchParams();
-        if (user.username) params.append('username', user.username);
-        if (user.studentId) params.append('studentId', user.studentId);
-        if (user.role) params.append('role', user.role);
-        url += `?${params.toString()}`;
-      }
+      const params = new URLSearchParams();
+      if (user.username) params.append('username', user.username);
+      if (user.studentId) params.append('studentId', user.studentId);
+      if (user.email) params.append('email', user.email);
+      if (user.role) params.append('role', user.role);
+      url += `?${params.toString()}`;
+
       const res = await fetch(url);
       const docs = await res.json();
       const list = Array.isArray(docs) ? docs : [];
       setAvailableDocs(list);
 
-      if (docIdQuery) {
+      if (docIdQuery && list.some((d: any) => d._id === docIdQuery)) {
         setSelectedDocId(docIdQuery);
       } else if (list.length > 0 && !list.some((d: any) => d._id === selectedDocId)) {
         setSelectedDocId(list[0]._id);
+      } else if (list.length === 0) {
+        setSelectedDocId('');
       }
-      if (!teamTargetDocId && list.length > 0) {
+      if (list.length > 0 && (!teamTargetDocId || !list.some((d: any) => d._id === teamTargetDocId))) {
         setTeamTargetDocId(list[0]._id);
       }
     } catch (err) {
@@ -112,16 +138,19 @@ function DashboardComponent() {
   };
 
   useEffect(() => {
-    loadStudents();
-  }, []);
-
-  useEffect(() => {
-    loadDocuments();
-  }, [user, docIdQuery]);
+    if (isAuthenticated && user) {
+      loadStudents();
+      loadDocuments();
+    } else {
+      setAvailableDocs([]);
+      setRegisteredStudents([]);
+      setSelectedDocId('');
+    }
+  }, [isAuthenticated, user, docIdQuery]);
 
   // Fetch document analytics when selectedDocId changes
   const fetchDocAnalytics = async (isInitial = false) => {
-    if (!selectedDocId) return;
+    if (!selectedDocId || !isAuthenticated || !user) return;
     try {
       if (isInitial) setLoading(true);
 
@@ -160,16 +189,16 @@ function DashboardComponent() {
   };
 
   useEffect(() => {
-    if (!selectedDocId) return;
+    if (!selectedDocId || !isAuthenticated || !user) return;
     fetchDocAnalytics(true);
     const interval = setInterval(() => fetchDocAnalytics(false), 5000);
     return () => clearInterval(interval);
-  }, [selectedDocId]);
+  }, [selectedDocId, isAuthenticated, user]);
 
   // Handle adding student to document
   const handleAddStudentToDoc = async (targetId: string, identifier: string) => {
     if (!identifier || !targetId) {
-      showToast("Please select both a document and a student.", "error", "Selection Required");
+      showToast("Please specify both a target document and a student ID / email.", "error", "Selection Required");
       return;
     }
     try {
@@ -177,15 +206,19 @@ function DashboardComponent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentUsername: user?.username || user?.studentId || '',
+          currentUsername: user?.username || '',
+          currentStudentId: user?.studentId || '',
+          currentUserEmail: user?.email || '',
+          currentRole: user?.role || '',
           targetUserIdentifier: identifier.trim(),
           action: 'add'
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add student");
-      showToast(`Student "${identifier}" successfully added to document!`, "success", "Student Added");
+      showToast(`Member "${identifier}" successfully added to document!`, "success", "Member Added");
       setSelectedStudentForAdd('');
+      setManualStudentInput('');
       await loadDocuments();
     } catch (err: any) {
       showToast(err.message, "error", "Failed to Add Student");
@@ -200,7 +233,10 @@ function DashboardComponent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentUsername: user?.username || user?.studentId || '',
+          currentUsername: user?.username || '',
+          currentStudentId: user?.studentId || '',
+          currentUserEmail: user?.email || '',
+          currentRole: user?.role || '',
           targetUserIdentifier: identifier.trim(),
           action: 'remove'
         })
@@ -223,6 +259,9 @@ function DashboardComponent() {
     }
     setCreateLoading(true);
     try {
+      const parsedCustom = customMemberInput.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      const combinedMembers = Array.from(new Set([...selectedNewMembers, ...parsedCustom]));
+
       const res = await fetch(`${API_BASE}/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,7 +274,7 @@ function DashboardComponent() {
           ownerName: user?.name || user?.username || 'Student Leader',
           studentId: user?.studentId || '',
           source: newDocSource,
-          members: selectedNewMembers
+          members: combinedMembers
         })
       });
       const data = await res.json();
@@ -244,6 +283,7 @@ function DashboardComponent() {
       setNewDocTitle('');
       setNewDocPrompt('');
       setSelectedNewMembers([]);
+      setCustomMemberInput('');
       await loadDocuments();
       router.push(`/editor?docId=${data.document._id}`);
     } catch (err: any) {
@@ -289,7 +329,9 @@ function DashboardComponent() {
 
     const isOwner = user && (
       (d.owner && d.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
+      (d.owner && user.email && d.owner.toLowerCase() === user.email.toLowerCase()) ||
+      (d.ownerName && user.name && d.ownerName.toLowerCase().includes(user.name.toLowerCase()))
     );
 
     if (docFilter === 'led') return isOwner;
@@ -297,7 +339,7 @@ function DashboardComponent() {
     return true;
   });
 
-  // Dynamic Component 3 Research Metrics
+  // Dynamic Document Evolution & Research Metrics
   const rawDocWords = selectedDocObj?.content
     ? selectedDocObj.content.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length
     : 0;
@@ -490,7 +532,7 @@ function DashboardComponent() {
   // Process Evolution & Growth Tracking Score
   const processEvolutionScore = Math.round(Math.max(45, Math.min(98, 68 + Math.min(26, revisionsCount * 3) - (pasteAnomaliesCount * 8))));
 
-  // Weighted Component 3 Standing Index
+  // Weighted Standing Index
   const weightedCompositeIndex = Math.round(
     0.35 * processEvolutionScore +
     0.25 * workloadEquityScore +
@@ -498,13 +540,34 @@ function DashboardComponent() {
     0.15 * significanceRatePercent
   );
 
+  // Security Gate 1: Unauthenticated visitors do not see any documents
+  if (!isAuthenticated || !user) {
+    return (
+      <GuestDashboardView onSignIn={() => openAuthModal()} />
+    );
+  }
+
+  // Security Gate 2: Administrators access executive superuser dashboard
+  if (user?.role === 'admin' || user?.username === 'admin') {
+    return (
+      <AdminDashboard />
+    );
+  }
+
+  // Security Gate 3: Lecturers access supervisor evaluation dashboard
+  if (isUserLecturer) {
+    return (
+      <LecturerDashboard />
+    );
+  }
+
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={id => setToasts(prev => prev.filter(t => t.id !== id))} />
 
       <div className="dashboard-container">
         
-        {/* 1. Top Success Notification Banner tailored to Component 3 */}
+        {/* 1. Top Success Notification Banner */}
         <div style={{
           background: 'rgba(163, 230, 53, 0.16)',
           border: '1px solid rgba(163, 230, 53, 0.35)',
@@ -519,7 +582,7 @@ function DashboardComponent() {
         }}>
           <span>Document Evolution Pipeline Active: Real-time multi-author contributions, collaborative revision history, and ML intent classifications are synchronized.</span>
           <span style={{ fontSize: '0.78rem', background: '#275306', color: '#ffffff', padding: '0.15rem 0.6rem', borderRadius: '9999px', fontWeight: 700 }}>
-            Component 3
+            Live Telemetry
           </span>
         </div>
 
@@ -554,11 +617,15 @@ function DashboardComponent() {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
-              {availableDocs.map((doc: any) => (
-                <option key={doc._id} value={doc._id}>
-                  {doc.title || doc._id}
-                </option>
-              ))}
+              {availableDocs.length === 0 ? (
+                <option value="">No assignments assigned yet</option>
+              ) : (
+                availableDocs.map((doc: any) => (
+                  <option key={doc._id} value={doc._id}>
+                    {doc.title || doc._id}
+                  </option>
+                ))
+              )}
             </select>
 
             <button
@@ -635,13 +702,106 @@ function DashboardComponent() {
           </button>
         </div>
 
-        {/* 3. Two Research-Aligned Cards Grid (Component 3 Document Evolution & ML Taxonomy) */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
-          gap: '1.5rem'
-        }}>
-          {/* Card 1: Document Evolution & Contribution Authenticity (Component 3 Core Research) */}
+        {/* 3. Two Research-Aligned Cards Grid or Empty Welcome State */}
+        {availableDocs.length === 0 ? (
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '16px',
+            padding: '2.5rem 2rem',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(163, 230, 53, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#121417'
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                Welcome to DocuTrace, {user?.name || user?.username}!
+              </h3>
+              <p style={{ margin: '0.4rem auto 0 auto', fontSize: '0.88rem', color: '#64748b', maxWidth: '580px', lineHeight: 1.5 }}>
+                You do not have any assignments or collaborative documents yet. You can create your first document as a group leader, or have your project leader invite your Student ID (<strong>{user?.studentId || 'N/A'}</strong>) to join an active group assignment.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                onClick={() => setActiveTab('create')}
+                style={{
+                  background: '#a3e635',
+                  color: '#121417',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '0.55rem 1.4rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  boxShadow: '0 2px 8px rgba(163, 230, 53, 0.3)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
+                onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Create New Assignment
+              </button>
+
+              <button
+                onClick={() => setActiveTab('team')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
+                  borderRadius: '9999px',
+                  padding: '0.55rem 1.25rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem'
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                View Student Directory
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
+            gap: '1.5rem'
+          }}>
+          {/* Card 1: Document Evolution & Contribution Authenticity (Core Research) */}
           <div style={{
             background: '#ffffff',
             border: '1px solid rgba(0, 0, 0, 0.06)',
@@ -716,7 +876,7 @@ function DashboardComponent() {
                 </p>
               </div>
 
-              {/* Three Component 3 Metric Mini Cards */}
+              {/* Metric Mini Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 0.5rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Incremental Drafting</div>
@@ -752,8 +912,8 @@ function DashboardComponent() {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem', marginTop: '0.75rem' }}>
+            {/* Action Buttons - Compact Sleek Design */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '0.45rem', marginTop: '0.65rem' }}>
               <button
                 onClick={() => router.push(`/editor?docId=${selectedDocId}`)}
                 style={{
@@ -761,17 +921,25 @@ function DashboardComponent() {
                   color: '#121417',
                   border: 'none',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   textAlign: 'center',
-                  boxShadow: '0 2px 8px rgba(163, 230, 53, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  boxShadow: '0 2px 6px rgba(163, 230, 53, 0.25)',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
                 onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
               >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
                 Open in Editor
               </button>
 
@@ -782,16 +950,23 @@ function DashboardComponent() {
                   border: '1px solid #e2e8f0',
                   color: '#0f172a',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
                 onMouseOut={e => e.currentTarget.style.background = '#ffffff'}
               >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
                 Author Highlights
               </button>
 
@@ -802,22 +977,26 @@ function DashboardComponent() {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
+                  gap: '0.35rem',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#272b30'}
                 onMouseOut={e => e.currentTarget.style.background = '#121417'}
                 title="Download full document evolution telemetry as JSON"
               >
-                <span style={{ fontWeight: 800 }}>&#123;&nbsp;&#125;</span> Download JSON
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+                Download JSON
               </button>
 
               <button
@@ -827,23 +1006,29 @@ function DashboardComponent() {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '9999px',
-                  padding: '0.65rem 0.85rem',
-                  fontSize: '0.82rem',
+                  padding: '0.42rem 0.65rem',
+                  fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.4rem',
-                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
+                  gap: '0.35rem',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = '#0369a1'}
                 onMouseOut={e => e.currentTarget.style.background = '#0284c7'}
                 title="Download ML training dataset as CSV (clean, flat tabular format for Pandas, PyTorch & Scikit-learn)"
               >
-                <span style={{ fontWeight: 800 }}>&#128202;</span> Download CSV
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="16" y2="17" />
+                </svg>
+                Download CSV
               </button>
             </div>
           </div>
@@ -888,7 +1073,7 @@ function DashboardComponent() {
               }}>
                 <div>
                   <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                    WEIGHTED EVOLUTION SCORE (COMPONENT 3)
+                    WEIGHTED EVOLUTION SCORE
                   </div>
                   <div style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, marginTop: '0.15rem' }}>
                     Composite index across process velocity, co-author equity &amp; ML intent depth
@@ -899,7 +1084,7 @@ function DashboardComponent() {
                 </div>
               </div>
 
-              {/* Progress Bars Breakdown for Component 3 Research Dimensions */}
+              {/* Progress Bars Breakdown for Research Dimensions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
@@ -944,6 +1129,7 @@ function DashboardComponent() {
             </div>
           </div>
         </div>
+      )}
 
         {/* 4. Tab Navigation Bar matching Component 1 in photo */}
         <div style={{
@@ -1108,7 +1294,9 @@ function DashboardComponent() {
                 {filteredDocs.map((doc: any) => {
                   const isOwner = user && (
                     (doc.owner && doc.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
+                    (doc.owner && user.email && doc.owner.toLowerCase() === user.email.toLowerCase()) ||
+                    (doc.ownerName && user.name && doc.ownerName.toLowerCase().includes(user.name.toLowerCase()))
                   );
 
                   return (
@@ -1158,8 +1346,71 @@ function DashboardComponent() {
                           {doc.title || doc._id}
                         </h4>
 
+                        {/* Assignment Metadata (Course, Type, Submission Status) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+                          <span style={{
+                            background: doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.14)' : 'rgba(245, 158, 11, 0.14)',
+                            color: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
+                            border: `1px solid ${doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            <span style={{
+                              width: '5px',
+                              height: '5px',
+                              borderRadius: '50%',
+                              background: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
+                            }} />
+                            {doc.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}
+                          </span>
+
+                          <span style={{
+                            background: doc.assignmentType === 'individual' ? 'rgba(14, 165, 233, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+                            color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800
+                          }}>
+                            {doc.assignmentType === 'individual' ? 'Individual' : 'Group Project'}
+                          </span>
+
+                          {doc.course && (
+                            <span style={{ background: '#f1f5f9', color: '#475569', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>
+                              {doc.course}
+                            </span>
+                          )}
+
+                          {doc.grade && (
+                            <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800 }}>
+                              Grade: {doc.grade}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Lecturer Feedback (if evaluated) */}
+                        {doc.lecturerFeedback && (
+                          <div style={{
+                            background: 'rgba(99, 102, 241, 0.06)',
+                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                            borderRadius: '8px',
+                            padding: '0.6rem 0.75rem',
+                            marginBottom: '0.65rem',
+                            fontSize: '0.76rem',
+                            color: '#334155',
+                            lineHeight: 1.4
+                          }}>
+                            <strong style={{ color: '#4338ca' }}>Lecturer Feedback:</strong> {doc.lecturerFeedback}
+                          </div>
+                        )}
+
                         {/* Collaborators */}
-                        <div style={{ marginTop: '0.75rem' }}>
+                        <div>
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
                             Group Members ({doc.collaborators?.length || 1}):
                           </span>
@@ -1234,7 +1485,7 @@ function DashboardComponent() {
                         </div>
 
                         {/* Leader Quick Share / Add Member */}
-                        {isOwner && (
+                        {(isOwner || isUserLeader) && (
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <button
                               onClick={() => {
@@ -1252,7 +1503,7 @@ function DashboardComponent() {
                                 cursor: 'pointer'
                               }}
                             >
-                              + Add Teammate
+                              + Add Member
                             </button>
 
                             <button
@@ -1310,10 +1561,10 @@ function DashboardComponent() {
                 </h4>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr auto', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
-                    1. Select Target Document
+                    1. Target Assignment / Document
                   </label>
                   <select
                     value={teamTargetDocId}
@@ -1321,9 +1572,9 @@ function DashboardComponent() {
                     style={{
                       width: '100%',
                       background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: '1.5px solid #e2e8f0',
                       borderRadius: '8px',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.65rem 0.85rem',
                       fontSize: '0.85rem',
                       color: '#0f172a',
                       fontWeight: 600
@@ -1339,23 +1590,26 @@ function DashboardComponent() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
-                    2. Select Registered Student / Classmate
+                    2. Choose Registered Classmate
                   </label>
                   <select
                     value={selectedStudentForAdd}
-                    onChange={e => setSelectedStudentForAdd(e.target.value)}
+                    onChange={e => {
+                      setSelectedStudentForAdd(e.target.value);
+                      if (e.target.value) setManualStudentInput('');
+                    }}
                     style={{
                       width: '100%',
                       background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: '1.5px solid #e2e8f0',
                       borderRadius: '8px',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.65rem 0.85rem',
                       fontSize: '0.85rem',
                       color: '#0f172a',
                       fontWeight: 600
                     }}
                   >
-                    <option value="">-- Choose a student to add --</option>
+                    <option value="">-- Choose student from directory --</option>
                     {registeredStudents.map((st: any) => (
                       <option key={st._id} value={st.username || st.studentId}>
                         {st.name} ({st.studentId}) &bull; {st.email}
@@ -1364,23 +1618,54 @@ function DashboardComponent() {
                   </select>
                 </div>
 
-                <div style={{ paddingTop: '1.35rem' }}>
-                  <button
-                    onClick={() => handleAddStudentToDoc(teamTargetDocId, selectedStudentForAdd)}
-                    disabled={!selectedStudentForAdd}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
+                    OR Enter IT Number / Student ID / Email
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. IT23217522 or student@sliit.lk"
+                    value={manualStudentInput}
+                    onChange={e => {
+                      setManualStudentInput(e.target.value);
+                      if (e.target.value) setSelectedStudentForAdd('');
+                    }}
                     style={{
-                      background: selectedStudentForAdd ? '#a3e635' : '#e2e8f0',
-                      color: selectedStudentForAdd ? '#121417' : '#94a3b8',
+                      width: '100%',
+                      background: '#f8fafc',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.85rem',
+                      color: '#0f172a',
+                      fontWeight: 600,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => {
+                      const idToAdd = manualStudentInput.trim() || selectedStudentForAdd;
+                      handleAddStudentToDoc(teamTargetDocId, idToAdd);
+                    }}
+                    disabled={!manualStudentInput.trim() && !selectedStudentForAdd}
+                    style={{
+                      width: '100%',
+                      background: (manualStudentInput.trim() || selectedStudentForAdd) ? '#a3e635' : '#e2e8f0',
+                      color: (manualStudentInput.trim() || selectedStudentForAdd) ? '#121417' : '#94a3b8',
                       border: 'none',
                       borderRadius: '8px',
-                      padding: '0.6rem 1.25rem',
+                      padding: '0.65rem 1.25rem',
                       fontSize: '0.85rem',
                       fontWeight: 800,
-                      cursor: selectedStudentForAdd ? 'pointer' : 'not-allowed',
+                      cursor: (manualStudentInput.trim() || selectedStudentForAdd) ? 'pointer' : 'not-allowed',
+                      boxShadow: (manualStudentInput.trim() || selectedStudentForAdd) ? '0 2px 8px rgba(163, 230, 53, 0.35)' : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    Add to Group
+                    + Add Member to Group
                   </button>
                 </div>
               </div>
@@ -1477,12 +1762,19 @@ function DashboardComponent() {
                   </thead>
                   <tbody>
                     {registeredStudents
-                      .filter(s =>
-                        !studentSearch ||
-                        (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
-                        (s.studentId || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
-                        (s.email || '').toLowerCase().includes(studentSearch.toLowerCase())
-                      )
+                      .filter(s => {
+                        const r = (s.role || '').toLowerCase();
+                        const un = (s.username || '').toLowerCase();
+                        if (r === 'admin' || r === 'lecturer' || r === 'teacher' || r === 'evaluator' || un === 'admin' || un === 'sansala') {
+                          return false;
+                        }
+                        return (
+                          !studentSearch ||
+                          (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                          (s.studentId || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                          (s.email || '').toLowerCase().includes(studentSearch.toLowerCase())
+                        );
+                      })
                       .map((st: any) => (
                         <tr key={st._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '0.85rem 0.5rem', fontWeight: 700, color: '#0f172a' }}>
@@ -1496,14 +1788,14 @@ function DashboardComponent() {
                           </td>
                           <td style={{ padding: '0.85rem 0.5rem' }}>
                             <span style={{
-                              background: st.role === 'group_leader' ? 'rgba(163, 230, 53, 0.16)' : st.role === 'lecturer' ? '#e8f0fe' : '#f1f5f9',
-                              color: st.role === 'group_leader' ? '#275306' : st.role === 'lecturer' ? '#1a73e8' : '#64748b',
+                              background: st.role === 'group_leader' ? 'rgba(163, 230, 53, 0.16)' : st.role === 'admin' ? '#fef3c7' : st.role === 'lecturer' ? '#e8f0fe' : '#f1f5f9',
+                              color: st.role === 'group_leader' ? '#275306' : st.role === 'admin' ? '#b45309' : st.role === 'lecturer' ? '#1a73e8' : '#64748b',
                               padding: '0.15rem 0.55rem',
                               borderRadius: '9999px',
                               fontSize: '0.72rem',
                               fontWeight: 700
                             }}>
-                              {st.role === 'group_leader' ? 'Group Leader' : st.role === 'lecturer' ? 'Lecturer' : 'Student Member'}
+                              {st.role === 'group_leader' ? 'Group Leader' : st.role === 'admin' ? 'Administrator' : st.role === 'lecturer' ? 'Lecturer' : 'Student Member'}
                             </span>
                           </td>
                           <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
@@ -1691,6 +1983,32 @@ function DashboardComponent() {
                   </div>
                 </div>
 
+                {/* Direct IT Number / Email input for assignment creation */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                    Or Enter Additional IT Numbers / Emails / Usernames (comma or space separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. IT23217522, student@sliit.lk, rashi"
+                    value={customMemberInput}
+                    onChange={e => setCustomMemberInput(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 0.9rem',
+                      borderRadius: '8px',
+                      border: '1.5px solid #e2e8f0',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      fontSize: '0.9rem',
+                      outline: 'none'
+                    }}
+                  />
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem' }}>
+                    Assigned students can immediately view and edit this assignment upon signing in, even if they register later.
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={createLoading}
@@ -1842,7 +2160,7 @@ function DashboardComponent() {
                         cursor: 'pointer'
                       }}
                     >
-                      {isChecked ? '✓ ' : '+ '} {doc.title || doc._id}
+                      {isChecked ? '[Selected] ' : '+ '} {doc.title || doc._id}
                     </button>
                   );
                 })}

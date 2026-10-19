@@ -22,12 +22,6 @@ const io = new Server(server, {
 
 const dmp = new DiffMatchPatch();
 
-// MongoDB Setup
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://docadmin:docadmin123@cluster0.p6utr.mongodb.net/document-evolution?retryWrites=true&w=majority';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB:', MONGODB_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
 // Password Hashing Helper
 function hashPassword(password) {
   const salt = 'doc_evo_salt_2026';
@@ -38,13 +32,37 @@ function hashPassword(password) {
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
   name: { type: String, required: true, trim: true },
-  studentId: { type: String, required: true, trim: true },
+  studentId: { type: String, required: true, unique: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, enum: ['student', 'group_leader', 'lecturer'], default: 'student' },
+  role: { type: String, enum: ['student', 'group_leader', 'lecturer', 'admin'], default: 'student' },
   createdAt: { type: Date, default: Date.now }
 });
 const User = mongoose.model('User', UserSchema);
+
+// MongoDB Setup & Admin Seeding
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://docadmin:docadmin123@cluster0.p6utr.mongodb.net/document-evolution?retryWrites=true&w=majority';
+mongoose.connect(MONGODB_URI)
+  .then(async () => {
+    console.log('Connected to MongoDB:', MONGODB_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local MongoDB');
+    try {
+      const adminExists = await User.findOne({ username: 'admin' });
+      if (!adminExists) {
+        await User.create({
+          username: 'admin',
+          name: 'System Administrator',
+          studentId: 'ADMIN01',
+          email: 'admin@docutrace.org',
+          passwordHash: hashPassword('admin123'),
+          role: 'admin'
+        });
+        console.log('Default admin user created: admin / admin123');
+      }
+    } catch (seedErr) {
+      console.error('Admin seeding notice:', seedErr.message);
+    }
+  })
+  .catch(err => console.error('MongoDB connection error:', err));
 
 const DocumentSchema = new mongoose.Schema({
   _id: { type: String, required: true },
@@ -58,41 +76,85 @@ const DocumentSchema = new mongoose.Schema({
   source: { type: String, default: 'in_built' }, // 'in_built', 'google_docs', 'microsoft_365'
   externalId: String,
   syncStatus: { type: String, default: 'synced' }, // 'synced', 'offline'
+  assignmentType: { type: String, enum: ['individual', 'group'], default: 'group' },
+  course: { type: String, default: 'Software Engineering' },
+  instructions: { type: String, default: '' },
+  dueDate: { type: String, default: '' },
+  createdByLecturer: { type: String, default: null },
+  submissionStatus: { type: String, enum: ['not_started', 'in_progress', 'submitted'], default: 'in_progress' },
+  submittedAt: { type: Date, default: null },
+  submittedBy: { type: String, default: null },
+  grade: { type: String, default: '' },
+  lecturerFeedback: { type: String, default: '' },
+  vivaRequired: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 const Document = mongoose.model('Document', DocumentSchema);
 
 // Permission Checker Helper
-function hasDocumentAccess(doc, username, studentId, role) {
+function hasDocumentAccess(doc, username, studentId, role, email, userObj = null) {
   if (!doc) return false;
-  if (role === 'lecturer') return true; // Lecturers can view/monitor all student work
-  if (doc.isPublic) return true;
-
-  const cleanUser = username ? username.toLowerCase().trim() : '';
-  const cleanStudentId = studentId ? studentId.toLowerCase().trim() : '';
-
-  // Owner access
-  if (doc.owner && (doc.owner.toLowerCase() === cleanUser || doc.owner.toLowerCase() === cleanStudentId)) {
+  // System Administrators have full superuser access to all documents without restriction
+  if (role === 'admin' || (username && username.toLowerCase().trim() === 'admin')) {
     return true;
   }
+  // Lecturers and evaluators have full supervisory access to all student assignments
+  if (role === 'lecturer' || role === 'teacher' || role === 'evaluator' || (username && username.toLowerCase().trim() === 'sansala')) {
+    return true;
+  }
+  // Once an assignment is submitted, lecturers/evaluators and admins can always access it
+  if (doc.submissionStatus === 'submitted') {
+    if (role === 'lecturer' || role === 'admin') return true;
+  }
+  if (doc.isPublic) return true;
 
-  // Allowed users array check
-  if (doc.allowedUsers && doc.allowedUsers.length > 0) {
-    const isAllowed = doc.allowedUsers.some(u => {
-      const cleanU = u.toLowerCase().trim();
-      return cleanU === cleanUser || cleanU === cleanStudentId;
-    });
-    if (isAllowed) return true;
+  // Gather all possible identifiers representing this user
+  const identifiers = new Set();
+  const addId = (val) => {
+    if (val && typeof val === 'string' && val.trim()) {
+      identifiers.add(val.toLowerCase().trim());
+    }
+  };
+
+  addId(username);
+  addId(studentId);
+  addId(email);
+
+  if (userObj) {
+    addId(userObj.username);
+    addId(userObj.studentId);
+    addId(userObj.email);
+    addId(userObj.name);
   }
 
-  // Collaborators array fallback
-  if (doc.collaborators && doc.collaborators.length > 0) {
-    const isCollab = doc.collaborators.some(c => {
-      const cleanC = c.toLowerCase();
-      return cleanC.includes(cleanUser) || cleanC.includes(cleanStudentId);
-    });
-    if (isCollab) return true;
+  const idList = Array.from(identifiers);
+  if (idList.length === 0) return false;
+
+  const docOwner = (doc.owner || '').toLowerCase().trim();
+  const docOwnerName = (doc.ownerName || '').toLowerCase().trim();
+
+  // 1. Check Owner match (exact owner username or parenthesized student ID)
+  for (const id of idList) {
+    if (docOwner === id || docOwnerName === id || docOwnerName.includes(`(${id})`)) {
+      return true;
+    }
+  }
+
+  // 2. Check Allowed Users array (exact match against stored username, student ID, or email)
+  const allowed = (doc.allowedUsers || []).map(u => (u || '').toLowerCase().trim()).filter(Boolean);
+  for (const id of idList) {
+    if (allowed.includes(id)) {
+      return true;
+    }
+  }
+
+  // 3. Check Collaborators array (exact match or parenthesized student ID e.g. "Name (IT...)")
+  const collabs = (doc.collaborators || []).map(c => (c || '').toLowerCase().trim()).filter(Boolean);
+  for (const id of idList) {
+    if (collabs.some(c => c === id || c.includes(`(${id})`) || (id.length >= 4 && c.includes(id)))) {
+      return true;
+    }
   }
 
   return false;
@@ -259,6 +321,8 @@ io.on('connection', (socket) => {
     let username = null;
     let studentId = null;
     let role = null;
+    let email = null;
+    let name = null;
 
     if (typeof data === 'string') {
       documentId = data;
@@ -267,6 +331,8 @@ io.on('connection', (socket) => {
       username = typeof data.username === 'string' ? data.username : null;
       studentId = typeof data.studentId === 'string' ? data.studentId : null;
       role = typeof data.role === 'string' ? data.role : null;
+      email = typeof data.email === 'string' ? data.email : null;
+      name = typeof data.name === 'string' ? data.name : null;
     }
 
     if (!documentId) return;
@@ -287,9 +353,25 @@ io.on('connection', (socket) => {
       });
     }
 
-    // Security permission guard
-    if (username || studentId || role) {
-      const allowed = hasDocumentAccess(doc, username, studentId, role);
+    // Security permission guard with full alias resolution
+    if (username || studentId || role || email) {
+      let userObj = null;
+      try {
+        const queryConds = [];
+        if (username) queryConds.push({ username: username.toLowerCase().trim() });
+        if (studentId) {
+          queryConds.push({ studentId: studentId.trim() });
+          queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
+        }
+        if (email) queryConds.push({ email: email.toLowerCase().trim() });
+        if (queryConds.length > 0) {
+          userObj = await User.findOne({ $or: queryConds }).lean();
+        }
+      } catch (e) {
+        console.error("User lookup error in join-document:", e);
+      }
+
+      const allowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!allowed) {
         socket.emit('access-denied', {
           error: 'Access Denied: You do not have permission to join this document session.',
@@ -316,9 +398,26 @@ io.on('connection', (socket) => {
     // Calculate diffs and track evolution
     const doc = await Document.findOne({ _id: documentId });
     if (doc) {
-      // Strict Security Guard 2: Verify author access permissions
+      // Strict Security Guard 2: Verify author access permissions with identity alias resolution
       if (author && author !== 'Anonymous') {
-        const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student');
+        let userObj = null;
+        try {
+          const queryConds = [];
+          if (studentId) {
+            queryConds.push({ studentId: studentId.trim() });
+            queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
+            queryConds.push({ username: studentId.toLowerCase().trim() });
+          }
+          if (author) {
+            queryConds.push({ username: author.toLowerCase().trim() });
+            queryConds.push({ name: new RegExp('^' + author.trim() + '$', 'i') });
+          }
+          if (queryConds.length > 0) {
+            userObj = await User.findOne({ $or: queryConds }).lean();
+          }
+        } catch (e) {}
+
+        const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student', null, userObj);
         if (!isPermitted) {
           socket.emit('access-denied', { error: 'Security Violation: You do not have permission to modify this document.' });
           return;
@@ -465,6 +564,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const cleanUsername = username.toLowerCase().trim();
     const cleanEmail = email.toLowerCase().trim();
+    const cleanStudentId = studentId.trim();
 
     const existingUsername = await User.findOne({ username: cleanUsername });
     if (existingUsername) {
@@ -476,8 +576,15 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Email is already registered.' });
     }
 
+    const existingStudentId = await User.findOne({
+      studentId: new RegExp('^' + cleanStudentId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i')
+    });
+    if (existingStudentId) {
+      return res.status(400).json({ error: `Student ID / IT number (${cleanStudentId}) is already registered to another account.` });
+    }
+
     const passwordHash = hashPassword(password);
-    const validRoles = ['student', 'group_leader', 'lecturer'];
+    const validRoles = ['student', 'group_leader', 'lecturer', 'admin'];
     const assignedRole = validRoles.includes(role) ? role : 'student';
     const newUser = await User.create({
       username: cleanUsername,
@@ -488,7 +595,7 @@ app.post('/api/auth/register', async (req, res) => {
       role: assignedRole
     });
 
-    const isLeader = newUser.role === 'group_leader' || newUser.role === 'lecturer';
+    const isLeader = newUser.role === 'group_leader' || newUser.role === 'lecturer' || newUser.role === 'admin';
     const userData = {
       id: newUser._id,
       username: newUser.username,
@@ -547,7 +654,17 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/users', async (req, res) => {
   try {
-    const users = await User.find({}, '-passwordHash').sort('name').lean();
+    const { role, studentsOnly } = req.query;
+    let query = {};
+    if (studentsOnly === 'true' || role === 'student') {
+      query = {
+        role: { $in: ['student', 'group_leader'] },
+        username: { $nin: ['admin', 'sansala'] }
+      };
+    } else if (role) {
+      query = { role };
+    }
+    const users = await User.find(query, '-passwordHash').sort('name').lean();
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -558,47 +675,173 @@ app.get('/api/auth/users', async (req, res) => {
 
 app.post('/api/documents/create', async (req, res) => {
   try {
-    const { title, content, owner, ownerName, studentId, source, members } = req.body;
+    const {
+      title,
+      content,
+      owner,
+      ownerName,
+      studentId,
+      source,
+      members,
+      assignmentType,
+      course,
+      instructions,
+      dueDate,
+      createdByLecturer,
+      assignedTo
+    } = req.body;
+
     if (!title || !owner) {
-      return res.status(400).json({ error: 'Document title and owner username are required.' });
+      return res.status(400).json({ error: 'Document / Assignment title and owner identifier are required.' });
     }
 
     const cleanOwner = owner.toLowerCase().trim();
     const cleanStudentId = studentId ? studentId.toLowerCase().trim() : '';
 
-    let formattedOwnerName = ownerName || owner || 'Student';
+    let formattedOwnerName = ownerName || owner || 'Student Author';
     if (studentId && cleanStudentId && !formattedOwnerName.toLowerCase().includes(cleanStudentId)) {
       formattedOwnerName = `${formattedOwnerName} (${studentId.trim()})`;
     }
 
-    // Process initial group members
+    // Process initial group members / assigned students
     const initialAllowed = [cleanOwner, cleanStudentId].filter(Boolean);
     const initialCollabs = [formattedOwnerName];
 
-    if (Array.isArray(members) && members.length > 0) {
-      members.forEach(m => {
-        if (m && typeof m === 'string') {
-          const cleanM = m.toLowerCase().trim();
-          if (!initialAllowed.includes(cleanM)) initialAllowed.push(cleanM);
-          if (!initialCollabs.includes(m)) initialCollabs.push(m);
+    // Include owner's full DB aliases (username, studentId, email) so owner is never locked out
+    try {
+      const ownerRecord = await User.findOne({
+        $or: [
+          { username: cleanOwner },
+          { studentId: cleanOwner },
+          cleanStudentId ? { studentId: cleanStudentId } : null,
+          cleanStudentId ? { studentId: new RegExp('^' + cleanStudentId + '$', 'i') } : null
+        ].filter(Boolean)
+      }).lean();
+      if (ownerRecord) {
+        if (ownerRecord.username && !initialAllowed.includes(ownerRecord.username.toLowerCase())) {
+          initialAllowed.push(ownerRecord.username.toLowerCase());
         }
-      });
+        if (ownerRecord.studentId && !initialAllowed.includes(ownerRecord.studentId.toLowerCase())) {
+          initialAllowed.push(ownerRecord.studentId.toLowerCase());
+        }
+        if (ownerRecord.email && !initialAllowed.includes(ownerRecord.email.toLowerCase())) {
+          initialAllowed.push(ownerRecord.email.toLowerCase());
+        }
+      }
+    } catch (e) {}
+
+    // If assignedTo array passed from lecturer, add all students
+    const targetMembers = Array.isArray(assignedTo) && assignedTo.length > 0 ? assignedTo : members;
+    let memberList = [];
+    if (Array.isArray(targetMembers)) {
+      memberList = targetMembers;
+    } else if (typeof targetMembers === 'string' && targetMembers.trim()) {
+      memberList = targetMembers.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+    }
+
+    for (const m of memberList) {
+      if (!m || typeof m !== 'string') continue;
+      const cleanM = m.toLowerCase().trim();
+      if (!cleanM) continue;
+
+      const foundUser = await User.findOne({
+        $or: [
+          { username: cleanM },
+          { studentId: cleanM },
+          { email: cleanM },
+          { name: new RegExp('^' + cleanM + '$', 'i') }
+        ]
+      }).lean();
+
+      if (foundUser) {
+        if (foundUser.username && !initialAllowed.includes(foundUser.username.toLowerCase())) {
+          initialAllowed.push(foundUser.username.toLowerCase());
+        }
+        if (foundUser.studentId && !initialAllowed.includes(foundUser.studentId.toLowerCase())) {
+          initialAllowed.push(foundUser.studentId.toLowerCase());
+        }
+        if (foundUser.email && !initialAllowed.includes(foundUser.email.toLowerCase())) {
+          initialAllowed.push(foundUser.email.toLowerCase());
+        }
+        const displayName = `${foundUser.name} (${foundUser.studentId})`;
+        if (!initialCollabs.includes(displayName)) {
+          initialCollabs.push(displayName);
+        }
+      } else {
+        if (!initialAllowed.includes(cleanM)) initialAllowed.push(cleanM);
+        if (!initialCollabs.includes(m.trim())) initialCollabs.push(m.trim());
+      }
     }
 
     const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    
+    // Default initial starter template
+    let initialContent = content;
+    if (!initialContent) {
+      if (createdByLecturer) {
+        initialContent = `<h2>${title.trim()}</h2><p><strong>Course:</strong> ${course || 'Software Engineering'}</p><p><strong>Assignment Type:</strong> ${assignmentType === 'individual' ? 'Individual Project' : 'Group Collaborative Project'}</p>${instructions ? `<hr/><p><strong>Lecturer Instructions:</strong></p><p>${instructions.trim()}</p><hr/>` : ''}<p><em>Start drafting your assignment solution below:</em></p><p></p>`;
+      } else {
+        initialContent = `<h2>${title.trim()}</h2><p>Document created by group leader ${formattedOwnerName}. Start writing report here...</p>`;
+      }
+    }
+
     const newDoc = await Document.create({
       _id: docId,
       title: title.trim(),
-      content: content || `<h2>${title.trim()}</h2><p>Document created by group leader ${formattedOwnerName}. Start writing report here...</p>`,
+      content: initialContent,
       owner: cleanOwner,
       ownerName: formattedOwnerName,
       allowedUsers: initialAllowed,
       collaborators: initialCollabs,
       source: source || 'in_built',
+      assignmentType: assignmentType || 'group',
+      course: course || 'Software Engineering',
+      instructions: instructions || '',
+      dueDate: dueDate || '',
+      createdByLecturer: createdByLecturer || null,
+      submissionStatus: 'in_progress',
       syncStatus: 'synced'
     });
 
-    res.status(201).json({ message: 'Document created successfully', document: newDoc });
+    res.status(201).json({ message: 'Assignment created successfully', document: newDoc });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/documents/:id/submit', async (req, res) => {
+  try {
+    const { submittedBy, studentId } = req.body;
+    const doc = await Document.findOne({ _id: req.params.id });
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+    doc.submissionStatus = 'submitted';
+    doc.submittedAt = Date.now();
+    doc.submittedBy = submittedBy || studentId || doc.ownerName || 'Student Author';
+    doc.updatedAt = Date.now();
+    await doc.save();
+
+    res.json({ message: "Assignment submitted successfully to lecturer", document: doc });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/documents/:id/grade', async (req, res) => {
+  try {
+    const { grade, lecturerFeedback, vivaRequired } = req.body;
+    const doc = await Document.findOne({ _id: req.params.id });
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+    if (grade !== undefined) doc.grade = grade;
+    if (lecturerFeedback !== undefined) doc.lecturerFeedback = lecturerFeedback;
+    if (vivaRequired !== undefined) doc.vivaRequired = Boolean(vivaRequired);
+    doc.updatedAt = Date.now();
+    await doc.save();
+
+    res.json({ message: "Grade and feedback saved successfully", document: doc });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -606,16 +849,292 @@ app.post('/api/documents/create', async (req, res) => {
 
 app.get('/api/documents', async (req, res) => {
   try {
-    const { username, studentId, role } = req.query;
-    const allDocs = await Document.find({}).lean();
+    const { username, studentId, role, email } = req.query;
+
+    // Security Gate: Without logging in, do NOT expose any documents or assignments
+    if (!username && !studentId && !role && !email) {
+      return res.json([]);
+    }
+
+    const allDocs = await Document.find({}).sort('-updatedAt').lean();
     
-    // Lecturers see all documents for evaluation
-    if (role === 'lecturer' || (!username && !studentId)) {
+    // System Administrators and Lecturers can see all documents
+    if (role === 'admin' || role === 'lecturer' || (username && (username.toLowerCase().trim() === 'admin' || username.toLowerCase().trim() === 'sansala'))) {
       return res.json(allDocs);
     }
 
-    const filtered = allDocs.filter(doc => hasDocumentAccess(doc, username, studentId, role));
+    // Resolve user in database to retrieve all registered aliases (username, studentId, email, name)
+    let userObj = null;
+    const cleanUser = username ? username.toLowerCase().trim() : '';
+    const cleanStudentId = studentId ? studentId.trim() : '';
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+    if (cleanUser || cleanEmail) {
+      userObj = await User.findOne({
+        $or: [
+          cleanUser ? { username: cleanUser } : null,
+          cleanEmail ? { email: cleanEmail } : null
+        ].filter(Boolean)
+      }).lean();
+    }
+    if (!userObj && cleanStudentId) {
+      userObj = await User.findOne({
+        studentId: new RegExp('^' + cleanStudentId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i')
+      }).lean();
+    }
+
+    // Students only see assignments relevant to their enrollment or ownership
+    const filtered = allDocs.filter(doc => hasDocumentAccess(doc, username, studentId, role, email, userObj));
     res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/lecturer/overview', async (req, res) => {
+  try {
+    const docs = await Document.find({}).sort('-updatedAt').lean();
+    const users = await User.find({}, '-passwordHash').lean();
+    const allRevs = await Revision.find({}).sort('timestamp').lean();
+
+    // Map revisions by documentId
+    const revsByDoc = {};
+    allRevs.forEach(r => {
+      if (!revsByDoc[r.documentId]) revsByDoc[r.documentId] = [];
+      revsByDoc[r.documentId].push(r);
+    });
+
+    // Map users by username / studentId
+    const userMap = {};
+    users.forEach(u => {
+      if (u.username) userMap[u.username.toLowerCase()] = u;
+      if (u.studentId) userMap[u.studentId.toLowerCase()] = u;
+    });
+
+    let totalWordsAll = 0;
+    let totalAnomaliesAll = 0;
+    let authenticitySum = 0;
+
+    const assignments = docs.map(doc => {
+      const docRevs = revsByDoc[doc._id] || [];
+      const plainText = stripHtml(doc.content || '').trim();
+      const rawWords = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
+      
+      const revWordsAdded = docRevs.reduce((sum, r) => sum + (r.wordCountAdded || 0), 0);
+      const totalWords = Math.max(rawWords, revWordsAdded);
+      totalWordsAll += totalWords;
+
+      // Authors detection
+      const rawAuthors = new Set();
+      if (doc.ownerName) rawAuthors.add(doc.ownerName);
+      if (doc.collaborators) doc.collaborators.forEach(c => rawAuthors.add(c));
+      docRevs.forEach(r => { if (r.author) rawAuthors.add(r.author); });
+      const authors = Array.from(rawAuthors);
+      const activeAuthorsCount = Math.max(1, authors.length);
+
+      // Paste anomalies
+      const pasteAnomalies = docRevs.filter(r => r.isBulkInsertion || r.anomalyFlag);
+      const pasteAnomaliesCount = pasteAnomalies.length;
+      totalAnomaliesAll += pasteAnomaliesCount;
+
+      const batchPastePercent = pasteAnomaliesCount > 0 ? Math.min(35, pasteAnomaliesCount * 6) : 0;
+      const incrementalDraftingPercent = Math.max(65, 100 - batchPastePercent);
+
+      // Workload equity score
+      let workloadEquityScore = 90;
+      if (activeAuthorsCount > 1 && totalWords > 0) {
+        const authorWordMap = {};
+        authors.forEach(a => { authorWordMap[a] = 0; });
+        docRevs.forEach(r => {
+          const a = r.author || authors[0];
+          authorWordMap[a] = (authorWordMap[a] || 0) + (r.wordCountAdded || 0);
+        });
+        const shares = Object.values(authorWordMap).map(w => w / (totalWords || 1));
+        const idealShare = 1 / activeAuthorsCount;
+        const deviation = shares.reduce((acc, s) => acc + Math.abs(s - idealShare), 0) / 2;
+        workloadEquityScore = Math.round(Math.max(40, Math.min(98, (1 - deviation) * 100)));
+      } else if (activeAuthorsCount === 1) {
+        workloadEquityScore = 95;
+      }
+
+      const authenticityScore = Math.round(0.6 * workloadEquityScore + 0.4 * incrementalDraftingPercent);
+      authenticitySum += authenticityScore;
+
+      // Status
+      let status = 'verified';
+      if (pasteAnomaliesCount > 0 || authenticityScore < 60) {
+        status = 'flagged';
+      } else if (docRevs.length === 0) {
+        status = 'draft';
+      }
+
+      // Owner info resolution
+      const ownerUser = userMap[doc.owner ? doc.owner.toLowerCase() : ''] || {};
+
+      return {
+        _id: doc._id,
+        title: doc.title || 'Untitled Document',
+        owner: doc.owner,
+        ownerName: doc.ownerName || (ownerUser.name ? `${ownerUser.name} (${ownerUser.studentId})` : doc.owner),
+        studentId: ownerUser.studentId || '',
+        email: ownerUser.email || '',
+        collaborators: doc.collaborators || [],
+        allowedUsers: doc.allowedUsers || [],
+        source: doc.source || 'in_built',
+        assignmentType: doc.assignmentType || 'group',
+        course: doc.course || 'Software Engineering',
+        instructions: doc.instructions || '',
+        dueDate: doc.dueDate || '',
+        createdByLecturer: doc.createdByLecturer || null,
+        submissionStatus: doc.submissionStatus || 'in_progress',
+        submittedAt: doc.submittedAt || null,
+        submittedBy: doc.submittedBy || null,
+        grade: doc.grade || '',
+        lecturerFeedback: doc.lecturerFeedback || '',
+        vivaRequired: Boolean(doc.vivaRequired),
+        totalWords,
+        revisionsCount: docRevs.length,
+        pasteAnomaliesCount,
+        batchPastePercent,
+        incrementalDraftingPercent,
+        workloadEquityScore,
+        authenticityScore,
+        status,
+        activeAuthorsCount,
+        authors,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt
+      };
+    });
+
+    const totalDocs = docs.length;
+    const avgAuthenticity = totalDocs > 0 ? Math.round(authenticitySum / totalDocs) : 0;
+    const verifiedCount = assignments.filter(a => a.status === 'verified').length;
+    const flaggedCount = assignments.filter(a => a.status === 'flagged').length;
+
+    res.json({
+      cohortStats: {
+        totalAssignments: totalDocs,
+        totalStudents: users.filter(u => u.role !== 'lecturer').length,
+        avgAuthenticity,
+        verifiedCount,
+        flaggedCount,
+        totalRevisions: allRevs.length,
+        totalWords: totalWordsAll,
+        totalAnomalies: totalAnomaliesAll
+      },
+      assignments
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin System Overview: All Documents, All Users, System Telemetry
+app.get('/api/admin/overview', async (req, res) => {
+  try {
+    const docs = await Document.find({}).sort('-updatedAt').lean();
+    const users = await User.find({}, '-passwordHash').sort('-createdAt').lean();
+    const allRevs = await Revision.find({}).sort('timestamp').lean();
+
+    const revsByDoc = {};
+    allRevs.forEach(r => {
+      if (!revsByDoc[r.documentId]) revsByDoc[r.documentId] = [];
+      revsByDoc[r.documentId].push(r);
+    });
+
+    const userMap = {};
+    users.forEach(u => {
+      if (u.username) userMap[u.username.toLowerCase()] = u;
+      if (u.studentId) userMap[u.studentId.toLowerCase()] = u;
+    });
+
+    let totalWordsAll = 0;
+    let totalAnomaliesAll = 0;
+    let authenticitySum = 0;
+
+    const enrichedDocs = docs.map(doc => {
+      const docRevs = revsByDoc[doc._id] || [];
+      const plainText = stripHtml(doc.content || '').trim();
+      const rawWords = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
+      const revWordsAdded = docRevs.reduce((sum, r) => sum + (r.wordCountAdded || 0), 0);
+      const totalWords = Math.max(rawWords, revWordsAdded);
+      totalWordsAll += totalWords;
+
+      const pasteAnomaliesCount = docRevs.filter(r => r.isBulkInsertion || r.anomalyFlag).length;
+      totalAnomaliesAll += pasteAnomaliesCount;
+
+      let authenticityScore = 94;
+      if (docRevs.length > 0) {
+        const pasteRatio = pasteAnomaliesCount / docRevs.length;
+        authenticityScore = Math.max(25, Math.min(99, Math.round(98 - (pasteRatio * 75))));
+      }
+      authenticitySum += authenticityScore;
+
+      const ownerUser = userMap[doc.owner ? doc.owner.toLowerCase() : ''] || {};
+
+      return {
+        _id: doc._id,
+        title: doc.title || 'Untitled Document',
+        content: doc.content || '',
+        owner: doc.owner,
+        ownerName: doc.ownerName || (ownerUser.name ? `${ownerUser.name} (${ownerUser.studentId})` : doc.owner),
+        studentId: ownerUser.studentId || '',
+        email: ownerUser.email || '',
+        collaborators: doc.collaborators || [],
+        allowedUsers: doc.allowedUsers || [],
+        source: doc.source || 'in_built',
+        assignmentType: doc.assignmentType || 'group',
+        course: doc.course || 'Software Engineering',
+        instructions: doc.instructions || '',
+        dueDate: doc.dueDate || '',
+        submissionStatus: doc.submissionStatus || 'in_progress',
+        submittedAt: doc.submittedAt || null,
+        submittedBy: doc.submittedBy || null,
+        grade: doc.grade || '',
+        lecturerFeedback: doc.lecturerFeedback || '',
+        totalWords,
+        revisionsCount: docRevs.length,
+        pasteAnomaliesCount,
+        authenticityScore,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt
+      };
+    });
+
+    const totalDocs = docs.length;
+    const avgAuthenticity = totalDocs > 0 ? Math.round(authenticitySum / totalDocs) : 0;
+
+    res.json({
+      stats: {
+        totalDocuments: totalDocs,
+        totalUsers: users.length,
+        totalStudents: users.filter(u => u.role === 'student' || u.role === 'group_leader').length,
+        totalLecturers: users.filter(u => u.role === 'lecturer').length,
+        totalAdmins: users.filter(u => u.role === 'admin').length,
+        avgAuthenticity,
+        totalRevisions: allRevs.length,
+        totalWords: totalWordsAll,
+        totalAnomalies: totalAnomaliesAll
+      },
+      documents: enrichedDocs,
+      users
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin User Role Update Endpoint
+app.post('/api/admin/users/:id/role', async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['student', 'group_leader', 'lecturer', 'admin'].includes(role)) {
+      return res.status(400).json({ error: "Invalid role specified." });
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
+    if (!user) return res.status(404).json({ error: "User not found." });
+    res.json({ message: "User role updated successfully", user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -623,15 +1142,35 @@ app.get('/api/documents', async (req, res) => {
 
 app.get('/api/documents/:id', async (req, res) => {
   try {
-    const { username, studentId, role } = req.query;
+    const { username, studentId, role, email } = req.query;
     const doc = await Document.findOne({ _id: req.params.id }).lean();
     if (!doc) {
       return res.status(404).json({ error: "Document not found" });
     }
 
-    // Access control check
-    if (username || studentId || role) {
-      const allowed = hasDocumentAccess(doc, username, studentId, role);
+    // Access control check: Admins and Lecturers have unrestricted superuser access
+    if (role === 'admin' || role === 'lecturer' || role === 'teacher' || role === 'evaluator' || (username && (username.toLowerCase().trim() === 'admin' || username.toLowerCase().trim() === 'sansala'))) {
+      return res.json(doc);
+    }
+
+    // Access control check for students
+    if (username || studentId || role || email) {
+      let userObj = null;
+      const cleanUser = username ? username.toLowerCase().trim() : '';
+      const cleanStudentId = studentId ? studentId.trim() : '';
+      const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+      if (cleanUser || cleanStudentId || cleanEmail) {
+        userObj = await User.findOne({
+          $or: [
+            cleanUser ? { username: cleanUser } : null,
+            cleanStudentId ? { studentId: cleanStudentId } : null,
+            cleanEmail ? { email: cleanEmail } : null
+          ].filter(Boolean)
+        }).lean();
+      }
+
+      const allowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!allowed) {
         return res.status(403).json({
           error: "Access Denied: You do not have permission to view or edit this document.",
@@ -649,15 +1188,30 @@ app.get('/api/documents/:id', async (req, res) => {
 
 app.delete('/api/documents/:id', async (req, res) => {
   try {
-    const { username, studentId, role } = req.query;
+    const { username, studentId, role, email } = req.query;
     const doc = await Document.findOne({ _id: req.params.id });
     if (!doc) {
       return res.status(404).json({ error: "Document not found" });
     }
 
     // Permission check: Owner, allowed user, or lecturer can delete
-    if (username || studentId || role) {
-      const isAllowed = hasDocumentAccess(doc, username, studentId, role);
+    if (username || studentId || role || email) {
+      let userObj = null;
+      const cleanUser = username ? username.toLowerCase().trim() : '';
+      const cleanStudentId = studentId ? studentId.trim() : '';
+      const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+      if (cleanUser || cleanStudentId || cleanEmail) {
+        userObj = await User.findOne({
+          $or: [
+            cleanUser ? { username: cleanUser } : null,
+            cleanStudentId ? { studentId: cleanStudentId } : null,
+            cleanEmail ? { email: cleanEmail } : null
+          ].filter(Boolean)
+        }).lean();
+      }
+
+      const isAllowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!isAllowed) {
         return res.status(403).json({ error: "Permission Denied: Only document owners, group members, or lecturers can delete this document." });
       }
@@ -675,7 +1229,7 @@ app.delete('/api/documents/:id', async (req, res) => {
 
 app.put('/api/documents/:id/rename', async (req, res) => {
   try {
-    const { title, username, studentId, role } = req.body;
+    const { title, username, studentId, role, email } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: "Document title cannot be empty." });
     }
@@ -686,8 +1240,23 @@ app.put('/api/documents/:id/rename', async (req, res) => {
     }
 
     // Permission check
-    if (username || studentId || role) {
-      const isAllowed = hasDocumentAccess(doc, username, studentId, role);
+    if (username || studentId || role || email) {
+      let userObj = null;
+      const cleanUser = username ? username.toLowerCase().trim() : '';
+      const cleanStudentId = studentId ? studentId.trim() : '';
+      const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+      if (cleanUser || cleanStudentId || cleanEmail) {
+        userObj = await User.findOne({
+          $or: [
+            cleanUser ? { username: cleanUser } : null,
+            cleanStudentId ? { studentId: cleanStudentId } : null,
+            cleanEmail ? { email: cleanEmail } : null
+          ].filter(Boolean)
+        }).lean();
+      }
+
+      const isAllowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!isAllowed) {
         return res.status(403).json({ error: "Permission Denied: Only document owners or group members can rename this document." });
       }
@@ -705,7 +1274,7 @@ app.put('/api/documents/:id/rename', async (req, res) => {
 
 app.post('/api/documents/:id/share', async (req, res) => {
   try {
-    const { currentUsername, targetUserIdentifier, action } = req.body;
+    const { currentUsername, currentStudentId, currentUserEmail, currentRole, targetUserIdentifier, action } = req.body;
     if (!targetUserIdentifier) {
       return res.status(400).json({ error: 'Target student identifier (Username, Student ID, or Email) is required.' });
     }
@@ -715,47 +1284,88 @@ app.post('/api/documents/:id/share', async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    // Permission check for managing shares
+    // Permission check for managing shares:
+    let requesterUserObj = null;
     const cleanRequester = currentUsername ? currentUsername.toLowerCase().trim() : '';
-    if (doc.owner && doc.owner !== 'system' && doc.owner.toLowerCase() !== cleanRequester) {
-      const isRequesterAllowed = doc.allowedUsers.some(u => u.toLowerCase() === cleanRequester);
-      if (!isRequesterAllowed) {
-        return res.status(403).json({ error: 'Only the document owner or group members can manage sharing permissions.' });
-      }
+    const cleanStudentId = currentStudentId ? currentStudentId.trim() : '';
+    const cleanEmail = currentUserEmail ? currentUserEmail.toLowerCase().trim() : '';
+
+    if (cleanRequester || cleanStudentId || cleanEmail) {
+      requesterUserObj = await User.findOne({
+        $or: [
+          cleanRequester ? { username: cleanRequester } : null,
+          cleanStudentId ? { studentId: cleanStudentId } : null,
+          cleanStudentId ? { studentId: new RegExp('^' + cleanStudentId + '$', 'i') } : null,
+          cleanEmail ? { email: cleanEmail } : null
+        ].filter(Boolean)
+      }).lean();
     }
 
-    const cleanTarget = targetUserIdentifier.toLowerCase().trim();
-    
-    // Find target user in database
-    const targetUser = await User.findOne({
-      $or: [
-        { username: cleanTarget },
-        { studentId: cleanTarget },
-        { email: cleanTarget },
-        { name: new RegExp('^' + cleanTarget + '$', 'i') }
-      ]
-    });
+    const isPermitted = hasDocumentAccess(doc, currentUsername, currentStudentId, currentRole, currentUserEmail, requesterUserObj);
+    if (!isPermitted && doc.owner && doc.owner !== 'system') {
+      return res.status(403).json({ error: 'Only the document owner, group members, or evaluators can manage sharing permissions.' });
+    }
 
-    const targetKey = targetUser ? targetUser.username : cleanTarget;
-    const targetStudentId = targetUser ? targetUser.studentId : '';
-    const targetDisplayName = targetUser ? `${targetUser.name} (${targetUser.studentId})` : cleanTarget;
+    // Parse targetUserIdentifier into array of entries
+    let targets = [];
+    if (Array.isArray(targetUserIdentifier)) {
+      targets = targetUserIdentifier;
+    } else if (typeof targetUserIdentifier === 'string') {
+      targets = targetUserIdentifier.split(/[,;\n\r\t]+/).map(s => s.trim()).filter(Boolean);
+    }
 
-    if (action === 'remove') {
-      doc.allowedUsers = doc.allowedUsers.filter(u => 
-        u.toLowerCase() !== targetKey.toLowerCase() && 
-        u.toLowerCase() !== cleanTarget &&
-        (!targetStudentId || u.toLowerCase() !== targetStudentId.toLowerCase())
-      );
-      doc.collaborators = doc.collaborators.filter(c => !c.toLowerCase().includes(cleanTarget));
-    } else {
-      if (!doc.allowedUsers.includes(targetKey)) {
-        doc.allowedUsers.push(targetKey);
+    const addedSummary = [];
+
+    for (const rawTarget of targets) {
+      const cleanTarget = rawTarget.toLowerCase().trim();
+      if (!cleanTarget) continue;
+
+      // Find target user in database by username, studentId, email, or name
+      const targetUser = await User.findOne({
+        $or: [
+          { username: cleanTarget },
+          { studentId: cleanTarget },
+          { studentId: new RegExp('^' + cleanTarget + '$', 'i') },
+          { email: cleanTarget },
+          { name: new RegExp('^' + cleanTarget + '$', 'i') }
+        ]
+      }).lean();
+
+      const userAliases = new Set([cleanTarget]);
+      let displayName = rawTarget.trim();
+
+      if (targetUser) {
+        if (targetUser.username) userAliases.add(targetUser.username.toLowerCase());
+        if (targetUser.studentId) {
+          userAliases.add(targetUser.studentId.toLowerCase());
+          userAliases.add(targetUser.studentId);
+        }
+        if (targetUser.email) userAliases.add(targetUser.email.toLowerCase());
+        displayName = `${targetUser.name} (${targetUser.studentId || targetUser.username})`;
       }
-      if (targetStudentId && !doc.allowedUsers.includes(targetStudentId)) {
-        doc.allowedUsers.push(targetStudentId);
-      }
-      if (!doc.collaborators.includes(targetDisplayName)) {
-        doc.collaborators.push(targetDisplayName);
+
+      if (action === 'remove') {
+        const aliasList = Array.from(userAliases);
+        doc.allowedUsers = doc.allowedUsers.filter(u => {
+          const lowerU = (u || '').toLowerCase().trim();
+          return !aliasList.includes(lowerU);
+        });
+        doc.collaborators = doc.collaborators.filter(c => {
+          const lowerC = (c || '').toLowerCase().trim();
+          return !aliasList.some(alias => lowerC.includes(alias));
+        });
+      } else {
+        // Add all aliases to allowedUsers
+        for (const alias of userAliases) {
+          if (!doc.allowedUsers.some(u => (u || '').toLowerCase() === alias)) {
+            doc.allowedUsers.push(alias);
+          }
+        }
+        // Add formatted display name to collaborators
+        if (!doc.collaborators.some(c => (c || '').toLowerCase() === displayName.toLowerCase())) {
+          doc.collaborators.push(displayName);
+        }
+        addedSummary.push(displayName);
       }
     }
 
@@ -763,7 +1373,7 @@ app.post('/api/documents/:id/share', async (req, res) => {
     await doc.save();
 
     res.json({
-      message: action === 'remove' ? 'Access permission revoked' : 'Permission granted successfully',
+      message: action === 'remove' ? 'Access permission revoked' : `Permission granted successfully to ${addedSummary.join(', ')}`,
       document: doc,
       allowedUsers: doc.allowedUsers,
       collaborators: doc.collaborators
@@ -1928,7 +2538,7 @@ app.get('/api/documents/cross-group-analysis', async (req, res) => {
 });
 
 // =========================================================================
-// Component 3: Intelligent Document Evolution & ML Revision Analytics APIs
+// Intelligent Document Evolution & ML Revision Analytics APIs
 // =========================================================================
 
 // 1. Get raw revisions with before/after diffs and ML classifications
@@ -2045,7 +2655,7 @@ app.get('/api/documents/:id/revision-analytics', async (req, res) => {
       timeline: timelineData,
       modelMetadata: {
         version: 'v1.0-rules-ml-ensemble',
-        framework: 'Component 3 ML Microservice (FastAPI on port 8002)',
+        framework: 'Intelligent ML Microservice (FastAPI on port 8002)',
         intentTaxonomy: Object.keys(intentCounts).filter(k => k !== 'Unclassified'),
         significanceCriteria: ['Minor', 'Moderate', 'Major']
       },
