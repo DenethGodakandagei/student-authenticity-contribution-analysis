@@ -346,10 +346,14 @@ function EditorComponent() {
       fetch(`${getSocketUrl()}/api/auth/users`)
         .then(res => res.json())
         .then(data => {
-          // Filter out current logged in user
+          // Filter out current logged in user, admins, and lecturers
           const others = (data || []).filter((u: any) => {
             const cleanCur = (user?.username || user?.studentId || '').toLowerCase();
-            return (u.username || u.studentId || '').toLowerCase() !== cleanCur;
+            const isSelf = (u.username || u.studentId || '').toLowerCase() === cleanCur;
+            const r = (u.role || '').toLowerCase();
+            const un = (u.username || '').toLowerCase();
+            const isStaffOrAdmin = r === 'admin' || r === 'lecturer' || r === 'teacher' || r === 'evaluator' || un === 'admin' || un === 'sansala';
+            return !isSelf && !isStaffOrAdmin;
           });
           setRegisteredUsersForCreate(others);
         })

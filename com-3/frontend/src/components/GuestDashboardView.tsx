@@ -291,7 +291,7 @@ export default function GuestDashboardView({ onSignIn }: GuestDashboardViewProps
           <span>Keystroke Telemetry &amp; Anomaly Classification Active</span>
         </div>
         <div>
-          Institutional Academic Integrity Engine &bull; Component 3 Real-Time Pipeline
+          Institutional Academic Integrity Engine &bull; Real-Time Evolution Pipeline
         </div>
       </div>
     </div>
