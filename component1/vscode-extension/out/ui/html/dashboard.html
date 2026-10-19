@@ -8,21 +8,23 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #111113;
-      --card-bg: #18181b;
-      --card-subtle: #141416;
-      --border: #27272a;
-      --border-hover: #3f3f46;
-      --text: #f4f4f5;
-      --text-muted: #a1a1aa;
-      --text-sub: #71717a;
+      --bg: #06070a;
+      --card-bg: rgba(14, 20, 32, 0.55);
+      --card-subtle: rgba(12, 17, 28, 0.4);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(56, 189, 248, 0.28);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-sub: #64748b;
+      --blue: #38bdf8;
       --green: #4ade80;
       --red: #f87171;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
-      background: var(--bg);
+      background: radial-gradient(ellipse 100% 45% at 50% 0%, #0d1629 0%, #06070a 75%);
+      background-attachment: fixed;
       color: var(--text);
       padding: 24px 20px;
       line-height: 1.45;
@@ -53,15 +55,18 @@
       margin-top: 2px;
     }
 
-    /* ── Tabs (Simple Segmented Control) ── */
+    /* ── Tabs (Frosted Glass Segmented Control) ── */
     .nav-tabs {
       display: flex;
       gap: 3px;
-      background: var(--card-bg);
+      background: rgba(14, 20, 32, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 3px;
       margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
       overflow-x: auto;
     }
     .tab-btn {
@@ -82,23 +87,32 @@
     .tab-btn svg { width: 13px; height: 13px; opacity: 0.6; }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active {
-      background: #27272a;
-      border-color: #3f3f46;
-      color: var(--text);
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.25);
+      color: #7dd3fc;
+      box-shadow: inset 0 1px 0 rgba(56, 189, 248, 0.15);
       font-weight: 600;
     }
-    .tab-btn.active svg { opacity: 1; }
+    .tab-btn.active svg { opacity: 1; color: var(--blue); }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* ── Cards ── */
+    /* ── Cards (Dark Glassmorphic Blur) ── */
     .glass-card {
       background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 16px;
       margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .glass-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.09);
     }
 
     /* ── Metrics Grid ── */
@@ -124,9 +138,11 @@
     .val-green { color: var(--green); }
     .val-red { color: var(--red); }
 
-    /* ── Status Banner ── */
+    /* ── Status Banner (Glass) ── */
     .status-banner {
-      background: var(--card-bg);
+      background: rgba(14, 20, 32, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 12px 16px;
@@ -134,6 +150,7 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
     .status-pill {
       padding: 2px 8px;
@@ -151,11 +168,12 @@
       padding: 10px 12px;
       border-radius: 6px;
       border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
     .highlight-stat .hl-label { font-size: 10px; color: var(--text-sub); }
     .highlight-stat .hl-value { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 2px; }
 
-    /* ── ML Feature Cards ── */
+    /* ── ML Feature Cards (Glass Effect) ── */
     .ml-features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -163,15 +181,23 @@
       margin-top: 12px;
     }
     .ml-card {
-      background: var(--card-bg);
+      background: rgba(14, 20, 32, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 12px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    .ml-num { font-size: 9.5px; color: var(--text-sub); font-weight: 600; letter-spacing: 0.5px; }
+    .ml-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    }
+    .ml-num { font-size: 9.5px; color: var(--blue); font-weight: 600; letter-spacing: 0.5px; opacity: 0.85; }
     .ml-title { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 2px; }
     .ml-desc { font-size: 10.5px; color: var(--text-sub); margin: 3px 0 8px 0; }
     .ml-val {
@@ -195,18 +221,19 @@
       font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
       font-size: 12px;
       outline: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
       transition: border-color 0.15s ease;
     }
     input:focus {
-      border-color: #52525b;
+      border-color: rgba(56, 189, 248, 0.45);
     }
 
-    /* ── Simple Buttons ── */
+    /* ── Buttons (Frosted Glass) ── */
     .btn {
       padding: 7px 14px;
-      background: #27272a;
-      border: 1px solid #3f3f46;
-      color: var(--text);
+      background: rgba(14, 116, 144, 0.16);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      color: #7dd3fc;
       border-radius: 6px;
       font-weight: 500;
       font-size: 12px;
@@ -214,17 +241,24 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: inset 0 1px 0 rgba(56, 189, 248, 0.14), 0 2px 8px rgba(0, 0, 0, 0.25);
       transition: background 0.15s ease, border-color 0.15s ease;
     }
-    .btn:hover { background: #323238; border-color: #52525b; }
+    .btn:hover {
+      background: rgba(14, 116, 144, 0.28);
+      border-color: rgba(56, 189, 248, 0.5);
+    }
     .btn:active { transform: scale(0.99); }
     .btn-secondary {
-      background: transparent;
+      background: rgba(18, 25, 40, 0.55);
       border: 1px solid var(--border);
       color: var(--text-muted);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
     .btn-secondary:hover {
-      background: var(--card-bg);
+      background: rgba(28, 40, 64, 0.65);
       border-color: var(--border-hover);
       color: var(--text);
     }
@@ -236,6 +270,8 @@
       font-size: 12px;
       margin-top: 12px;
       background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       border-radius: 8px;
       overflow: hidden;
       border: 1px solid var(--border);
@@ -333,11 +369,11 @@
       <!-- Provenance -->
       <div class="glass-card">
         <div class="card-title">Coding Provenance</div>
-        <div style="font-size:16px; font-weight:600; margin:4px 0 10px 0;" id="cardStyle">Manual Typing</div>
-        <div style="height:6px; border-radius:3px; background:var(--border); display:flex; overflow:hidden; margin-bottom:10px;">
-          <div id="barManual" style="width:100%; background:#e4e4e7; transition:width 0.3s ease;"></div>
-          <div id="barAi" style="width:0%; background:#94a3b8; transition:width 0.3s ease;"></div>
-          <div id="barPaste" style="width:0%; background:#52525b; transition:width 0.3s ease;"></div>
+        <div style="font-size:16px; font-weight:600; margin:4px 0 10px 0; color:var(--blue);" id="cardStyle">Manual Typing</div>
+        <div style="height:6px; border-radius:3px; background:rgba(20, 28, 44, 0.7); display:flex; overflow:hidden; margin-bottom:10px;">
+          <div id="barManual" style="width:100%; background:var(--blue); transition:width 0.3s ease;"></div>
+          <div id="barAi" style="width:0%; background:#818cf8; transition:width 0.3s ease;"></div>
+          <div id="barPaste" style="width:0%; background:#475569; transition:width 0.3s ease;"></div>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
           <span>Manual: <strong id="lblManual" style="color:var(--text);">100%</strong></span>
@@ -363,7 +399,7 @@
       </div>
 
       <div class="status-banner" style="margin-bottom:14px;">
-        <span style="font-size:12px; color:var(--text);">Interval: <strong id="mlWindowInterval" style="color:var(--text);">Evaluating...</strong></span>
+        <span style="font-size:12px; color:var(--text);">Interval: <strong id="mlWindowInterval" style="color:var(--blue);">Evaluating...</strong></span>
         <span style="font-size:11px; color:var(--text-sub);" id="mlEventsInWindow">0 events in slice</span>
       </div>
 
