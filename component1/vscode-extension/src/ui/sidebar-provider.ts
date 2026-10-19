@@ -62,6 +62,9 @@ export class CollabIntelSidebarProvider implements vscode.WebviewViewProvider {
           if (testRes.success) vscode.window.showInformationMessage(`✅ ${testRes.message}`);
           else vscode.window.showErrorMessage(`❌ ${testRes.message}`);
           break;
+        case 'switchMode':
+          vscode.commands.executeCommand('collabintel.switchMode');
+          break;
         case 'openSetup':
           this._callbacks.openInteractiveDashboard('setup');
           break;

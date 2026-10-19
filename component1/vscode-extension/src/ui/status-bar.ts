@@ -1,13 +1,10 @@
 import * as vscode from 'vscode';
 import { StatusState } from '../types';
 import { getPendingCount } from '../storage/event-store';
+import { getConfig } from '../config/settings';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  STATUS BAR MANAGEMENT (Plan 4 & Plan 6)
-//  Spec text:
-//    - $(check) Telemetry: Synced
-//    - $(cloud-offline) Telemetry: 38 Offline Pending
-//    - $(sync~spin) Telemetry: Syncing...
+//  STATUS BAR MANAGEMENT (Dual-Mode Real vs Experimental)
 // ─────────────────────────────────────────────────────────────────────────────
 
 let statusBarItem: vscode.StatusBarItem;
@@ -25,16 +22,20 @@ export function getSafePendingCount(): number {
 }
 
 /**
- * Format status bar text according to spec.
+ * Format status bar text reflecting active operating mode.
  */
 export function formatStatusBarText(status: TelemetryStatus, pendingCount: number): string {
+  const cfg = getConfig();
+  const isExp = cfg.operatingMode === 'experimental';
+  const prefix = isExp ? '$(beaker) CollabIntel [Exp]' : '$(shield) CollabIntel';
+
   switch (status) {
     case 'synced':
-      return '$(check) Telemetry: Synced';
+      return `${prefix}: Synced`;
     case 'syncing':
-      return '$(sync~spin) Telemetry: Syncing...';
+      return `$(sync~spin) CollabIntel: Syncing...`;
     case 'offline_pending':
-      return `$(cloud-offline) Telemetry: ${pendingCount} Offline Pending`;
+      return `$(cloud-offline) ${prefix}: ${pendingCount} Pending`;
   }
 }
 
@@ -73,25 +74,29 @@ export function updateTelemetryStatusBar(
 
   const count = pendingCount !== undefined ? pendingCount : getSafePendingCount();
 
+  const cfg = getConfig();
+  const isExp = cfg.operatingMode === 'experimental';
+  const modeLabel = isExp ? '[Experimental Mode]' : '[Real Mode]';
+
   switch (status) {
     case 'synced':
       currentStatusState = 'tracking';
       statusBarItem.text = formatStatusBarText('synced', count);
-      statusBarItem.tooltip = 'All telemetry events are synced to the backend. Click to open dashboard.';
+      statusBarItem.tooltip = `CollabIntel ${modeLabel}: All telemetry events are synced. Click to open dashboard.`;
       statusBarItem.backgroundColor = undefined;
       break;
 
     case 'syncing':
       currentStatusState = 'syncing';
       statusBarItem.text = formatStatusBarText('syncing', count);
-      statusBarItem.tooltip = 'Syncing telemetry events to CollabIntel server...';
+      statusBarItem.tooltip = `CollabIntel ${modeLabel}: Syncing telemetry events to server...`;
       statusBarItem.backgroundColor = undefined;
       break;
 
     case 'offline_pending':
       currentStatusState = 'error';
       statusBarItem.text = formatStatusBarText('offline_pending', count);
-      statusBarItem.tooltip = `${count} telemetry event(s) buffered in SQLite. Auto-syncs when online. Click to open dashboard.`;
+      statusBarItem.tooltip = `CollabIntel ${modeLabel}: ${count} event(s) buffered in SQLite. Auto-syncs when online.`;
       statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
       break;
   }

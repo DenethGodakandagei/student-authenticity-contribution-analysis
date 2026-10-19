@@ -52,6 +52,11 @@
         "icon": "$(database)"
       },
       {
+        "command": "collabintel.switchMode",
+        "title": "CollabIntel: Switch Operating Mode (Real vs Experimental)",
+        "icon": "$(gear)"
+      },
+      {
         "command": "collabintel.setupParticipant",
         "title": "Experiment: Set Participant & Task Mode (P01-P20)",
         "icon": "$(account)"
@@ -117,6 +122,19 @@
           "type": "boolean",
           "default": true,
           "description": "If true, only track files inside the workspace folder matching the assignment's linked GitHub repository."
+        },
+        "collabintel.operatingMode": {
+          "type": "string",
+          "enum": [
+            "real",
+            "experimental"
+          ],
+          "enumDescriptions": [
+            "Real Mode: Production academic coursework tracking for assignments and grading.",
+            "Experimental Mode: Research participant pilot study with Task A/B ground truth tagging."
+          ],
+          "default": "real",
+          "description": "Operating mode: 'real' for real student coursework tracking, or 'experimental' for research pilot study."
         }
       }
     }

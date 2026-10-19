@@ -69,6 +69,9 @@ class CollabIntelSidebarProvider {
                     else
                         vscode.window.showErrorMessage(`❌ ${testRes.message}`);
                     break;
+                case 'switchMode':
+                    vscode.commands.executeCommand('collabintel.switchMode');
+                    break;
                 case 'openSetup':
                     this._callbacks.openInteractiveDashboard('setup');
                     break;

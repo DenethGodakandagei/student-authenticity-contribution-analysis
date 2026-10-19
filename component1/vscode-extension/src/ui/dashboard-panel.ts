@@ -107,10 +107,15 @@ export function openInteractiveDashboard(
           authToken: msg.authToken || cfg.get<string>('authToken') || '',
           assignmentId: msg.assignmentId || cfg.get<string>('assignmentId') || '',
           syncIntervalMinutes: 5,
-          trackOnlyLinkedRepo: true
+          trackOnlyLinkedRepo: true,
+          operatingMode: (cfg.get<string>('operatingMode') as 'real' | 'experimental') || 'real'
         };
         const res = await callbacks.testBackendConnection(testConfig);
         panel.webview.postMessage({ type: 'testResult', result: res });
+        break;
+
+      case 'switchMode':
+        vscode.commands.executeCommand('collabintel.switchMode');
         break;
 
       case 'clearOfflineCache':

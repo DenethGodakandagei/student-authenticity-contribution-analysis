@@ -5,7 +5,7 @@ import { StatusState } from '../types';
  */
 export declare function getSafePendingCount(): number;
 /**
- * Format status bar text according to spec.
+ * Format status bar text reflecting active operating mode.
  */
 export declare function formatStatusBarText(status: TelemetryStatus, pendingCount: number): string;
 /**

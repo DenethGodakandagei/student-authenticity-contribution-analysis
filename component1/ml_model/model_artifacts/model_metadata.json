@@ -1,5 +1,5 @@
 {
-  "model_name": "Random Forest (Tuned)",
+  "model_name": "XGBoost (Tuned)",
   "features": [
     "duration_minutes",
     "keystrokes",
@@ -16,6 +16,32 @@
     "files_edited_count"
   ],
   "benchmark_summary": {
+    "XGBoost (Tuned)": {
+      "accuracy": [
+        0.9933,
+        0.0133
+      ],
+      "balanced_accuracy": [
+        0.9944,
+        0.0111
+      ],
+      "roc_auc": [
+        1.0,
+        0.0
+      ],
+      "f1": [
+        0.992,
+        0.016
+      ],
+      "precision": [
+        0.9846,
+        0.0308
+      ],
+      "recall": [
+        1.0,
+        0.0
+      ]
+    },
     "Random Forest (Tuned)": {
       "accuracy": [
         1.0,

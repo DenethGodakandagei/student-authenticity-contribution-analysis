@@ -97,10 +97,14 @@ function openInteractiveDashboard(context, callbacks, initialTab = 'overview') {
                     authToken: msg.authToken || cfg.get('authToken') || '',
                     assignmentId: msg.assignmentId || cfg.get('assignmentId') || '',
                     syncIntervalMinutes: 5,
-                    trackOnlyLinkedRepo: true
+                    trackOnlyLinkedRepo: true,
+                    operatingMode: cfg.get('operatingMode') || 'real'
                 };
                 const res = await callbacks.testBackendConnection(testConfig);
                 panel.webview.postMessage({ type: 'testResult', result: res });
+                break;
+            case 'switchMode':
+                vscode.commands.executeCommand('collabintel.switchMode');
                 break;
             case 'clearOfflineCache':
                 context.globalState.update('offline_sessions', []);

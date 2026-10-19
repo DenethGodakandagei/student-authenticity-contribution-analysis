@@ -367,7 +367,11 @@
         <h1>CollabIntel Dashboard</h1>
         <p>Student Repository Telemetry &amp; Contribution Analytics</p>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-secondary" onclick="postCmd('switchMode')" title="Click to toggle between Real Coursework Mode and Experimental Study Mode">
+          <span id="dashModeIcon">🛡️</span>
+          <span id="dashModeText">Real Mode</span>
+        </button>
         <button class="btn btn-secondary" onclick="postCmd('viewQueueAudit')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Audit Queue
@@ -614,6 +618,21 @@
       document.getElementById('cardKeys').innerText = s.keystrokes || 0;
       document.getElementById('cardAdded').innerText = '+' + (s.linesAdded || 0);
       document.getElementById('cardRemoved').innerText = '-' + (s.linesRemoved || 0);
+
+      // Render Active Operating Mode
+      const isExp = s.operatingMode === 'experimental';
+      const dText = document.getElementById('dashModeText');
+      const dIcon = document.getElementById('dashModeIcon');
+      if (dText && dIcon) {
+        if (isExp) {
+          const pInfo = s.experimentSession ? ` (${s.experimentSession.participantId} - ${s.experimentSession.taskCondition === 'TASK_B_AI' ? 'Task B' : 'Task A'})` : '';
+          dText.innerText = 'Experimental' + pInfo;
+          dIcon.innerText = '🔬';
+        } else {
+          dText.innerText = 'Real Academic Mode';
+          dIcon.innerText = '🛡️';
+        }
+      }
 
       if (s.provenance) {
         document.getElementById('cardStyle').innerHTML = '<span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">' + (s.provenance.style || 'Manual Typing') + '</span>';

@@ -18,12 +18,22 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Any, Union, List
 
-from .config import (
-    MODEL_SAVE_PATH,
-    FEATURE_COLUMNS,
-    LOW_RISK_MAX,
-    HIGH_RISK_MIN
-)
+try:
+    from .config import (
+        MODEL_SAVE_PATH,
+        FEATURE_COLUMNS,
+        LOW_RISK_MAX,
+        HIGH_RISK_MIN,
+        DEFAULT_DATA_PATH
+    )
+except ImportError:
+    from config import (
+        MODEL_SAVE_PATH,
+        FEATURE_COLUMNS,
+        LOW_RISK_MAX,
+        HIGH_RISK_MIN,
+        DEFAULT_DATA_PATH
+    )
 
 
 def classify_risk_tier(prob_percent: float) -> str:
@@ -127,9 +137,10 @@ def demonstrate_predictions(
     sample_indices = np.linspace(0, len(df) - 1, num=min(num_samples, len(df)), dtype=int)
     for idx in sample_indices:
         row = df.iloc[idx]
-        pid = row.get("participant_id", "P01")
-        w_idx = row.get("window_index", 0)
-        label = row.get("label", 0)
+        pid = row.get("student_id", row.get("participant_id", f"S{idx:02d}"))
+        pid_display = (pid[:8] + "..") if isinstance(pid, str) and len(pid) > 10 else str(pid)
+        w_idx = row.get("window_index", idx)
+        label = row.get("authenticity_label", row.get("label", row.get("target", 0)))
         gt_text = "Class 1 (AI/Paste)" if label == 1 else "Class 0 (Manual)"
 
         feat_dict = {col: row.get(col, 0) for col in FEATURE_COLUMNS}
@@ -138,4 +149,13 @@ def demonstrate_predictions(
         p_ai = pred["suspicion_score_percent"]
         tier = pred["risk_tier"]
 
-        print(f"  {pid:<13} #{w_idx:<7} {gt_text:<16} {p_ai:6.2f}%            {tier:<28}")
+        print(f"  {pid_display:<13} #{w_idx:<7} {gt_text:<16} {p_ai:6.2f}%            {tier:<28}")
+
+
+if __name__ == "__main__":
+    csv_target = "preprocessed_features.csv" if os.path.exists("preprocessed_features.csv") else DEFAULT_DATA_PATH
+    print(f"[*] Inference: Loading test samples from '{csv_target}'...")
+    test_df = pd.read_csv(csv_target)
+    bundle = load_model_bundle()
+    demonstrate_predictions(test_df, model_bundle=bundle, num_samples=12)
+

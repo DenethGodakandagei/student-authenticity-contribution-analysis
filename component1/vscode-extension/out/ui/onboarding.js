@@ -23,8 +23,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getExperimentSession = exports.reconfigureParticipant = exports.switchTaskCondition = exports.ensureParticipantSession = exports.validateParticipantId = void 0;
+exports.switchOperatingMode = exports.getExperimentSession = exports.reconfigureParticipant = exports.switchTaskCondition = exports.ensureParticipantSession = exports.validateParticipantId = void 0;
 const vscode = __importStar(require("vscode"));
+const settings_1 = require("../config/settings");
 /**
  * Validates participant ID format (e.g. P01 through P20).
  */
@@ -41,9 +42,18 @@ function validateParticipantId(value) {
 exports.validateParticipantId = validateParticipantId;
 /**
  * Ensure participant ID and task condition are initialized in workspaceState.
- * If not set, triggers modal input prompts on extension startup.
+ * If in Real Mode, skips prompts completely.
+ * If in Experimental Mode, triggers modal prompts if not already configured.
  */
 async function ensureParticipantSession(context) {
+    const cfg = (0, settings_1.getConfig)();
+    if (cfg.operatingMode === 'real') {
+        // Real Academic Coursework Mode: Transparent background tracking, no experimental prompts.
+        return {
+            participantId: 'REAL_STUDENT',
+            taskCondition: 'TASK_A_MANUAL'
+        };
+    }
     let participantId = context.workspaceState.get('telemetry_participant_id');
     let taskCondition = context.workspaceState.get('telemetry_task_condition');
     if (!participantId) {
@@ -142,4 +152,48 @@ function getExperimentSession(context) {
     return { participantId, taskCondition };
 }
 exports.getExperimentSession = getExperimentSession;
+/**
+ * Interactive mode switcher allowing seamless toggle between Real Mode and Experimental Mode.
+ */
+async function switchOperatingMode(context, onModeChanged) {
+    const cfg = (0, settings_1.getConfig)();
+    const currentMode = cfg.operatingMode;
+    const selected = await vscode.window.showQuickPick([
+        {
+            label: '$(shield) Real Mode (Academic Coursework)',
+            description: 'Track real coursework assignments for grading and lecturer verification',
+            detail: 'Connects to your real student account, assignment ID, and repository.',
+            picked: currentMode === 'real',
+            value: 'real'
+        },
+        {
+            label: '$(beaker) Experimental Mode (Research Study)',
+            description: 'Participant P01-P20 study with Latin Square Task A/B tagging',
+            detail: 'Enables ground-truth labeling (0 = Manual, 1 = AI) and dataset export.',
+            picked: currentMode === 'experimental',
+            value: 'experimental'
+        }
+    ], {
+        title: `CollabIntel: Switch Operating Mode (Current: ${currentMode === 'real' ? 'Real Academic' : 'Experimental Study'})`,
+        placeHolder: 'Select active mode for this VS Code session',
+        ignoreFocusOut: true
+    });
+    if (selected && selected.value !== currentMode) {
+        const workspaceConfig = vscode.workspace.getConfiguration('collabintel');
+        await workspaceConfig.update('operatingMode', selected.value, vscode.ConfigurationTarget.Global);
+        if (selected.value === 'experimental') {
+            vscode.window.showInformationMessage('Switched to Experimental Study Mode. Initializing participant setup...');
+            await ensureParticipantSession(context);
+        }
+        else {
+            vscode.window.showInformationMessage('Switched to Real Academic Mode. Connected to your coursework tracking.');
+        }
+        if (onModeChanged) {
+            onModeChanged(selected.value);
+        }
+        return selected.value;
+    }
+    return currentMode;
+}
+exports.switchOperatingMode = switchOperatingMode;
 //# sourceMappingURL=onboarding.js.map
