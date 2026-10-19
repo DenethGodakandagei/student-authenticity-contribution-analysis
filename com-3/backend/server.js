@@ -93,7 +93,7 @@ const DocumentSchema = new mongoose.Schema({
 const Document = mongoose.model('Document', DocumentSchema);
 
 // Permission Checker Helper
-function hasDocumentAccess(doc, username, studentId, role) {
+function hasDocumentAccess(doc, username, studentId, role, email, userObj = null) {
   if (!doc) return false;
   // System Administrators have full superuser access to all documents without restriction
   if (role === 'admin' || (username && username.toLowerCase().trim() === 'admin')) {
@@ -109,30 +109,52 @@ function hasDocumentAccess(doc, username, studentId, role) {
   }
   if (doc.isPublic) return true;
 
-  const cleanUser = username ? username.toLowerCase().trim() : '';
-  const cleanStudentId = studentId ? studentId.toLowerCase().trim() : '';
+  // Gather all possible identifiers representing this user
+  const identifiers = new Set();
+  const addId = (val) => {
+    if (val && typeof val === 'string' && val.trim()) {
+      identifiers.add(val.toLowerCase().trim());
+    }
+  };
 
-  // Owner access
-  if (doc.owner && (doc.owner.toLowerCase() === cleanUser || doc.owner.toLowerCase() === cleanStudentId)) {
-    return true;
+  addId(username);
+  addId(studentId);
+  addId(email);
+
+  if (userObj) {
+    addId(userObj.username);
+    addId(userObj.studentId);
+    addId(userObj.email);
+    addId(userObj.name);
   }
 
-  // Allowed users array check
-  if (doc.allowedUsers && doc.allowedUsers.length > 0) {
-    const isAllowed = doc.allowedUsers.some(u => {
-      const cleanU = u.toLowerCase().trim();
-      return cleanU === cleanUser || cleanU === cleanStudentId;
-    });
-    if (isAllowed) return true;
+  const idList = Array.from(identifiers);
+  if (idList.length === 0) return false;
+
+  const docOwner = (doc.owner || '').toLowerCase().trim();
+  const docOwnerName = (doc.ownerName || '').toLowerCase().trim();
+
+  // 1. Check Owner match
+  for (const id of idList) {
+    if (docOwner === id || docOwner.includes(id) || docOwnerName.includes(id)) {
+      return true;
+    }
   }
 
-  // Collaborators array fallback
-  if (doc.collaborators && doc.collaborators.length > 0) {
-    const isCollab = doc.collaborators.some(c => {
-      const cleanC = c.toLowerCase();
-      return cleanC.includes(cleanUser) || cleanC.includes(cleanStudentId);
-    });
-    if (isCollab) return true;
+  // 2. Check Allowed Users array
+  const allowed = (doc.allowedUsers || []).map(u => (u || '').toLowerCase().trim()).filter(Boolean);
+  for (const id of idList) {
+    if (allowed.some(u => u === id || u.includes(id) || id.includes(u))) {
+      return true;
+    }
+  }
+
+  // 3. Check Collaborators array
+  const collabs = (doc.collaborators || []).map(c => (c || '').toLowerCase().trim()).filter(Boolean);
+  for (const id of idList) {
+    if (collabs.some(c => c === id || c.includes(id) || id.includes(c))) {
+      return true;
+    }
   }
 
   return false;
@@ -299,6 +321,8 @@ io.on('connection', (socket) => {
     let username = null;
     let studentId = null;
     let role = null;
+    let email = null;
+    let name = null;
 
     if (typeof data === 'string') {
       documentId = data;
@@ -307,6 +331,8 @@ io.on('connection', (socket) => {
       username = typeof data.username === 'string' ? data.username : null;
       studentId = typeof data.studentId === 'string' ? data.studentId : null;
       role = typeof data.role === 'string' ? data.role : null;
+      email = typeof data.email === 'string' ? data.email : null;
+      name = typeof data.name === 'string' ? data.name : null;
     }
 
     if (!documentId) return;
@@ -327,9 +353,25 @@ io.on('connection', (socket) => {
       });
     }
 
-    // Security permission guard
-    if (username || studentId || role) {
-      const allowed = hasDocumentAccess(doc, username, studentId, role);
+    // Security permission guard with full alias resolution
+    if (username || studentId || role || email) {
+      let userObj = null;
+      try {
+        const queryConds = [];
+        if (username) queryConds.push({ username: username.toLowerCase().trim() });
+        if (studentId) {
+          queryConds.push({ studentId: studentId.trim() });
+          queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
+        }
+        if (email) queryConds.push({ email: email.toLowerCase().trim() });
+        if (queryConds.length > 0) {
+          userObj = await User.findOne({ $or: queryConds }).lean();
+        }
+      } catch (e) {
+        console.error("User lookup error in join-document:", e);
+      }
+
+      const allowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!allowed) {
         socket.emit('access-denied', {
           error: 'Access Denied: You do not have permission to join this document session.',
@@ -356,9 +398,26 @@ io.on('connection', (socket) => {
     // Calculate diffs and track evolution
     const doc = await Document.findOne({ _id: documentId });
     if (doc) {
-      // Strict Security Guard 2: Verify author access permissions
+      // Strict Security Guard 2: Verify author access permissions with identity alias resolution
       if (author && author !== 'Anonymous') {
-        const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student');
+        let userObj = null;
+        try {
+          const queryConds = [];
+          if (studentId) {
+            queryConds.push({ studentId: studentId.trim() });
+            queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
+            queryConds.push({ username: studentId.toLowerCase().trim() });
+          }
+          if (author) {
+            queryConds.push({ username: author.toLowerCase().trim() });
+            queryConds.push({ name: new RegExp('^' + author.trim() + '$', 'i') });
+          }
+          if (queryConds.length > 0) {
+            userObj = await User.findOne({ $or: queryConds }).lean();
+          }
+        } catch (e) {}
+
+        const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student', null, userObj);
         if (!isPermitted) {
           socket.emit('access-denied', { error: 'Security Violation: You do not have permission to modify this document.' });
           return;
@@ -630,16 +689,70 @@ app.post('/api/documents/create', async (req, res) => {
     const initialAllowed = [cleanOwner, cleanStudentId].filter(Boolean);
     const initialCollabs = [formattedOwnerName];
 
+    // Include owner's full DB aliases (username, studentId, email) so owner is never locked out
+    try {
+      const ownerRecord = await User.findOne({
+        $or: [
+          { username: cleanOwner },
+          { studentId: cleanOwner },
+          cleanStudentId ? { studentId: cleanStudentId } : null,
+          cleanStudentId ? { studentId: new RegExp('^' + cleanStudentId + '$', 'i') } : null
+        ].filter(Boolean)
+      }).lean();
+      if (ownerRecord) {
+        if (ownerRecord.username && !initialAllowed.includes(ownerRecord.username.toLowerCase())) {
+          initialAllowed.push(ownerRecord.username.toLowerCase());
+        }
+        if (ownerRecord.studentId && !initialAllowed.includes(ownerRecord.studentId.toLowerCase())) {
+          initialAllowed.push(ownerRecord.studentId.toLowerCase());
+        }
+        if (ownerRecord.email && !initialAllowed.includes(ownerRecord.email.toLowerCase())) {
+          initialAllowed.push(ownerRecord.email.toLowerCase());
+        }
+      }
+    } catch (e) {}
+
     // If assignedTo array passed from lecturer, add all students
     const targetMembers = Array.isArray(assignedTo) && assignedTo.length > 0 ? assignedTo : members;
-    if (Array.isArray(targetMembers) && targetMembers.length > 0) {
-      targetMembers.forEach(m => {
-        if (m && typeof m === 'string') {
-          const cleanM = m.toLowerCase().trim();
-          if (!initialAllowed.includes(cleanM)) initialAllowed.push(cleanM);
-          if (!initialCollabs.includes(m)) initialCollabs.push(m);
+    let memberList = [];
+    if (Array.isArray(targetMembers)) {
+      memberList = targetMembers;
+    } else if (typeof targetMembers === 'string' && targetMembers.trim()) {
+      memberList = targetMembers.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+    }
+
+    for (const m of memberList) {
+      if (!m || typeof m !== 'string') continue;
+      const cleanM = m.toLowerCase().trim();
+      if (!cleanM) continue;
+
+      const foundUser = await User.findOne({
+        $or: [
+          { username: cleanM },
+          { studentId: cleanM },
+          { email: cleanM },
+          { name: new RegExp('^' + cleanM + '$', 'i') }
+        ]
+      }).lean();
+
+      if (foundUser) {
+        if (foundUser.username && !initialAllowed.includes(foundUser.username.toLowerCase())) {
+          initialAllowed.push(foundUser.username.toLowerCase());
         }
-      });
+        if (foundUser.studentId && !initialAllowed.includes(foundUser.studentId.toLowerCase())) {
+          initialAllowed.push(foundUser.studentId.toLowerCase());
+        }
+        if (foundUser.email && !initialAllowed.includes(foundUser.email.toLowerCase())) {
+          initialAllowed.push(foundUser.email.toLowerCase());
+        }
+        const displayName = `${foundUser.name} (${foundUser.studentId})`;
+        if (!initialCollabs.includes(displayName)) {
+          initialCollabs.push(displayName);
+        }
+      } else {
+        if (!initialAllowed.includes(cleanM)) initialAllowed.push(cleanM);
+        if (!initialCollabs.includes(m.trim())) initialCollabs.push(m.trim());
+      }
     }
 
     const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
@@ -718,10 +831,10 @@ app.post('/api/documents/:id/grade', async (req, res) => {
 
 app.get('/api/documents', async (req, res) => {
   try {
-    const { username, studentId, role } = req.query;
+    const { username, studentId, role, email } = req.query;
 
     // Security Gate: Without logging in, do NOT expose any documents or assignments
-    if (!username && !studentId && !role) {
+    if (!username && !studentId && !role && !email) {
       return res.json([]);
     }
 
@@ -732,8 +845,24 @@ app.get('/api/documents', async (req, res) => {
       return res.json(allDocs);
     }
 
+    // Resolve user in database to retrieve all registered aliases (username, studentId, email, name)
+    let userObj = null;
+    const cleanUser = username ? username.toLowerCase().trim() : '';
+    const cleanStudentId = studentId ? studentId.trim() : '';
+    const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+    if (cleanUser || cleanStudentId || cleanEmail) {
+      userObj = await User.findOne({
+        $or: [
+          cleanUser ? { username: cleanUser } : null,
+          cleanStudentId ? { studentId: cleanStudentId } : null,
+          cleanEmail ? { email: cleanEmail } : null
+        ].filter(Boolean)
+      }).lean();
+    }
+
     // Students only see assignments relevant to their enrollment or ownership
-    const filtered = allDocs.filter(doc => hasDocumentAccess(doc, username, studentId, role));
+    const filtered = allDocs.filter(doc => hasDocumentAccess(doc, username, studentId, role, email, userObj));
     res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -991,7 +1120,7 @@ app.post('/api/admin/users/:id/role', async (req, res) => {
 
 app.get('/api/documents/:id', async (req, res) => {
   try {
-    const { username, studentId, role } = req.query;
+    const { username, studentId, role, email } = req.query;
     const doc = await Document.findOne({ _id: req.params.id }).lean();
     if (!doc) {
       return res.status(404).json({ error: "Document not found" });
@@ -1003,8 +1132,23 @@ app.get('/api/documents/:id', async (req, res) => {
     }
 
     // Access control check for students
-    if (username || studentId || role) {
-      const allowed = hasDocumentAccess(doc, username, studentId, role);
+    if (username || studentId || role || email) {
+      let userObj = null;
+      const cleanUser = username ? username.toLowerCase().trim() : '';
+      const cleanStudentId = studentId ? studentId.trim() : '';
+      const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+      if (cleanUser || cleanStudentId || cleanEmail) {
+        userObj = await User.findOne({
+          $or: [
+            cleanUser ? { username: cleanUser } : null,
+            cleanStudentId ? { studentId: cleanStudentId } : null,
+            cleanEmail ? { email: cleanEmail } : null
+          ].filter(Boolean)
+        }).lean();
+      }
+
+      const allowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!allowed) {
         return res.status(403).json({
           error: "Access Denied: You do not have permission to view or edit this document.",
@@ -1022,15 +1166,30 @@ app.get('/api/documents/:id', async (req, res) => {
 
 app.delete('/api/documents/:id', async (req, res) => {
   try {
-    const { username, studentId, role } = req.query;
+    const { username, studentId, role, email } = req.query;
     const doc = await Document.findOne({ _id: req.params.id });
     if (!doc) {
       return res.status(404).json({ error: "Document not found" });
     }
 
     // Permission check: Owner, allowed user, or lecturer can delete
-    if (username || studentId || role) {
-      const isAllowed = hasDocumentAccess(doc, username, studentId, role);
+    if (username || studentId || role || email) {
+      let userObj = null;
+      const cleanUser = username ? username.toLowerCase().trim() : '';
+      const cleanStudentId = studentId ? studentId.trim() : '';
+      const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+      if (cleanUser || cleanStudentId || cleanEmail) {
+        userObj = await User.findOne({
+          $or: [
+            cleanUser ? { username: cleanUser } : null,
+            cleanStudentId ? { studentId: cleanStudentId } : null,
+            cleanEmail ? { email: cleanEmail } : null
+          ].filter(Boolean)
+        }).lean();
+      }
+
+      const isAllowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!isAllowed) {
         return res.status(403).json({ error: "Permission Denied: Only document owners, group members, or lecturers can delete this document." });
       }
@@ -1048,7 +1207,7 @@ app.delete('/api/documents/:id', async (req, res) => {
 
 app.put('/api/documents/:id/rename', async (req, res) => {
   try {
-    const { title, username, studentId, role } = req.body;
+    const { title, username, studentId, role, email } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: "Document title cannot be empty." });
     }
@@ -1059,8 +1218,23 @@ app.put('/api/documents/:id/rename', async (req, res) => {
     }
 
     // Permission check
-    if (username || studentId || role) {
-      const isAllowed = hasDocumentAccess(doc, username, studentId, role);
+    if (username || studentId || role || email) {
+      let userObj = null;
+      const cleanUser = username ? username.toLowerCase().trim() : '';
+      const cleanStudentId = studentId ? studentId.trim() : '';
+      const cleanEmail = email ? email.toLowerCase().trim() : '';
+
+      if (cleanUser || cleanStudentId || cleanEmail) {
+        userObj = await User.findOne({
+          $or: [
+            cleanUser ? { username: cleanUser } : null,
+            cleanStudentId ? { studentId: cleanStudentId } : null,
+            cleanEmail ? { email: cleanEmail } : null
+          ].filter(Boolean)
+        }).lean();
+      }
+
+      const isAllowed = hasDocumentAccess(doc, username, studentId, role, email, userObj);
       if (!isAllowed) {
         return res.status(403).json({ error: "Permission Denied: Only document owners or group members can rename this document." });
       }
@@ -1078,7 +1252,7 @@ app.put('/api/documents/:id/rename', async (req, res) => {
 
 app.post('/api/documents/:id/share', async (req, res) => {
   try {
-    const { currentUsername, targetUserIdentifier, action } = req.body;
+    const { currentUsername, currentStudentId, currentUserEmail, currentRole, targetUserIdentifier, action } = req.body;
     if (!targetUserIdentifier) {
       return res.status(400).json({ error: 'Target student identifier (Username, Student ID, or Email) is required.' });
     }
@@ -1088,47 +1262,88 @@ app.post('/api/documents/:id/share', async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    // Permission check for managing shares
+    // Permission check for managing shares:
+    let requesterUserObj = null;
     const cleanRequester = currentUsername ? currentUsername.toLowerCase().trim() : '';
-    if (doc.owner && doc.owner !== 'system' && doc.owner.toLowerCase() !== cleanRequester) {
-      const isRequesterAllowed = doc.allowedUsers.some(u => u.toLowerCase() === cleanRequester);
-      if (!isRequesterAllowed) {
-        return res.status(403).json({ error: 'Only the document owner or group members can manage sharing permissions.' });
-      }
+    const cleanStudentId = currentStudentId ? currentStudentId.trim() : '';
+    const cleanEmail = currentUserEmail ? currentUserEmail.toLowerCase().trim() : '';
+
+    if (cleanRequester || cleanStudentId || cleanEmail) {
+      requesterUserObj = await User.findOne({
+        $or: [
+          cleanRequester ? { username: cleanRequester } : null,
+          cleanStudentId ? { studentId: cleanStudentId } : null,
+          cleanStudentId ? { studentId: new RegExp('^' + cleanStudentId + '$', 'i') } : null,
+          cleanEmail ? { email: cleanEmail } : null
+        ].filter(Boolean)
+      }).lean();
     }
 
-    const cleanTarget = targetUserIdentifier.toLowerCase().trim();
-    
-    // Find target user in database
-    const targetUser = await User.findOne({
-      $or: [
-        { username: cleanTarget },
-        { studentId: cleanTarget },
-        { email: cleanTarget },
-        { name: new RegExp('^' + cleanTarget + '$', 'i') }
-      ]
-    });
+    const isPermitted = hasDocumentAccess(doc, currentUsername, currentStudentId, currentRole, currentUserEmail, requesterUserObj);
+    if (!isPermitted && doc.owner && doc.owner !== 'system') {
+      return res.status(403).json({ error: 'Only the document owner, group members, or evaluators can manage sharing permissions.' });
+    }
 
-    const targetKey = targetUser ? targetUser.username : cleanTarget;
-    const targetStudentId = targetUser ? targetUser.studentId : '';
-    const targetDisplayName = targetUser ? `${targetUser.name} (${targetUser.studentId})` : cleanTarget;
+    // Parse targetUserIdentifier into array of entries
+    let targets = [];
+    if (Array.isArray(targetUserIdentifier)) {
+      targets = targetUserIdentifier;
+    } else if (typeof targetUserIdentifier === 'string') {
+      targets = targetUserIdentifier.split(/[,;\n\r\t]+/).map(s => s.trim()).filter(Boolean);
+    }
 
-    if (action === 'remove') {
-      doc.allowedUsers = doc.allowedUsers.filter(u => 
-        u.toLowerCase() !== targetKey.toLowerCase() && 
-        u.toLowerCase() !== cleanTarget &&
-        (!targetStudentId || u.toLowerCase() !== targetStudentId.toLowerCase())
-      );
-      doc.collaborators = doc.collaborators.filter(c => !c.toLowerCase().includes(cleanTarget));
-    } else {
-      if (!doc.allowedUsers.includes(targetKey)) {
-        doc.allowedUsers.push(targetKey);
+    const addedSummary = [];
+
+    for (const rawTarget of targets) {
+      const cleanTarget = rawTarget.toLowerCase().trim();
+      if (!cleanTarget) continue;
+
+      // Find target user in database by username, studentId, email, or name
+      const targetUser = await User.findOne({
+        $or: [
+          { username: cleanTarget },
+          { studentId: cleanTarget },
+          { studentId: new RegExp('^' + cleanTarget + '$', 'i') },
+          { email: cleanTarget },
+          { name: new RegExp('^' + cleanTarget + '$', 'i') }
+        ]
+      }).lean();
+
+      const userAliases = new Set([cleanTarget]);
+      let displayName = rawTarget.trim();
+
+      if (targetUser) {
+        if (targetUser.username) userAliases.add(targetUser.username.toLowerCase());
+        if (targetUser.studentId) {
+          userAliases.add(targetUser.studentId.toLowerCase());
+          userAliases.add(targetUser.studentId);
+        }
+        if (targetUser.email) userAliases.add(targetUser.email.toLowerCase());
+        displayName = `${targetUser.name} (${targetUser.studentId || targetUser.username})`;
       }
-      if (targetStudentId && !doc.allowedUsers.includes(targetStudentId)) {
-        doc.allowedUsers.push(targetStudentId);
-      }
-      if (!doc.collaborators.includes(targetDisplayName)) {
-        doc.collaborators.push(targetDisplayName);
+
+      if (action === 'remove') {
+        const aliasList = Array.from(userAliases);
+        doc.allowedUsers = doc.allowedUsers.filter(u => {
+          const lowerU = (u || '').toLowerCase().trim();
+          return !aliasList.includes(lowerU);
+        });
+        doc.collaborators = doc.collaborators.filter(c => {
+          const lowerC = (c || '').toLowerCase().trim();
+          return !aliasList.some(alias => lowerC.includes(alias));
+        });
+      } else {
+        // Add all aliases to allowedUsers
+        for (const alias of userAliases) {
+          if (!doc.allowedUsers.some(u => (u || '').toLowerCase() === alias)) {
+            doc.allowedUsers.push(alias);
+          }
+        }
+        // Add formatted display name to collaborators
+        if (!doc.collaborators.some(c => (c || '').toLowerCase() === displayName.toLowerCase())) {
+          doc.collaborators.push(displayName);
+        }
+        addedSummary.push(displayName);
       }
     }
 
@@ -1136,7 +1351,7 @@ app.post('/api/documents/:id/share', async (req, res) => {
     await doc.save();
 
     res.json({
-      message: action === 'remove' ? 'Access permission revoked' : 'Permission granted successfully',
+      message: action === 'remove' ? 'Access permission revoked' : `Permission granted successfully to ${addedSummary.join(', ')}`,
       document: doc,
       allowedUsers: doc.allowedUsers,
       collaborators: doc.collaborators

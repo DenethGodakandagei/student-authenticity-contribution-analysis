@@ -56,12 +56,14 @@ function DashboardComponent() {
   const [studentSearch, setStudentSearch] = useState('');
   const [teamTargetDocId, setTeamTargetDocId] = useState<string>('');
   const [selectedStudentForAdd, setSelectedStudentForAdd] = useState<string>('');
+  const [manualStudentInput, setManualStudentInput] = useState<string>('');
 
   // Create Assignment / Document states
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocPrompt, setNewDocPrompt] = useState('');
   const [newDocSource, setNewDocSource] = useState('in_built');
   const [selectedNewMembers, setSelectedNewMembers] = useState<string[]>([]);
+  const [customMemberInput, setCustomMemberInput] = useState<string>('');
   const [createLoading, setCreateLoading] = useState(false);
 
   // Share Modal State
@@ -106,6 +108,7 @@ function DashboardComponent() {
       const params = new URLSearchParams();
       if (user.username) params.append('username', user.username);
       if (user.studentId) params.append('studentId', user.studentId);
+      if (user.email) params.append('email', user.email);
       if (user.role) params.append('role', user.role);
       url += `?${params.toString()}`;
 
@@ -190,7 +193,7 @@ function DashboardComponent() {
   // Handle adding student to document
   const handleAddStudentToDoc = async (targetId: string, identifier: string) => {
     if (!identifier || !targetId) {
-      showToast("Please select both a document and a student.", "error", "Selection Required");
+      showToast("Please specify both a target document and a student ID / email.", "error", "Selection Required");
       return;
     }
     try {
@@ -198,15 +201,19 @@ function DashboardComponent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentUsername: user?.username || user?.studentId || '',
+          currentUsername: user?.username || '',
+          currentStudentId: user?.studentId || '',
+          currentUserEmail: user?.email || '',
+          currentRole: user?.role || '',
           targetUserIdentifier: identifier.trim(),
           action: 'add'
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add student");
-      showToast(`Student "${identifier}" successfully added to document!`, "success", "Student Added");
+      showToast(`Member "${identifier}" successfully added to document!`, "success", "Member Added");
       setSelectedStudentForAdd('');
+      setManualStudentInput('');
       await loadDocuments();
     } catch (err: any) {
       showToast(err.message, "error", "Failed to Add Student");
@@ -221,7 +228,10 @@ function DashboardComponent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentUsername: user?.username || user?.studentId || '',
+          currentUsername: user?.username || '',
+          currentStudentId: user?.studentId || '',
+          currentUserEmail: user?.email || '',
+          currentRole: user?.role || '',
           targetUserIdentifier: identifier.trim(),
           action: 'remove'
         })
@@ -244,6 +254,9 @@ function DashboardComponent() {
     }
     setCreateLoading(true);
     try {
+      const parsedCustom = customMemberInput.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      const combinedMembers = Array.from(new Set([...selectedNewMembers, ...parsedCustom]));
+
       const res = await fetch(`${API_BASE}/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,7 +269,7 @@ function DashboardComponent() {
           ownerName: user?.name || user?.username || 'Student Leader',
           studentId: user?.studentId || '',
           source: newDocSource,
-          members: selectedNewMembers
+          members: combinedMembers
         })
       });
       const data = await res.json();
@@ -265,6 +278,7 @@ function DashboardComponent() {
       setNewDocTitle('');
       setNewDocPrompt('');
       setSelectedNewMembers([]);
+      setCustomMemberInput('');
       await loadDocuments();
       router.push(`/editor?docId=${data.document._id}`);
     } catch (err: any) {
@@ -310,7 +324,9 @@ function DashboardComponent() {
 
     const isOwner = user && (
       (d.owner && d.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
+      (d.owner && user.email && d.owner.toLowerCase() === user.email.toLowerCase()) ||
+      (d.ownerName && user.name && d.ownerName.toLowerCase().includes(user.name.toLowerCase()))
     );
 
     if (docFilter === 'led') return isOwner;
@@ -1154,7 +1170,9 @@ function DashboardComponent() {
                 {filteredDocs.map((doc: any) => {
                   const isOwner = user && (
                     (doc.owner && doc.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase())
+                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
+                    (doc.owner && user.email && doc.owner.toLowerCase() === user.email.toLowerCase()) ||
+                    (doc.ownerName && user.name && doc.ownerName.toLowerCase().includes(user.name.toLowerCase()))
                   );
 
                   return (
@@ -1343,7 +1361,7 @@ function DashboardComponent() {
                         </div>
 
                         {/* Leader Quick Share / Add Member */}
-                        {isOwner && (
+                        {(isOwner || isUserLeader) && (
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <button
                               onClick={() => {
@@ -1361,7 +1379,7 @@ function DashboardComponent() {
                                 cursor: 'pointer'
                               }}
                             >
-                              + Add Teammate
+                              + Add Member
                             </button>
 
                             <button
@@ -1419,10 +1437,10 @@ function DashboardComponent() {
                 </h4>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr auto', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
-                    1. Select Target Document
+                    1. Target Assignment / Document
                   </label>
                   <select
                     value={teamTargetDocId}
@@ -1430,9 +1448,9 @@ function DashboardComponent() {
                     style={{
                       width: '100%',
                       background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: '1.5px solid #e2e8f0',
                       borderRadius: '8px',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.65rem 0.85rem',
                       fontSize: '0.85rem',
                       color: '#0f172a',
                       fontWeight: 600
@@ -1448,23 +1466,26 @@ function DashboardComponent() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
-                    2. Select Registered Student / Classmate
+                    2. Choose Registered Classmate
                   </label>
                   <select
                     value={selectedStudentForAdd}
-                    onChange={e => setSelectedStudentForAdd(e.target.value)}
+                    onChange={e => {
+                      setSelectedStudentForAdd(e.target.value);
+                      if (e.target.value) setManualStudentInput('');
+                    }}
                     style={{
                       width: '100%',
                       background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: '1.5px solid #e2e8f0',
                       borderRadius: '8px',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.65rem 0.85rem',
                       fontSize: '0.85rem',
                       color: '#0f172a',
                       fontWeight: 600
                     }}
                   >
-                    <option value="">-- Choose a student to add --</option>
+                    <option value="">-- Choose student from directory --</option>
                     {registeredStudents.map((st: any) => (
                       <option key={st._id} value={st.username || st.studentId}>
                         {st.name} ({st.studentId}) &bull; {st.email}
@@ -1473,23 +1494,54 @@ function DashboardComponent() {
                   </select>
                 </div>
 
-                <div style={{ paddingTop: '1.35rem' }}>
-                  <button
-                    onClick={() => handleAddStudentToDoc(teamTargetDocId, selectedStudentForAdd)}
-                    disabled={!selectedStudentForAdd}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: '0.35rem' }}>
+                    OR Enter IT Number / Student ID / Email
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. IT23217522 or student@sliit.lk"
+                    value={manualStudentInput}
+                    onChange={e => {
+                      setManualStudentInput(e.target.value);
+                      if (e.target.value) setSelectedStudentForAdd('');
+                    }}
                     style={{
-                      background: selectedStudentForAdd ? '#a3e635' : '#e2e8f0',
-                      color: selectedStudentForAdd ? '#121417' : '#94a3b8',
+                      width: '100%',
+                      background: '#f8fafc',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.85rem',
+                      color: '#0f172a',
+                      fontWeight: 600,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => {
+                      const idToAdd = manualStudentInput.trim() || selectedStudentForAdd;
+                      handleAddStudentToDoc(teamTargetDocId, idToAdd);
+                    }}
+                    disabled={!manualStudentInput.trim() && !selectedStudentForAdd}
+                    style={{
+                      width: '100%',
+                      background: (manualStudentInput.trim() || selectedStudentForAdd) ? '#a3e635' : '#e2e8f0',
+                      color: (manualStudentInput.trim() || selectedStudentForAdd) ? '#121417' : '#94a3b8',
                       border: 'none',
                       borderRadius: '8px',
-                      padding: '0.6rem 1.25rem',
+                      padding: '0.65rem 1.25rem',
                       fontSize: '0.85rem',
                       fontWeight: 800,
-                      cursor: selectedStudentForAdd ? 'pointer' : 'not-allowed',
+                      cursor: (manualStudentInput.trim() || selectedStudentForAdd) ? 'pointer' : 'not-allowed',
+                      boxShadow: (manualStudentInput.trim() || selectedStudentForAdd) ? '0 2px 8px rgba(163, 230, 53, 0.35)' : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    Add to Group
+                    + Add Member to Group
                   </button>
                 </div>
               </div>
@@ -1797,6 +1849,32 @@ function DashboardComponent() {
                         </label>
                       );
                     })}
+                  </div>
+                </div>
+
+                {/* Direct IT Number / Email input for assignment creation */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                    Or Enter Additional IT Numbers / Emails / Usernames (comma or space separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. IT23217522, student@sliit.lk, rashi"
+                    value={customMemberInput}
+                    onChange={e => setCustomMemberInput(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 0.9rem',
+                      borderRadius: '8px',
+                      border: '1.5px solid #e2e8f0',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      fontSize: '0.9rem',
+                      outline: 'none'
+                    }}
+                  />
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem' }}>
+                    Assigned students can immediately view and edit this assignment upon signing in, even if they register later.
                   </div>
                 </div>
 

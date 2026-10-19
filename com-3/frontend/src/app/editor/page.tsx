@@ -430,7 +430,7 @@ function EditorComponent() {
 
   const fetchDocs = () => {
     if (!user) return;
-    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
     fetch(`${getSocketUrl()}/api/documents?${query}`)
       .then(res => res.json())
       .then(data => {
@@ -438,12 +438,7 @@ function EditorComponent() {
         setAvailableDocs(docs);
         if (docs.length > 0) {
           if (docIdParam) {
-            const hasParam = docs.some((d: any) => d._id === docIdParam);
-            if (hasParam) {
-              setSelectedDocId(docIdParam);
-            } else {
-              setSelectedDocId(docs[0]._id);
-            }
+            setSelectedDocId(docIdParam);
           } else {
             setSelectedDocId(prev => {
               const stillValid = docs.some((d: any) => d._id === prev);
@@ -467,7 +462,7 @@ function EditorComponent() {
     if (!selectedDocId || !user) return;
     setAccessDenied(false);
 
-    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
     fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`)
       .then(async res => {
         const data = await res.json();
@@ -593,6 +588,7 @@ function EditorComponent() {
         documentId: selectedDocId,
         username: user.username,
         studentId: user.studentId,
+        email: user.email,
         name: user.name,
         role: user.role
       });
@@ -938,7 +934,7 @@ function EditorComponent() {
       onConfirm: async () => {
         setConfirmDialog((prev: any) => ({ ...prev, isOpen: false }));
         try {
-          const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&role=${encodeURIComponent(user.role || '')}`;
+          const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
           const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`, {
             method: 'DELETE'
           });

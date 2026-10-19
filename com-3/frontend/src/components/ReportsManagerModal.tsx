@@ -59,8 +59,9 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
     try {
       const uName = user.username || '';
       const sId = user.studentId || '';
+      const uEmail = user.email || '';
       const uRole = user.role || '';
-      const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&role=${encodeURIComponent(uRole)}`;
+      const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&email=${encodeURIComponent(uEmail)}&role=${encodeURIComponent(uRole)}`;
       const res = await fetch(`${getBackendUrl()}/api/documents?${query}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load documents');
@@ -101,6 +102,7 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
               title: newTitle.trim(),
               username: user?.username,
               studentId: user?.studentId,
+              email: user?.email,
               role: user?.role
             })
           });
@@ -135,8 +137,9 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
         try {
           const uName = user?.username || '';
           const sId = user?.studentId || '';
+          const uEmail = user?.email || '';
           const uRole = user?.role || '';
-          const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&role=${encodeURIComponent(uRole)}`;
+          const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&email=${encodeURIComponent(uEmail)}&role=${encodeURIComponent(uRole)}`;
           const res = await fetch(`${getBackendUrl()}/api/documents/${docId}?${query}`, {
             method: 'DELETE'
           });
