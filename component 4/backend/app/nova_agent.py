@@ -8,6 +8,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.llm import BaseLLMProvider, get_llm_provider, generate_json
+from app.detector import detect_misconceptions_checked
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -363,8 +364,10 @@ INSTRUCTIONS FOR NOVA:
 4. Only after that, if you still hold other active beliefs, you may briefly mention one of them.
 5. If the other person's message is short, vague, or only partly correct, push back politely instead
    of accepting it, based on your current beliefs.
-6. When you give an explanation or example, use MY CURRENT BELIEFS above, not the correct facts,
-   unless the concept is listed under CONCEPTS I HAVE ALREADY LEARNED.
+6. If the message is about a concept you have a belief about (listed under MY CURRENT BELIEFS above),
+   you MUST apply that belief in one short sentence or a tiny example right after reacting, for example
+   "so I would write ...". Use MY CURRENT BELIEFS, not the correct facts. Never say the correct answer
+   for a belief you still hold; only CONCEPTS I HAVE ALREADY LEARNED may be stated correctly.
 7. When the other person clearly and fully corrects one of your beliefs, show a realistic moment
    of understanding and restate the corrected idea in your own words.
 8. If WHAT IS HAPPENING RIGHT NOW gives you a question to ask, ask that question word for word.
@@ -440,19 +443,26 @@ Return ONLY valid JSON:
         Builds the prompt that generates the 3 check questions for a misconception
         that has just entered testing. Only the source quote and the correct
         concept are used as the source of truth.
+
+        The questions are "what would happen if..." scenario questions built on a
+        NEW example the teacher did not use, so the first question cannot be
+        answered by repeating the teacher's last message.
         """
         avoid_block = f"""
-THE STUDENT'S OWN WORDING (do NOT repeat or copy this wording in your questions):
+THE TEACHER'S LAST MESSAGE (do NOT reuse its example or wording in your questions):
 "{avoid_wording}"
 """ if avoid_wording else ""
 
         return f"""
 You write check questions for a tutor who is teaching Nova.
 Write EXACTLY 3 check questions for the misconception below. All 3 must test the SAME concept
-in three different ways:
-  1. a definition question (what is / what does X mean),
-  2. a "what happens if..." scenario question,
+and must be DIFFERENT from each other:
+  1. a "what would happen if..." scenario question built on a NEW concrete example that the
+     teacher never mentioned (for example a different class/object than the teacher used),
+  2. another "what would happen if..." scenario question built on a DIFFERENT new example,
   3. a "which statement is true" question.
+The FIRST question must not be answerable by repeating or paraphrasing the teacher's last message:
+the student has to apply the concept to the new example instead.
 Use ONLY the source quote and the correct concept below as the source of truth; invent nothing.
 Each question must be answerable from the source quote, and each expected_answer must be a short
 correct answer taken from the source quote.
@@ -691,8 +701,9 @@ Return ONLY valid JSON:
             outcome["check_result"] = "passed"
             outcome["newly_corrected_ids"] = [m.id]
             outcome["situation"] = (
-                "You have just understood the correct idea. Show a realistic moment of understanding "
-                "and restate the corrected idea in your own words."
+                "You have just understood the correct idea. In 1-2 sentences, confirm that you now "
+                "understand and restate the corrected idea in your own words. Do NOT ask any new "
+                "question and do not express confusion - just show that you get it."
             )
             return outcome
 
@@ -763,13 +774,15 @@ Return ONLY valid JSON:
 
     def respond(self, user_message: str) -> Dict[str, Any]:
         """
-        Main interaction method (adaptive question gate):
+        Main interaction method (adaptive question gate + misconception detection):
         1. If a misconception is being tested, the message is judged as the ANSWER
            to the current check question (pass / fail / needs_review).
         2. Otherwise the message is teaching: the concept-targeted correction check
            decides whether a misconception moves from active to testing.
         3. Generates Nova's in-character reply (including the check question to ask).
-        4. Appends the turn to the history and returns progress + gate fields.
+        4. When the reply is not a check question, the Stage 6 detector checks
+           whether any still-held misconception remains in her reply (read-only).
+        5. Appends the turn to the history and returns progress + gate fields.
         """
         if not user_message or not user_message.strip():
             raise ValueError("User message cannot be empty.")
@@ -794,6 +807,32 @@ Return ONLY valid JSON:
         self.state.conversation_history.append({"role": "teacher", "content": user_message})
         self.state.conversation_history.append({"role": "nova", "content": raw_response})
         self._log_event({"type": "nova_reply", "text": raw_response})
+
+        # Step 4: Stage 6 - Misconception Detection on Nova's reply (read-only).
+        # Runs only when the reply is NOT a check question and at least one
+        # misconception is still active; it never changes any status.
+        detection: List[Dict[str, Any]] = []
+        hold = [m for m in self.state.misconceptions if m.status in ("active", "testing")]
+        if not outcome.get("check_question") and any(m.status == "active" for m in hold):
+            targets = [
+                {"id": m.id, "concept": m.concept, "wrong_belief": m.wrong_concept,
+                 "correct_concept": m.correct_concept}
+                for m in hold
+            ]
+            try:
+                detection, detection_error = detect_misconceptions_checked(
+                    raw_response, user_message, targets, provider=self.provider
+                )
+            except Exception as e:  # defensive: detection must never break a turn
+                detection_error = str(e)
+                detection = [
+                    {"id": t["id"], "still_present": True, "evidence": "", "confidence": 0.0}
+                    for t in targets
+                ]
+            if detection_error:
+                self._log_event({"type": "detector_error", "error": detection_error})
+            self._log_event({"type": "detection", "results": detection})
+
         self.state.updated_at = datetime.now().isoformat()
 
         unresolved = self.get_unresolved_misconceptions()
@@ -813,6 +852,7 @@ Return ONLY valid JSON:
             "check_result": outcome["check_result"],
             "check_feedback": outcome["check_feedback"],
             "understanding": understanding_summary(self.state),
+            "detection": detection,
             "state": self.to_dict()
         }
 

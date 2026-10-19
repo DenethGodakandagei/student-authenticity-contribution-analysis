@@ -2,12 +2,13 @@
 'use client';
 
 import { useState } from 'react';
-import { apiRequest } from "../utils/api";
+import { authHeaders } from "../utils/api";
 import { useRouter } from 'next/navigation';
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,18 +19,24 @@ export default function UploadForm() {
     formData.append('file', file);
 
     setLoading(true);
+    setError('');
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/upload-material`,
         {
           method: 'POST',
           body: formData,
+          headers: authHeaders(),
         }
       );
-      const { session_id } = await res.json();
-      router.push(`/session/${session_id}/chat`);
+      const data = await res.json();
+      if (!res.ok || !data.session_id) {
+        throw new Error(data.detail ?? 'Upload failed. Please try again.');
+      }
+      router.push(`/session/${data.session_id}/chat`);
     } catch (err) {
       console.error(err);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -45,6 +52,11 @@ export default function UploadForm() {
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         className="mb-4"
       />
+      {error && (
+        <p className="mb-4 rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          {error}
+        </p>
+      )}
       <button type="submit" className="button" disabled={loading}>
         {loading ? <span className="spinner" /> : 'Start Session'}
       </button>

@@ -114,6 +114,16 @@ class MockProvider(BaseLLMProvider):
         return json.dumps({"results": self.check_results})
 
 
+def _assert_events_in_order(events, required):
+    """Required event types must appear in this order; extra events are allowed."""
+    types = [e["type"] for e in events]
+    pos = 0
+    for event_type in types:
+        if pos < len(required) and event_type == required[pos]:
+            pos += 1
+    assert pos == len(required), f"missing or out-of-order events: wanted {required}, got {types}"
+
+
 def _assert_learned_only_after_passed_answer(nova):
     """'learned' may only ever follow a logged answer_judged event with passed=true."""
     events = nova.state.events
@@ -230,8 +240,10 @@ def test_chat_turn_events_and_state(check=True):
     assert result["understanding"]["overall_score"] is None
 
     # Events: teacher_message, check_result, status_change, question_asked, nova_reply.
-    types = [e["type"] for e in nova.state.events]
-    assert types == ["teacher_message", "check_result", "status_change", "question_asked", "nova_reply"], types
+    _assert_events_in_order(
+        nova.state.events,
+        ["teacher_message", "check_result", "status_change", "question_asked", "nova_reply"],
+    )
     for e in nova.state.events:
         assert e["time"], "event missing time"
     assert nova.state.events[1]["results"][0]["id"] == "m1"
@@ -266,7 +278,9 @@ def test_correction_check_failure_is_non_fatal():
     assert result["newly_corrected_ids"] == []
     assert result["check_question"] is None and result["check_result"] is None
     assert all(m.status == "active" for m in nova.state.misconceptions)
-    assert [e["type"] for e in nova.state.events] == ["teacher_message", "check_result", "nova_reply"]
+    _assert_events_in_order(
+        nova.state.events, ["teacher_message", "check_result", "nova_reply"]
+    )
     assert nova.state.events[1]["error"], "failed check must log the error"
     print("  OK broken correction-check JSON is tolerated (no state change, event logged).")
 
@@ -287,7 +301,9 @@ def test_vague_or_wrong_message_never_reaches_learned():
         assert result["check_question"] is None
         assert result["check_result"] is None
         assert result["understanding"]["overall_score"] is None
-        assert [e["type"] for e in nova.state.events] == ["teacher_message", "check_result", "nova_reply"]
+        _assert_events_in_order(
+            nova.state.events, ["teacher_message", "check_result", "nova_reply"]
+        )
         assert not any(e["type"] == "status_change" for e in nova.state.events)
         assert nova.state.events[1]["results"][0]["quality"] == quality
         _assert_learned_only_after_passed_answer(nova)
@@ -362,10 +378,10 @@ def test_gate_flow_needs_review_and_passed_answer():
     _assert_learned_only_after_passed_answer(nova2)
 
     # Event order for the answering turns.
-    assert [e["type"] for e in nova2.state.events] == [
+    _assert_events_in_order(nova2.state.events, [
         "teacher_message", "check_result", "status_change", "question_asked", "nova_reply",
         "teacher_message", "answer_judged", "status_change", "nova_reply",
-    ]
+    ])
     print("  OK gate: three wrong answers -> needs_review, passed answer -> learned.")
 
 

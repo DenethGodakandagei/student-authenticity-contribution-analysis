@@ -346,6 +346,7 @@ def chat_with_nova(session_id: str, req: ChatMessageRequest, user: dict = Depend
             "check_result": result["check_result"],
             "check_feedback": result["check_feedback"],
             "understanding": result["understanding"],
+            "detection": result["detection"],
             "conversation_history": nova.state.conversation_history,
             "updated_state": nova.to_dict()
         }
