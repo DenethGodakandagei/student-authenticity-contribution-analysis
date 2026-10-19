@@ -590,14 +590,15 @@ export default function Integrations() {
                           onClick={() => router.push(`/editor?docId=${doc._id}`)}
                           style={{
                             flex: 1,
-                            background: '#a3e635',
-                            color: '#121417',
+                            background: '#6FAF9A',
+                            color: '#0D1110',
                             border: 'none',
                             padding: '0.45rem',
                             borderRadius: '6px',
                             fontWeight: 800,
                             fontSize: '0.78rem',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 6px rgba(111, 175, 154, 0.3)'
                           }}
                         >
                           Open in Editor

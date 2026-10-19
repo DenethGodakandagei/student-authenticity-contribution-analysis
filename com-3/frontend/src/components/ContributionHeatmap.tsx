@@ -60,17 +60,17 @@ export default function ContributionHeatmap({ data }: { data: HeatmapData | null
   });
 
   const getCellColor = (val: number) => {
-    if (val === 0) return '#f1f5f9';
-    if (val < 25) return 'rgba(163, 230, 53, 0.22)';
-    if (val < 50) return 'rgba(163, 230, 53, 0.45)';
-    if (val < 75) return 'rgba(163, 230, 53, 0.75)';
-    return '#a3e635'; // Primary Lime
+    if (val === 0) return '#EFF8F3';
+    if (val < 25) return 'rgba(111, 175, 154, 0.25)';
+    if (val < 50) return 'rgba(111, 175, 154, 0.50)';
+    if (val < 75) return 'rgba(111, 175, 154, 0.75)';
+    return '#6FAF9A'; // Primary Sage
   };
 
   const getTextColor = (val: number) => {
-    if (val === 0) return '#cbd5e1';
-    if (val < 50) return '#275306';
-    return '#121417';
+    if (val === 0) return '#789086';
+    if (val < 50) return '#0D1110';
+    return '#FFFFFF';
   };
 
   // Find peak day of week
@@ -100,32 +100,33 @@ export default function ContributionHeatmap({ data }: { data: HeatmapData | null
         flexWrap: 'wrap',
         gap: '0.75rem',
         paddingBottom: '0.5rem',
-        borderBottom: '1px solid #f1f5f9'
+        borderBottom: '1px solid rgba(111, 175, 154, 0.2)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.82rem', color: '#43574f', fontWeight: 600 }}>
             Peak Collaboration Day:
           </span>
           <span style={{
-            background: 'rgba(163, 230, 53, 0.2)',
-            color: '#275306',
+            background: 'rgba(111, 175, 154, 0.2)',
+            color: '#0D1110',
             fontWeight: 800,
             fontSize: '0.78rem',
             padding: '0.2rem 0.65rem',
-            borderRadius: '9999px'
+            borderRadius: '9999px',
+            border: '1px solid rgba(111, 175, 154, 0.35)'
           }}>
             {peakVal > 0 ? peakDay : 'Pending activity'}
           </span>
         </div>
 
         {/* Intensity Legend */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#64748b' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#43574f' }}>
           <span>Less</span>
-          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: '#f1f5f9', border: '1px solid #e2e8f0' }} title="0%" />
-          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(163, 230, 53, 0.22)' }} title="1-25%" />
-          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(163, 230, 53, 0.45)' }} title="26-50%" />
-          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(163, 230, 53, 0.75)' }} title="51-75%" />
-          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: '#a3e635' }} title="76-100%" />
+          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: '#EFF8F3', border: '1px solid rgba(111, 175, 154, 0.3)' }} title="0%" />
+          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(111, 175, 154, 0.25)' }} title="1-25%" />
+          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(111, 175, 154, 0.50)' }} title="26-50%" />
+          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(111, 175, 154, 0.75)' }} title="51-75%" />
+          <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: '#6FAF9A' }} title="76-100%" />
           <span>More Active</span>
         </div>
       </div>
@@ -200,8 +201,8 @@ export default function ContributionHeatmap({ data }: { data: HeatmapData | null
                         width: '26px',
                         height: '26px',
                         borderRadius: '50%',
-                        background: '#121417',
-                        color: '#a3e635',
+                        background: '#0D1110',
+                        color: '#6FAF9A',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

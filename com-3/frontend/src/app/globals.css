@@ -8,34 +8,42 @@ body {
 }
 /* Append to existing index.css or replace */
 :root {
-  /* User-Defined Design System Tokens */
-  --primary-accent: #a3e635;
-  --accent-hover: #8ee01d;
-  --accent-light: rgba(163, 230, 53, 0.16);
-  --accent-dark: #275306;
-  --dark-accent: #121417;
-  --dark-hover: #1e2227;
-  --main-background: #f6f8fa;
-  --card-surface: #ffffff;
-  --secondary-surface: #f1f5f9;
-  --tertiary-surface: #e2e8f0;
-  --card-border: rgba(0, 0, 0, 0.06);
-  --primary-text: #0f172a;
-  --secondary-text: #64748b;
-  --tertiary-text: #94a3b8;
-  --success: #22c55e;
-  --warning: #f59e0b;
+  /* User-Defined Core Brand Palette */
+  --color-obsidian: #0D1110;
+  --color-white: #FFFFFF;
+  --color-sage: #6FAF9A;
+  --color-mint-whisper: #EFF8F3;
+
+  /* Primary Accent Tokens */
+  --primary-accent: #6FAF9A;
+  --accent-hover: #5d9d88;
+  --accent-light: rgba(111, 175, 154, 0.16);
+  --accent-dark: #0D1110;
+  --dark-accent: #0D1110;
+  --dark-hover: #19221f;
+
+  /* Surfaces & Backgrounds */
+  --main-background: #EFF8F3;
+  --card-surface: #FFFFFF;
+  --secondary-surface: #e5f2eb;
+  --tertiary-surface: #d7eade;
+  --card-border: rgba(111, 175, 154, 0.22);
+  --primary-text: #0D1110;
+  --secondary-text: #43574f;
+  --tertiary-text: #738b81;
+  --success: #6FAF9A;
+  --warning: #d97706;
   --danger: #ef4444;
-  --info: #0ea5e9;
+  --info: #6FAF9A;
 
   /* Aliases & Semantic Fallbacks */
-  --bg-primary: #f6f8fa;
-  --bg-secondary: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.95);
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --border-color: #e2e8f0;
-  --glass-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  --bg-primary: #EFF8F3;
+  --bg-secondary: #FFFFFF;
+  --bg-glass: rgba(255, 255, 255, 0.96);
+  --text-primary: #0D1110;
+  --text-secondary: #43574f;
+  --border-color: rgba(111, 175, 154, 0.25);
+  --glass-shadow: 0 4px 18px rgba(13, 17, 16, 0.05);
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
