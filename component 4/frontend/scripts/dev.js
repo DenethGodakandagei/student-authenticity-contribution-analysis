@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { spawn, exec } = require('child_process');
 
 // Pass any extra arguments to `next dev` (e.g., -p 3001 or --turbo)

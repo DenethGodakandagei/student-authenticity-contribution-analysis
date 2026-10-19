@@ -1,18 +1,12 @@
 // app/session/[id]/page.tsx
-import ChatBox from '../../components/ChatBox';
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 export default async function SessionPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  // Simple guard – the backend will return 404 if the session does not exist
-  if (!params.id) notFound();
-
-  return (
-    <main className="flex min-h-screen flex-col items-center p-8">
-      <ChatBox sessionId={params.id} />
-    </main>
-  );
+  const { id } = await params;
+  // Old entry point — the teaching UI now lives at /session/[id]/chat
+  redirect(`/session/${id}/chat`);
 }

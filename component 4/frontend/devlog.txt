@@ -2,7 +2,660 @@
 - Local:         http://localhost:3000
 - Network:       http://192.168.8.184:3000
 - Environments: .env.local
-✓ Ready in 815ms
-✓ Running next.config.ts took 202ms
+✓ Ready in 895ms
+✓ Running next.config.ts took 50ms
 
- GET / 200 in 342ms (next.js: 207ms, application-code: 135ms)
+ GET / 200 in 419ms (next.js: 239ms, application-code: 180ms)
+ GET /login 200 in 672ms (next.js: 497ms, application-code: 175ms)
+ GET /register 200 in 298ms (next.js: 257ms, application-code: 40ms)
+ GET /session/2143e8c5-9da5-4cb8-895f-6b266f431862/chat 200 in 768ms (next.js: 713ms, application-code: 55ms)
+ GET /session/2143e8c5-9da5-4cb8-895f-6b266f431862 307 in 1000ms (next.js: 923ms, application-code: 77ms)
+ GET /session/2143e8c5-9da5-4cb8-895f-6b266f431862/exam 307 in 924ms (next.js: 868ms, application-code: 57ms)
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+  [90m7 |[0m
+  [90m8 |[0m [36mlet[0m [33mCssSyntaxError[0m = require([32m'./css-syntax-error'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/map-generator.js:4:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m2 |[0m
+  [90m3 |[0m [36mlet[0m { dirname, relative, resolve, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m4 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mlet[0m { pathToFileURL } = require([32m'url'[0m)
+  [90m6 |[0m
+  [90m7 |[0m [36mlet[0m [33mInput[0m = require([32m'./input'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/map-generator.js
+    ./node_modules/postcss/lib/lazy-result.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/previous-map.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { existsSync, readFileSync } = require([32m'fs'[0m)
+  [90m4 |[0m [36mlet[0m { dirname, isAbsolute, join, relative, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m
+  [90m7 |[0m [36mfunction[0m fromBase64(str) {
+  [90m8 |[0m   [36mif[0m ([33mBuffer[0m) {
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/previous-map.js
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+  [90m7 |[0m
+  [90m8 |[0m [36mlet[0m [33mCssSyntaxError[0m = require([32m'./css-syntax-error'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/map-generator.js:4:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m2 |[0m
+  [90m3 |[0m [36mlet[0m { dirname, relative, resolve, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m4 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mlet[0m { pathToFileURL } = require([32m'url'[0m)
+  [90m6 |[0m
+  [90m7 |[0m [36mlet[0m [33mInput[0m = require([32m'./input'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/map-generator.js
+    ./node_modules/postcss/lib/lazy-result.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/previous-map.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { existsSync, readFileSync } = require([32m'fs'[0m)
+  [90m4 |[0m [36mlet[0m { dirname, isAbsolute, join, relative, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m
+  [90m7 |[0m [36mfunction[0m fromBase64(str) {
+  [90m8 |[0m   [36mif[0m ([33mBuffer[0m) {
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/previous-map.js
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+  [90m7 |[0m
+  [90m8 |[0m [36mlet[0m [33mCssSyntaxError[0m = require([32m'./css-syntax-error'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/map-generator.js:4:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m2 |[0m
+  [90m3 |[0m [36mlet[0m { dirname, relative, resolve, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m4 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mlet[0m { pathToFileURL } = require([32m'url'[0m)
+  [90m6 |[0m
+  [90m7 |[0m [36mlet[0m [33mInput[0m = require([32m'./input'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/map-generator.js
+    ./node_modules/postcss/lib/lazy-result.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/previous-map.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { existsSync, readFileSync } = require([32m'fs'[0m)
+  [90m4 |[0m [36mlet[0m { dirname, isAbsolute, join, relative, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m
+  [90m7 |[0m [36mfunction[0m fromBase64(str) {
+  [90m8 |[0m   [36mif[0m ([33mBuffer[0m) {
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/previous-map.js
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+  [90m7 |[0m
+  [90m8 |[0m [36mlet[0m [33mCssSyntaxError[0m = require([32m'./css-syntax-error'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/map-generator.js:4:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m2 |[0m
+  [90m3 |[0m [36mlet[0m { dirname, relative, resolve, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m4 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mlet[0m { pathToFileURL } = require([32m'url'[0m)
+  [90m6 |[0m
+  [90m7 |[0m [36mlet[0m [33mInput[0m = require([32m'./input'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/map-generator.js
+    ./node_modules/postcss/lib/lazy-result.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/previous-map.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { existsSync, readFileSync } = require([32m'fs'[0m)
+  [90m4 |[0m [36mlet[0m { dirname, isAbsolute, join, relative, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m
+  [90m7 |[0m [36mfunction[0m fromBase64(str) {
+  [90m8 |[0m   [36mif[0m ([33mBuffer[0m) {
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/previous-map.js
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+  [90m7 |[0m
+  [90m8 |[0m [36mlet[0m [33mCssSyntaxError[0m = require([32m'./css-syntax-error'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/map-generator.js:4:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m2 |[0m
+  [90m3 |[0m [36mlet[0m { dirname, relative, resolve, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m4 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mlet[0m { pathToFileURL } = require([32m'url'[0m)
+  [90m6 |[0m
+  [90m7 |[0m [36mlet[0m [33mInput[0m = require([32m'./input'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/map-generator.js
+    ./node_modules/postcss/lib/lazy-result.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/previous-map.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { existsSync, readFileSync } = require([32m'fs'[0m)
+  [90m4 |[0m [36mlet[0m { dirname, isAbsolute, join, relative, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m
+  [90m7 |[0m [36mfunction[0m fromBase64(str) {
+  [90m8 |[0m   [36mif[0m ([33mBuffer[0m) {
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/previous-map.js
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+  [90m7 |[0m
+  [90m8 |[0m [36mlet[0m [33mCssSyntaxError[0m = require([32m'./css-syntax-error'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/map-generator.js:4:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m2 |[0m
+  [90m3 |[0m [36mlet[0m { dirname, relative, resolve, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m4 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m [36mlet[0m { pathToFileURL } = require([32m'url'[0m)
+  [90m6 |[0m
+  [90m7 |[0m [36mlet[0m [33mInput[0m = require([32m'./input'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/map-generator.js
+    ./node_modules/postcss/lib/lazy-result.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/previous-map.js:5:49
+Error: Module not found: Can't resolve 'source-map-js'
+  [90m3 |[0m [36mlet[0m { existsSync, readFileSync } = require([32m'fs'[0m)
+  [90m4 |[0m [36mlet[0m { dirname, isAbsolute, join, relative, sep } = require([32m'path'[0m)
+[31m[1m>[0m [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m  |[0m                                                 [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m
+  [90m7 |[0m [36mfunction[0m fromBase64(str) {
+  [90m8 |[0m   [36mif[0m ([33mBuffer[0m) {
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/previous-map.js
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./node_modules/postcss/lib/input.js:3:18
+Error: Module not found: Can't resolve 'nanoid/non-secure'
+  [90m1 |[0m [32m'use strict'[0m
+  [90m2 |[0m
+[31m[1m>[0m [90m3 |[0m [36mlet[0m { nanoid } = require([32m'nanoid/non-secure'[0m)
+  [90m  |[0m                  [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m [36mlet[0m { isAbsolute, resolve } = require([32m'path'[0m)
+  [90m5 |[0m [36mlet[0m { [33mSourceMapConsumer[0m, [33mSourceMapGenerator[0m } = require([32m'source-map-js'[0m)
+  [90m6 |[0m [36mlet[0m { fileURLToPath, pathToFileURL } = require([32m'url'[0m)
+
+
+
+Import trace:
+  postcss:
+    ./node_modules/postcss/lib/input.js
+    ./node_modules/postcss/lib/postcss.js
+    ./node_modules/postcss/lib/postcss.mjs
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ GET / 200 in 33ms (next.js: 6ms, application-code: 26ms)
+ GET / 200 in 28ms (next.js: 6ms, application-code: 22ms)
+ GET /login 200 in 86ms (next.js: 11ms, application-code: 75ms)
+ GET /login 200 in 46ms (next.js: 15ms, application-code: 31ms)
+ GET /register 200 in 45ms (next.js: 16ms, application-code: 28ms)
+[?25h
