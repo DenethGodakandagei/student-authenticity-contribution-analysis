@@ -11,6 +11,9 @@ import ShareModal from '../../components/ShareModal';
 import { useAuth } from '../../context/AuthContext';
 import { getApiBase, getBackendUrl } from '../../utils/apiConfig';
 import { ToastContainer, ToastItem } from '../../components/CustomDialog';
+import LecturerDashboard from '../../components/LecturerDashboard';
+import AdminDashboard from '../../components/AdminDashboard';
+import GuestDashboardView from '../../components/GuestDashboardView';
 
 const API_BASE = getApiBase();
 
@@ -70,6 +73,16 @@ function DashboardComponent() {
   const [compareLoading, setCompareLoading] = useState(false);
 
   const isUserLeader = user?.role === 'group_leader' || user?.role === 'lecturer' || user?.isLeader || false;
+  const isUserLecturer = user?.role === 'lecturer';
+  const [viewMode, setViewMode] = useState<'lecturer' | 'student'>('student');
+
+  useEffect(() => {
+    if (user?.role === 'lecturer') {
+      setViewMode('lecturer');
+    } else {
+      setViewMode('student');
+    }
+  }, [user?.role]);
 
   // Load registered students
   const loadStudents = async () => {
@@ -84,26 +97,31 @@ function DashboardComponent() {
 
   // Load documents accessible to user
   const loadDocuments = async () => {
+    if (!user) {
+      setAvailableDocs([]);
+      return;
+    }
     try {
       let url = API_BASE;
-      if (user) {
-        const params = new URLSearchParams();
-        if (user.username) params.append('username', user.username);
-        if (user.studentId) params.append('studentId', user.studentId);
-        if (user.role) params.append('role', user.role);
-        url += `?${params.toString()}`;
-      }
+      const params = new URLSearchParams();
+      if (user.username) params.append('username', user.username);
+      if (user.studentId) params.append('studentId', user.studentId);
+      if (user.role) params.append('role', user.role);
+      url += `?${params.toString()}`;
+
       const res = await fetch(url);
       const docs = await res.json();
       const list = Array.isArray(docs) ? docs : [];
       setAvailableDocs(list);
 
-      if (docIdQuery) {
+      if (docIdQuery && list.some((d: any) => d._id === docIdQuery)) {
         setSelectedDocId(docIdQuery);
       } else if (list.length > 0 && !list.some((d: any) => d._id === selectedDocId)) {
         setSelectedDocId(list[0]._id);
+      } else if (list.length === 0) {
+        setSelectedDocId('');
       }
-      if (!teamTargetDocId && list.length > 0) {
+      if (list.length > 0 && (!teamTargetDocId || !list.some((d: any) => d._id === teamTargetDocId))) {
         setTeamTargetDocId(list[0]._id);
       }
     } catch (err) {
@@ -112,16 +130,19 @@ function DashboardComponent() {
   };
 
   useEffect(() => {
-    loadStudents();
-  }, []);
-
-  useEffect(() => {
-    loadDocuments();
-  }, [user, docIdQuery]);
+    if (isAuthenticated && user) {
+      loadStudents();
+      loadDocuments();
+    } else {
+      setAvailableDocs([]);
+      setRegisteredStudents([]);
+      setSelectedDocId('');
+    }
+  }, [isAuthenticated, user, docIdQuery]);
 
   // Fetch document analytics when selectedDocId changes
   const fetchDocAnalytics = async (isInitial = false) => {
-    if (!selectedDocId) return;
+    if (!selectedDocId || !isAuthenticated || !user) return;
     try {
       if (isInitial) setLoading(true);
 
@@ -160,11 +181,11 @@ function DashboardComponent() {
   };
 
   useEffect(() => {
-    if (!selectedDocId) return;
+    if (!selectedDocId || !isAuthenticated || !user) return;
     fetchDocAnalytics(true);
     const interval = setInterval(() => fetchDocAnalytics(false), 5000);
     return () => clearInterval(interval);
-  }, [selectedDocId]);
+  }, [selectedDocId, isAuthenticated, user]);
 
   // Handle adding student to document
   const handleAddStudentToDoc = async (targetId: string, identifier: string) => {
@@ -498,6 +519,27 @@ function DashboardComponent() {
     0.15 * significanceRatePercent
   );
 
+  // Security Gate 1: Unauthenticated visitors do not see any documents
+  if (!isAuthenticated || !user) {
+    return (
+      <GuestDashboardView onSignIn={() => openAuthModal()} />
+    );
+  }
+
+  // Security Gate 2: Administrators access executive superuser dashboard
+  if (user?.role === 'admin' || user?.username === 'admin') {
+    return (
+      <AdminDashboard />
+    );
+  }
+
+  // Security Gate 3: Lecturers access supervisor evaluation dashboard
+  if (isUserLecturer) {
+    return (
+      <LecturerDashboard />
+    );
+  }
+
   return (
     <>
       <ToastContainer toasts={toasts} onDismiss={id => setToasts(prev => prev.filter(t => t.id !== id))} />
@@ -554,11 +596,15 @@ function DashboardComponent() {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
-              {availableDocs.map((doc: any) => (
-                <option key={doc._id} value={doc._id}>
-                  {doc.title || doc._id}
-                </option>
-              ))}
+              {availableDocs.length === 0 ? (
+                <option value="">No assignments assigned yet</option>
+              ) : (
+                availableDocs.map((doc: any) => (
+                  <option key={doc._id} value={doc._id}>
+                    {doc.title || doc._id}
+                  </option>
+                ))
+              )}
             </select>
 
             <button
@@ -1158,8 +1204,71 @@ function DashboardComponent() {
                           {doc.title || doc._id}
                         </h4>
 
+                        {/* Assignment Metadata (Course, Type, Submission Status) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+                          <span style={{
+                            background: doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.14)' : 'rgba(245, 158, 11, 0.14)',
+                            color: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
+                            border: `1px solid ${doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}>
+                            <span style={{
+                              width: '5px',
+                              height: '5px',
+                              borderRadius: '50%',
+                              background: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
+                            }} />
+                            {doc.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}
+                          </span>
+
+                          <span style={{
+                            background: doc.assignmentType === 'individual' ? 'rgba(14, 165, 233, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+                            color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
+                            padding: '0.15rem 0.55rem',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 800
+                          }}>
+                            {doc.assignmentType === 'individual' ? 'Individual' : 'Group Project'}
+                          </span>
+
+                          {doc.course && (
+                            <span style={{ background: '#f1f5f9', color: '#475569', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>
+                              {doc.course}
+                            </span>
+                          )}
+
+                          {doc.grade && (
+                            <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800 }}>
+                              Grade: {doc.grade}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Lecturer Feedback (if evaluated) */}
+                        {doc.lecturerFeedback && (
+                          <div style={{
+                            background: 'rgba(99, 102, 241, 0.06)',
+                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                            borderRadius: '8px',
+                            padding: '0.6rem 0.75rem',
+                            marginBottom: '0.65rem',
+                            fontSize: '0.76rem',
+                            color: '#334155',
+                            lineHeight: 1.4
+                          }}>
+                            <strong style={{ color: '#4338ca' }}>Lecturer Feedback:</strong> {doc.lecturerFeedback}
+                          </div>
+                        )}
+
                         {/* Collaborators */}
-                        <div style={{ marginTop: '0.75rem' }}>
+                        <div>
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
                             Group Members ({doc.collaborators?.length || 1}):
                           </span>
@@ -1842,7 +1951,7 @@ function DashboardComponent() {
                         cursor: 'pointer'
                       }}
                     >
-                      {isChecked ? '✓ ' : '+ '} {doc.title || doc._id}
+                      {isChecked ? '[Selected] ' : '+ '} {doc.title || doc._id}
                     </button>
                   );
                 })}

@@ -16,17 +16,35 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
   }, []);
 
   const getRoleLabel = () => {
-    if (!user) return 'Student Node';
-    if (user.role === 'lecturer') return 'Lecturer Node';
-    if (user.role === 'group_leader' || user.isLeader) return 'Leader Node';
+    if (!user) return 'Guest';
+    if (user.role === 'admin') return 'System Administrator Node';
+    if (user.role === 'lecturer') return 'Lecturer / Academic Evaluator';
+    if (user.role === 'group_leader' || user.isLeader) return 'Group Leader Node';
     return 'Student Node';
   };
 
-  const navItems = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Editor', href: '/editor' },
-    { label: 'Integrations', href: '/integrations' }
-  ];
+  const isAdmin = user?.role === 'admin';
+  const isLecturer = user?.role === 'lecturer';
+  const isLeader = user?.role === 'group_leader' || user?.isLeader;
+
+  const navItems = !user
+    ? [
+        { label: 'Platform Home', href: '/dashboard' }
+      ]
+    : isAdmin
+    ? [
+        { label: 'Admin Dashboard', href: '/dashboard' },
+        { label: 'Document Editor', href: '/editor' }
+      ]
+    : isLecturer
+    ? [
+        { label: 'Academic Evaluation Dashboard', href: '/dashboard' }
+      ]
+    : [
+        { label: 'Dashboard', href: '/dashboard' },
+        { label: 'Document Editor', href: '/editor' },
+        { label: 'Integrations', href: '/integrations' }
+      ];
 
   return (
     <div className="app-layout">
@@ -72,39 +90,46 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
 
           {/* Node Role Pill */}
           <span style={{
-            background: 'rgba(163, 230, 53, 0.16)',
-            color: '#275306',
-            border: '1px solid rgba(163, 230, 53, 0.35)',
+            background: isAdmin ? 'rgba(217, 119, 6, 0.14)' : isLecturer ? 'rgba(99, 102, 241, 0.14)' : isLeader ? 'rgba(163, 230, 53, 0.16)' : user ? 'rgba(14, 165, 233, 0.12)' : '#f1f5f9',
+            color: isAdmin ? '#b45309' : isLecturer ? '#4338ca' : isLeader ? '#275306' : user ? '#0369a1' : '#64748b',
+            border: `1px solid ${isAdmin ? 'rgba(217, 119, 6, 0.35)' : isLecturer ? 'rgba(99, 102, 241, 0.35)' : isLeader ? 'rgba(163, 230, 53, 0.35)' : user ? 'rgba(14, 165, 233, 0.3)' : '#e2e8f0'}`,
             padding: '0.22rem 0.75rem',
             borderRadius: '9999px',
             fontSize: '0.74rem',
-            fontWeight: 700,
-            letterSpacing: '0.01em'
+            fontWeight: 800,
+            letterSpacing: '0.01em',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem'
           }}>
+            {isAdmin && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#d97706' }} />}
+            {isLecturer && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6366f1' }} />}
             {getRoleLabel()}
           </span>
 
-          {/* Quick Pill Button: Telemetry Simulator / Editor */}
-          <Link
-            href="/editor"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              background: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              color: '#0f172a',
-              padding: '0.35rem 0.9rem',
-              borderRadius: '9999px',
-              fontSize: '0.8rem',
-              fontFamily: 'monospace',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <span>&gt;_</span> Document Editor
-          </Link>
+          {/* Quick Pill Button: Telemetry Simulator / Editor (Student and Admin view only when logged in) */}
+          {Boolean(user && !isLecturer) && (
+            <Link
+              href="/editor"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: '#f1f5f9',
+                border: '1px solid #e2e8f0',
+                color: '#0f172a',
+                padding: '0.35rem 0.9rem',
+                borderRadius: '9999px',
+                fontSize: '0.8rem',
+                fontFamily: 'monospace',
+                fontWeight: 600,
+                textDecoration: 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>&gt;_</span> Document Editor
+            </Link>
+          )}
 
           {/* Nav Links */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: '0.5rem' }}>
@@ -164,6 +189,8 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
               </div>
 
               <button
+                id="logout-btn"
+                type="button"
                 onClick={logout}
                 style={{
                   display: 'inline-flex',
@@ -188,11 +215,13 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                   e.currentTarget.style.color = '#64748b';
                 }}
               >
-                <span>[→</span> Logout
+                Logout
               </button>
             </div>
           ) : (
             <button
+              id="signin-btn"
+              type="button"
               onClick={openAuthModal}
               style={{
                 background: '#a3e635',

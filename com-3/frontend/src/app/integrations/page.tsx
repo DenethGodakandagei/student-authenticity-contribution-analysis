@@ -57,6 +57,12 @@ export default function Integrations() {
   };
 
   useEffect(() => {
+    if (user?.role === 'lecturer') {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
+
+  useEffect(() => {
     fetchLinkedDocs();
     fetchStudents();
   }, []);
