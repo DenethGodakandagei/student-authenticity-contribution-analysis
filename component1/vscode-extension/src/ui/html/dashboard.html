@@ -3,322 +3,230 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CollabIntel Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>INCODE Dashboard</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #111113;
+      --card-bg: #18181b;
+      --card-subtle: #141416;
+      --border: #27272a;
+      --border-hover: #3f3f46;
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --text-sub: #71717a;
+      --green: #4ade80;
+      --red: #f87171;
+    }
+
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0a0a0f;
-      color: #e8eaed;
-      padding: 28px 24px;
-      line-height: 1.5;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 20px;
+      line-height: 1.45;
       -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-      position: relative;
       min-height: 100vh;
     }
 
-    /* ── Liquid Animated Background Orbs ── */
-    .liquid-bg {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-    .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(100px);
-      opacity: 0.12;
-    }
-    .orb-1 {
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, #6366f1, #a855f7, transparent 70%);
-      top: -100px; left: -100px;
-      animation: orbMove1 16s ease-in-out infinite alternate;
-    }
-    .orb-2 {
-      width: 350px; height: 350px;
-      background: radial-gradient(circle, #06b6d4, #3b82f6, transparent 70%);
-      bottom: -80px; right: -80px;
-      animation: orbMove2 18s ease-in-out infinite alternate;
-    }
-    .orb-3 {
-      width: 280px; height: 280px;
-      background: radial-gradient(circle, #f43f5e, #a855f7, transparent 70%);
-      top: 50%; left: 60%;
-      animation: orbMove3 20s ease-in-out infinite alternate;
-    }
-    @keyframes orbMove1 {
-      0% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(80px, 60px) scale(1.15); }
-      66% { transform: translate(20px, 100px) scale(0.95); }
-      100% { transform: translate(-30px, 120px) scale(1.08); }
-    }
-    @keyframes orbMove2 {
-      0% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(-60px, -40px) scale(1.1); }
-      66% { transform: translate(-30px, -80px) scale(0.9); }
-      100% { transform: translate(30px, -60px) scale(1.05); }
-    }
-    @keyframes orbMove3 {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(-80px, -50px) scale(1.2); }
-      100% { transform: translate(40px, 30px) scale(0.85); }
-    }
-
-    .container { max-width: 1040px; margin: 0 auto; position: relative; z-index: 1; }
+    .container { max-width: 1000px; margin: 0 auto; }
 
     /* ── Header ── */
     .dashboard-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       padding-bottom: 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid var(--border);
     }
     .brand-title h1 {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #c4b5fd 0%, #818cf8 30%, #67e8f9 60%, #c4b5fd 100%);
-      background-size: 300% 300%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: gradientShift 6s ease infinite;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
     .brand-title p {
-      font-size: 13px;
-      color: rgba(255,255,255,0.4);
+      font-size: 12px;
+      color: var(--text-muted);
       margin-top: 2px;
     }
-    @keyframes gradientShift {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
 
-    /* ── Tabs (Liquid Pill Switcher) ── */
+    /* ── Tabs (Simple Segmented Control) ── */
     .nav-tabs {
       display: flex;
       gap: 3px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 14px;
-      padding: 4px;
-      margin-bottom: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      margin-bottom: 20px;
       overflow-x: auto;
     }
     .tab-btn {
-      padding: 8px 16px;
+      padding: 6px 14px;
       background: transparent;
-      border: none;
-      border-radius: 10px;
-      color: rgba(255,255,255,0.45);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--text-muted);
       font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.3s ease;
+      transition: all 0.15s ease;
       white-space: nowrap;
-      position: relative;
     }
-    .tab-btn svg { width: 14px; height: 14px; opacity: 0.5; }
-    .tab-btn:hover { color: rgba(255,255,255,0.7); }
+    .tab-btn svg { width: 13px; height: 13px; opacity: 0.6; }
+    .tab-btn:hover { color: var(--text); }
     .tab-btn.active {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.15) 100%);
-      color: #c4b5fd;
+      background: #27272a;
+      border-color: #3f3f46;
+      color: var(--text);
       font-weight: 600;
-      box-shadow: 0 0 16px rgba(99, 102, 241, 0.12);
     }
     .tab-btn.active svg { opacity: 1; }
 
-    .tab-content { display: none; animation: fadeIn 0.35s ease; }
+    .tab-content { display: none; }
     .tab-content.active { display: block; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
 
-    /* ── Glass Card ── */
+    /* ── Cards ── */
     .glass-card {
-      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 18px;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-    .glass-card:hover {
-      border-color: rgba(139, 92, 246, 0.3);
-      box-shadow: 0 4px 30px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
-    }
-    .glass-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: -100%;
-      width: 100%; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), rgba(6, 182, 212, 0.5), transparent);
-      animation: shimmer 5s ease-in-out infinite;
-    }
-    @keyframes shimmer {
-      0% { left: -100%; }
-      100% { left: 200%; }
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
     }
 
-    /* ── Metrics ── */
+    /* ── Metrics Grid ── */
     .metrics-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      margin-bottom: 16px;
+      gap: 8px;
+      margin-bottom: 14px;
     }
     .card-title {
       font-size: 11px;
       font-weight: 500;
-      color: rgba(255,255,255,0.4);
+      color: var(--text-muted);
       margin-bottom: 6px;
     }
     .card-value {
-      font-size: 26px;
-      font-weight: 800;
+      font-size: 24px;
+      font-weight: 700;
       font-variant-numeric: tabular-nums;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #e8eaed 0%, #a5b4fc 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
-    .val-green { background: linear-gradient(135deg, #34d399, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .val-red { background: linear-gradient(135deg, #f87171, #fca5a5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .val-amber { color: #fbbf24; background: none; -webkit-text-fill-color: #fbbf24; }
-    .val-blue { color: #67e8f9; background: none; -webkit-text-fill-color: #67e8f9; }
+    .val-green { color: var(--green); }
+    .val-red { color: var(--red); }
 
     /* ── Status Banner ── */
     .status-banner {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%);
-      border: 1px solid rgba(99, 102, 241, 0.2);
-      border-left: 3px solid;
-      border-image: linear-gradient(180deg, #6366f1, #a855f7) 1;
-      border-radius: 12px;
-      padding: 14px 18px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
+    .status-pill {
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-weight: 500;
+      font-size: 11px;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.25);
+      color: var(--green);
+    }
+
+    /* ── Highlight Stat Boxes ── */
+    .highlight-stat {
+      background: var(--card-subtle);
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .highlight-stat .hl-label { font-size: 10px; color: var(--text-sub); }
+    .highlight-stat .hl-value { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 2px; }
 
     /* ── ML Feature Cards ── */
     .ml-features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 10px;
-      margin-top: 14px;
+      gap: 8px;
+      margin-top: 12px;
     }
     .ml-card {
-      background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 100%);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 14px;
-      padding: 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
-    .ml-card:hover {
-      border-color: rgba(139, 92, 246, 0.3);
-      box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
-    }
-    .ml-card::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), rgba(6, 182, 212, 0.3), transparent);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    .ml-card:hover::after { opacity: 1; }
-    .ml-num { font-size: 10px; color: #818cf8; font-weight: 700; letter-spacing: 0.5px; }
-    .ml-title { font-size: 12px; font-weight: 600; color: #e8eaed; margin-top: 1px; }
-    .ml-desc { font-size: 10px; color: rgba(255,255,255,0.35); margin: 3px 0 8px 0; }
+    .ml-num { font-size: 9.5px; color: var(--text-sub); font-weight: 600; letter-spacing: 0.5px; }
+    .ml-title { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 2px; }
+    .ml-desc { font-size: 10.5px; color: var(--text-sub); margin: 3px 0 8px 0; }
     .ml-val {
-      font-size: 20px;
-      font-weight: 800;
-      font-family: 'SF Mono', 'Menlo', monospace;
-      background: linear-gradient(135deg, #67e8f9, #818cf8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 18px;
+      font-weight: 600;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
+      color: var(--text);
     }
 
-    /* ── Form ── */
-    .form-group { margin-bottom: 18px; }
-    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #e8eaed; }
-    .hint { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    /* ── Form Inputs ── */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+    .hint { font-size: 11px; color: var(--text-sub); margin-bottom: 6px; }
     input[type="text"], input[type="password"], input[type="number"] {
       width: 100%;
-      padding: 10px 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      color: #e8eaed;
-      font-family: 'SF Mono', 'Menlo', monospace;
-      font-size: 13px;
+      padding: 8px 12px;
+      background: var(--card-subtle);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
+      font-size: 12px;
       outline: none;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      transition: border-color 0.15s ease;
     }
     input:focus {
-      border-color: rgba(99, 102, 241, 0.5);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.1);
+      border-color: #52525b;
     }
 
-    /* ── Liquid Buttons ── */
+    /* ── Simple Buttons ── */
     .btn {
-      padding: 9px 18px;
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
-      background-size: 200% 200%;
-      color: #ffffff;
-      border: none;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 13px;
+      padding: 7px 14px;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      color: var(--text);
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 12px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      transition: all 0.3s ease;
-      animation: btnGlow 5s ease infinite;
-      box-shadow: 0 2px 14px rgba(99, 102, 241, 0.3);
+      gap: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease;
     }
-    @keyframes btnGlow {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    .btn:hover { box-shadow: 0 4px 24px rgba(99, 102, 241, 0.45); transform: translateY(-1px); }
-    .btn:active { transform: scale(0.98); }
+    .btn:hover { background: #323238; border-color: #52525b; }
+    .btn:active { transform: scale(0.99); }
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.06);
-      color: #c4b5fd;
-      border: 1px solid rgba(139, 92, 246, 0.2);
-      box-shadow: none;
-      animation: none;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
     }
     .btn-secondary:hover {
-      background: rgba(139, 92, 246, 0.12);
-      border-color: rgba(139, 92, 246, 0.4);
-      box-shadow: 0 0 16px rgba(139, 92, 246, 0.15);
+      background: var(--card-bg);
+      border-color: var(--border-hover);
+      color: var(--text);
     }
 
     /* ── Table ── */
@@ -326,58 +234,42 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      margin-top: 14px;
-      background: rgba(255, 255, 255, 0.02);
-      border-radius: 12px;
+      margin-top: 12px;
+      background: var(--card-bg);
+      border-radius: 8px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
     }
-    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-    th { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); }
-    td:last-child { font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; }
+    th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--card-subtle); }
+    td:last-child { font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace; font-size: 11px; }
 
-    .test-box { margin-top: 14px; padding: 12px; border-radius: 10px; font-size: 12px; display: none; font-weight: 600; }
-    .test-box.success { display: block; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.25); color: #34d399; }
-    .test-box.error { display: block; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.25); color: #f87171; }
-
-    /* ── Highlight stat boxes ── */
-    .highlight-stat {
-      background: rgba(255, 255, 255, 0.03);
-      padding: 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      transition: border-color 0.3s ease;
-    }
-    .highlight-stat:hover { border-color: rgba(139, 92, 246, 0.25); }
-    .highlight-stat .hl-label { font-size: 10px; color: rgba(255,255,255,0.4); }
-    .highlight-stat .hl-value { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+    .test-box { margin-top: 12px; padding: 10px 12px; border-radius: 6px; font-size: 11.5px; display: none; font-weight: 500; }
+    .test-box.success { display: block; background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.2); color: var(--green); }
+    .test-box.error { display: block; background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.2); color: var(--red); }
   </style>
 </head>
 <body>
-  <!-- Liquid Background Orbs -->
-  <div class="liquid-bg">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
-
   <div class="container">
+    <!-- Header -->
     <div class="dashboard-header">
       <div class="brand-title">
-        <h1>CollabIntel Dashboard</h1>
+        <h1>INCODE Dashboard</h1>
         <p>Student Repository Telemetry &amp; Contribution Analytics</p>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn btn-secondary" onclick="postCmd('switchMode')" title="Click to toggle between Real Coursework Mode and Experimental Study Mode">
-          <span id="dashModeIcon">🛡️</span>
+        <button class="btn btn-secondary" onclick="postCmd('switchMode')" title="Switch operating mode">
+          <span id="dashModeIcon" style="display:inline-flex; align-items:center;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </span>
           <span id="dashModeText">Real Mode</span>
         </button>
         <button class="btn btn-secondary" onclick="postCmd('viewQueueAudit')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Audit Queue
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Queue Audit
         </button>
         <button class="btn" onclick="postCmd('syncNow')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
           Sync Telemetry
         </button>
       </div>
@@ -411,10 +303,10 @@
     <div id="content-overview" class="tab-content active">
       <div class="status-banner">
         <div>
-          <div style="font-weight:700; font-size:14px; color:#e8eaed;">Session Active</div>
-          <div style="font-size:12px; color:rgba(255,255,255,0.4);">Tracking local workspace edits and keystrokes</div>
+          <div style="font-weight:600; font-size:13px; color:var(--text);">Session Active</div>
+          <div style="font-size:11px; color:var(--text-sub);">Tracking workspace edits and typing velocity</div>
         </div>
-        <div style="padding:4px 12px; border-radius:100px; font-weight:600; font-size:11px; background:rgba(52,211,153,0.15); color:#34d399; box-shadow: 0 0 10px rgba(52,211,153,0.2);">Online</div>
+        <div class="status-pill">Online</div>
       </div>
 
       <div class="metrics-row">
@@ -426,104 +318,91 @@
       </div>
 
       <!-- Overview Highlights -->
-      <div class="glass-card" style="margin-bottom: 16px;">
-        <div class="card-title" style="margin-bottom:12px; color:#c4b5fd; font-weight:600;">Session Intelligence Highlights</div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px;">
-          <div class="highlight-stat"><div class="hl-label">Active Typing</div><div class="hl-value" style="color:#67e8f9;" id="ovActiveTyping">0s</div></div>
-          <div class="highlight-stat"><div class="hl-label">Typing Velocity</div><div class="hl-value" style="color:#34d399;" id="ovTypingVelocity">0.00 c/s</div></div>
-          <div class="highlight-stat"><div class="hl-label">Paste Ratio</div><div class="hl-value" style="color:#fbbf24;" id="ovPasteRatio">0.00</div></div>
-          <div class="highlight-stat"><div class="hl-label">Code Churn</div><div class="hl-value" style="color:#c084fc;" id="ovChurn">0.00</div></div>
-          <div class="highlight-stat"><div class="hl-label">Syntax Errors</div><div class="hl-value" style="color:#f87171;" id="ovErrors">0</div></div>
-          <div class="highlight-stat"><div class="hl-label">Focus Switches</div><div class="hl-value" style="color:#34d399;" id="ovFocus">0</div></div>
+      <div class="glass-card">
+        <div class="card-title" style="margin-bottom:10px;">Session Intelligence Highlights</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px;">
+          <div class="highlight-stat"><div class="hl-label">Active Typing</div><div class="hl-value" id="ovActiveTyping">0s</div></div>
+          <div class="highlight-stat"><div class="hl-label">Typing Velocity</div><div class="hl-value" id="ovTypingVelocity">0.00 c/s</div></div>
+          <div class="highlight-stat"><div class="hl-label">Paste Ratio</div><div class="hl-value" id="ovPasteRatio">0.00</div></div>
+          <div class="highlight-stat"><div class="hl-label">Code Churn</div><div class="hl-value" id="ovChurn">0.00</div></div>
+          <div class="highlight-stat"><div class="hl-label">Syntax Errors</div><div class="hl-value" id="ovErrors">0</div></div>
+          <div class="highlight-stat"><div class="hl-label">Focus Switches</div><div class="hl-value" id="ovFocus">0</div></div>
         </div>
       </div>
 
       <!-- Provenance -->
-      <div class="glass-card" style="margin-bottom: 20px;">
+      <div class="glass-card">
         <div class="card-title">Coding Provenance</div>
-        <div style="font-size:18px; font-weight:800; margin:4px 0 10px 0;" id="cardStyle">
-          <span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Manual Typing</span>
+        <div style="font-size:16px; font-weight:600; margin:4px 0 10px 0;" id="cardStyle">Manual Typing</div>
+        <div style="height:6px; border-radius:3px; background:var(--border); display:flex; overflow:hidden; margin-bottom:10px;">
+          <div id="barManual" style="width:100%; background:#e4e4e7; transition:width 0.3s ease;"></div>
+          <div id="barAi" style="width:0%; background:#94a3b8; transition:width 0.3s ease;"></div>
+          <div id="barPaste" style="width:0%; background:#52525b; transition:width 0.3s ease;"></div>
         </div>
-        <div style="height:8px; border-radius:4px; background:rgba(255,255,255,0.06); display:flex; overflow:hidden; margin-bottom:10px;">
-          <div id="barManual" style="width:100%; background:linear-gradient(90deg,#6366f1,#818cf8); border-radius:4px; transition:width 0.5s ease;"></div>
-          <div id="barAi" style="width:0%; background:linear-gradient(90deg,#a855f7,#c084fc); transition:width 0.5s ease;"></div>
-          <div id="barPaste" style="width:0%; background:linear-gradient(90deg,#f43f5e,#fb7185); transition:width 0.5s ease;"></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:11px; color:rgba(255,255,255,0.4);">
-          <span style="display:inline-flex; align-items:center; gap:6px;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#818cf8" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            Manual: <strong id="lblManual" style="color:#e8eaed; font-family:'SF Mono','Menlo',monospace;">100%</strong>
-          </span>
-          <span style="display:inline-flex; align-items:center; gap:6px;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#c084fc" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
-            AI: <strong id="lblAi" style="color:#e8eaed; font-family:'SF Mono','Menlo',monospace;">0%</strong>
-          </span>
-          <span style="display:inline-flex; align-items:center; gap:6px;">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fb7185" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-            Paste: <strong id="lblPaste" style="color:#e8eaed; font-family:'SF Mono','Menlo',monospace;">0%</strong>
-          </span>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
+          <span>Manual: <strong id="lblManual" style="color:var(--text);">100%</strong></span>
+          <span>AI: <strong id="lblAi" style="color:var(--text);">0%</strong></span>
+          <span>Paste: <strong id="lblPaste" style="color:var(--text);">0%</strong></span>
         </div>
       </div>
     </div>
 
     <!-- TAB 2: ML FEATURES -->
     <div id="content-ml" class="tab-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div>
-          <h2 style="font-size:18px; font-weight:800; display:flex; align-items:center; gap:8px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-            Live Sliding Window ML Features
-          </h2>
-          <p style="font-size:12px; color:rgba(255,255,255,0.35); margin-top:2px;">
-            Features over the current 5-minute rolling window [window: 5 min, step: 2.5 min].
+          <h2 style="font-size:16px; font-weight:700; color:var(--text);">Live Sliding Window ML Features</h2>
+          <p style="font-size:11.5px; color:var(--text-sub); margin-top:2px;">
+            Features over rolling 5-minute window [window: 5 min, step: 2.5 min].
           </p>
         </div>
         <button class="btn" onclick="postCmd('computeSlidingWindow')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
           Recalculate
         </button>
       </div>
 
-      <div class="status-banner" style="padding:12px 16px; margin-bottom:16px;">
-        <span style="font-size:12px; color:#e8eaed;">Window Interval: <strong id="mlWindowInterval" style="color:#67e8f9;">Evaluating...</strong></span>
-        <span style="font-size:11px; color:rgba(255,255,255,0.4);" id="mlEventsInWindow">0 events in slice</span>
+      <div class="status-banner" style="margin-bottom:14px;">
+        <span style="font-size:12px; color:var(--text);">Interval: <strong id="mlWindowInterval" style="color:var(--text);">Evaluating...</strong></span>
+        <span style="font-size:11px; color:var(--text-sub);" id="mlEventsInWindow">0 events in slice</span>
       </div>
 
       <div class="ml-features-grid">
-        <div class="ml-card"><div><div class="ml-num">#1 TEMPORAL</div><div class="ml-title">Active Coding Time</div><div class="ml-desc">Seconds with keystrokes/edits (&lt;60s gap)</div></div><div class="ml-val" id="feat_activeCodingTimeSec">0s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#1 TEMPORAL</div><div class="ml-title">Active Coding Time</div><div class="ml-desc">Seconds with edits (&lt;60s gap)</div></div><div class="ml-val" id="feat_activeCodingTimeSec">0s</div></div>
         <div class="ml-card"><div><div class="ml-num">#2 TEMPORAL</div><div class="ml-title">Idle Time</div><div class="ml-desc">Seconds in inactive gaps (&ge;60s)</div></div><div class="ml-val" id="feat_idleTimeSec">0s</div></div>
-        <div class="ml-card"><div><div class="ml-num">#3 TEMPORAL</div><div class="ml-title">Session Duration</div><div class="ml-desc">Total window timespan in seconds</div></div><div class="ml-val" id="feat_sessionDurationSec">300s</div></div>
-        <div class="ml-card"><div><div class="ml-num">#4 TEMPORAL</div><div class="ml-title">Active Typing Duration</div><div class="ml-desc">Continuous keystroke clusters (&lt;5s gap)</div></div><div class="ml-val" id="feat_activeTypingDurationSec">0s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#3 TEMPORAL</div><div class="ml-title">Session Duration</div><div class="ml-desc">Total window duration</div></div><div class="ml-val" id="feat_sessionDurationSec">300s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#4 TEMPORAL</div><div class="ml-title">Active Typing Duration</div><div class="ml-desc">Continuous keystrokes (&lt;5s gap)</div></div><div class="ml-val" id="feat_activeTypingDurationSec">0s</div></div>
         <div class="ml-card"><div><div class="ml-num">#5 KEYSTROKE</div><div class="ml-title">Keystroke Count</div><div class="ml-desc">Total raw keystroke events</div></div><div class="ml-val" id="feat_keystrokeCount">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#6 PASTE</div><div class="ml-title">Paste Burst Count</div><div class="ml-desc">Total copy-paste insertion events</div></div><div class="ml-val" id="feat_pasteCount">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#7 PASTE</div><div class="ml-title">Pasted Characters</div><div class="ml-desc">Sum of characters pasted in window</div></div><div class="ml-val" id="feat_pastedCharCount">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#8 PASTE</div><div class="ml-title">Paste-to-Keystroke Ratio</div><div class="ml-desc">Pasted chars / (manual keys + 1)</div></div><div class="ml-val" id="feat_pasteToKeystrokeRatio">0.00</div></div>
-        <div class="ml-card"><div><div class="ml-num">#9 VELOCITY</div><div class="ml-title">Typing Velocity</div><div class="ml-desc">Characters inserted per active second</div></div><div class="ml-val" id="feat_typingVelocity">0.00 c/s</div></div>
-        <div class="ml-card"><div><div class="ml-num">#10 CHURN</div><div class="ml-title">Net Inserted Characters</div><div class="ml-desc">Total characters added in editor</div></div><div class="ml-val" id="feat_netInsertedChars">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#11 CHURN</div><div class="ml-title">Net Deleted Characters</div><div class="ml-desc">Total characters removed/replaced</div></div><div class="ml-val" id="feat_netDeletedChars">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#12 CHURN</div><div class="ml-title">Code Churn Ratio</div><div class="ml-desc">Deleted chars / (inserted chars + 1)</div></div><div class="ml-val" id="feat_codeChurnRatio">0.00</div></div>
-        <div class="ml-card"><div><div class="ml-num">#13 FILE DYNAMICS</div><div class="ml-title">File Mod Frequency</div><div class="ml-desc">Total file switch/edit transitions</div></div><div class="ml-val" id="feat_fileModificationFreq">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#14 FILE DYNAMICS</div><div class="ml-title">File Create/Delete Count</div><div class="ml-desc">Total files created or deleted</div></div><div class="ml-val" id="feat_fileCreateDeleteCount">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#15 FILE DYNAMICS</div><div class="ml-title">Explicit Save Count</div><div class="ml-desc">Ctrl+S / Save commands triggered</div></div><div class="ml-val" id="feat_explicitSaveCount">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#16 ERROR PATTERNS</div><div class="ml-title">Syntax Error Count</div><div class="ml-desc">Compiler / linter diagnostics raised</div></div><div class="ml-val" id="feat_syntaxErrorCount">0</div></div>
-        <div class="ml-card"><div><div class="ml-num">#17 ERROR PATTERNS</div><div class="ml-title">Error Resolution Duration</div><div class="ml-desc">Average seconds to fix syntax errors</div></div><div class="ml-val" id="feat_errorResolutionDurationSec">0s</div></div>
-        <div class="ml-card"><div><div class="ml-num">#18 ATTENTION</div><div class="ml-title">Focus Transitions</div><div class="ml-desc">Window blur/focus attention shifts</div></div><div class="ml-val" id="feat_windowFocusTransitions">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#6 PASTE</div><div class="ml-title">Paste Burst Count</div><div class="ml-desc">Copy-paste insertion events</div></div><div class="ml-val" id="feat_pasteCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#7 PASTE</div><div class="ml-title">Pasted Characters</div><div class="ml-desc">Total characters pasted</div></div><div class="ml-val" id="feat_pastedCharCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#8 PASTE</div><div class="ml-title">Paste Ratio</div><div class="ml-desc">Pasted / (keys + 1)</div></div><div class="ml-val" id="feat_pasteToKeystrokeRatio">0.00</div></div>
+        <div class="ml-card"><div><div class="ml-num">#9 VELOCITY</div><div class="ml-title">Typing Velocity</div><div class="ml-desc">Chars per active second</div></div><div class="ml-val" id="feat_typingVelocity">0.00 c/s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#10 CHURN</div><div class="ml-title">Net Inserted Chars</div><div class="ml-desc">Total characters added</div></div><div class="ml-val" id="feat_netInsertedChars">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#11 CHURN</div><div class="ml-title">Net Deleted Chars</div><div class="ml-desc">Total characters removed</div></div><div class="ml-val" id="feat_netDeletedChars">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#12 CHURN</div><div class="ml-title">Code Churn Ratio</div><div class="ml-desc">Deleted / (inserted + 1)</div></div><div class="ml-val" id="feat_codeChurnRatio">0.00</div></div>
+        <div class="ml-card"><div><div class="ml-num">#13 DYNAMICS</div><div class="ml-title">File Mod Frequency</div><div class="ml-desc">File switch/edit transitions</div></div><div class="ml-val" id="feat_fileModificationFreq">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#14 DYNAMICS</div><div class="ml-title">File Create/Delete</div><div class="ml-desc">Files created or deleted</div></div><div class="ml-val" id="feat_fileCreateDeleteCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#15 DYNAMICS</div><div class="ml-title">Explicit Saves</div><div class="ml-desc">Ctrl+S / Save commands</div></div><div class="ml-val" id="feat_explicitSaveCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#16 DIAGNOSTICS</div><div class="ml-title">Syntax Error Count</div><div class="ml-desc">Linter/compiler errors</div></div><div class="ml-val" id="feat_syntaxErrorCount">0</div></div>
+        <div class="ml-card"><div><div class="ml-num">#17 DIAGNOSTICS</div><div class="ml-title">Error Fix Duration</div><div class="ml-desc">Average seconds to resolve</div></div><div class="ml-val" id="feat_errorResolutionDurationSec">0s</div></div>
+        <div class="ml-card"><div><div class="ml-num">#18 ATTENTION</div><div class="ml-title">Focus Transitions</div><div class="ml-desc">Window blur/focus shifts</div></div><div class="ml-val" id="feat_windowFocusTransitions">0</div></div>
       </div>
     </div>
 
     <!-- TAB 3: COMMITS -->
     <div id="content-commits" class="tab-content">
-      <h2 style="font-size:18px; font-weight:800; margin-bottom:12px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Session Git Commits</h2>
+      <h2 style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--text);">Session Git Commits</h2>
       <div id="commitsContainer">
-        <p style="color:rgba(255,255,255,0.35); font-style:italic;">No commits captured in current session.</p>
+        <p style="color:var(--text-sub); font-size:12px;">No commits captured in current session.</p>
       </div>
     </div>
 
     <!-- TAB 4: SETUP -->
     <div id="content-setup" class="tab-content">
-      <h2 style="font-size:18px; font-weight:800; margin-bottom:14px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Credentials &amp; Assignment Linking</h2>
+      <h2 style="font-size:16px; font-weight:700; margin-bottom:14px; color:var(--text);">Credentials &amp; Assignment Linking</h2>
       <div class="form-group">
-        <label>CollabIntel Server URL</label>
-        <div class="hint">Use HTTPS for remote servers (e.g., https://collabintel.edu) or http://localhost:5000 for local dev.</div>
+        <label>INCODE Server URL</label>
+        <div class="hint">Use HTTPS for remote server or http://localhost:5000 for local dev.</div>
         <input type="text" id="cfgServerUrl" value="http://localhost:5000">
       </div>
       <div class="form-group">
@@ -533,7 +412,7 @@
       </div>
       <div class="form-group">
         <label>Student Auth Token (JWT)</label>
-        <div class="hint">Secret token copied from the CollabIntel student portal.</div>
+        <div class="hint">Secret token copied from the INCODE student portal.</div>
         <input type="password" id="cfgAuthToken" placeholder="eyJhbGciOi...">
       </div>
       <div class="form-group">
@@ -547,9 +426,9 @@
 
     <!-- TAB 5: SETTINGS -->
     <div id="content-settings" class="tab-content">
-      <h2 style="font-size:18px; font-weight:800; margin-bottom:14px; background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Extension Settings &amp; Cache</h2>
-      <p style="font-size:12px; color:rgba(255,255,255,0.35); margin-bottom:16px;">Manage offline buffered events and diagnostics.</p>
-      <button class="btn btn-secondary" onclick="postCmd('clearOfflineCache')">Clear In-Memory Offline Cache</button>
+      <h2 style="font-size:16px; font-weight:700; margin-bottom:12px; color:var(--text);">Extension Settings &amp; Cache</h2>
+      <p style="font-size:12px; color:var(--text-sub); margin-bottom:16px;">Manage offline buffered events and telemetry cache.</p>
+      <button class="btn btn-secondary" onclick="postCmd('clearOfflineCache')">Clear In-Memory Cache</button>
     </div>
   </div>
 
@@ -585,7 +464,7 @@
       if (box) {
         box.className = 'test-box';
         box.style.display = 'block';
-        box.innerText = '⚡ Testing connection to ' + (serverUrl || 'backend') + '...';
+        box.innerText = 'Connecting to ' + (serverUrl || 'backend') + '...';
       }
 
       vscode.postMessage({
@@ -609,7 +488,7 @@
       const box = document.getElementById('testResultBox');
       if (!box) return;
       box.className = 'test-box ' + (res.success ? 'success' : 'error');
-      box.innerText = (res.success ? '✅ ' : '❌ ') + res.message;
+      box.innerText = (res.success ? 'Connected: ' : 'Failed: ') + res.message;
     }
 
     function renderState(s) {
@@ -625,17 +504,17 @@
       const dIcon = document.getElementById('dashModeIcon');
       if (dText && dIcon) {
         if (isExp) {
-          const pInfo = s.experimentSession ? ` (${s.experimentSession.participantId} - ${s.experimentSession.taskCondition === 'TASK_B_AI' ? 'Task B' : 'Task A'})` : '';
+          const pInfo = s.experimentSession ? ` (${s.experimentSession.participantId})` : '';
           dText.innerText = 'Experimental' + pInfo;
-          dIcon.innerText = '🔬';
+          dIcon.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.31M14 2v7.31M8.5 2h7M14 9.3l5.88 9.8A2 2 0 0 1 18.18 22H5.82a2 2 0 0 1-1.7-2.9L10 9.3"/></svg>`;
         } else {
-          dText.innerText = 'Real Academic Mode';
-          dIcon.innerText = '🛡️';
+          dText.innerText = 'Real Mode';
+          dIcon.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--green)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
         }
       }
 
       if (s.provenance) {
-        document.getElementById('cardStyle').innerHTML = '<span style="background:linear-gradient(135deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">' + (s.provenance.style || 'Manual Typing') + '</span>';
+        document.getElementById('cardStyle').innerText = s.provenance.style || 'Manual Typing';
         document.getElementById('barManual').style.width = (s.provenance.manualPercent || 0) + '%';
         document.getElementById('barAi').style.width = (s.provenance.aiPercent || 0) + '%';
         document.getElementById('barPaste').style.width = (s.provenance.pastePercent || 0) + '%';

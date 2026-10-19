@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OffSync — Trust & Equity Analytics for Student Contributions",
+  title: "INCODE — Trust & Equity Analytics for Student Contributions",
   description: "Academic multi-modal student contribution tracker integrating offline VS Code telemetry, Git repository mining, and equity scoring algorithms.",
 };
 

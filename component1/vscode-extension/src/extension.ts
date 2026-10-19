@@ -1041,7 +1041,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (dbInitialized) {
         await triggerBatchSync({ onStatusUpdate: broadcastStateToWebviews });
       }
-      vscode.window.showInformationMessage('✅ CollabIntel: Telemetry synced successfully!');
+      vscode.window.showInformationMessage('CollabIntel: Telemetry synced.');
     })
   );
 
@@ -1070,8 +1070,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('collabintel.testConnection', async () => {
       const res = await testBackendConnection(getConfig());
-      if (res.success) vscode.window.showInformationMessage(`✅ ${res.message}`);
-      else vscode.window.showErrorMessage(`❌ ${res.message}`);
+      if (res.success) vscode.window.showInformationMessage(`CollabIntel: ${res.message}`);
+      else vscode.window.showErrorMessage(`CollabIntel: ${res.message}`);
     })
   );
 

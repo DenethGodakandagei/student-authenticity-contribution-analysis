@@ -1,8 +1,8 @@
 {
   "name": "student-contribution-tracker",
-  "displayName": "CollabIntel – Student Repo Tracker",
-  "description": "Automatically tracks coding sessions, file edits, git commits, and keystrokes inside your assigned project repo and syncs contribution analytics to the CollabIntel platform.",
-  "version": "2.0.0",
+  "displayName": "INCODE – Student Contribution Tracker",
+  "description": "Automatically tracks coding sessions, file edits, git commits, and keystrokes inside your assigned project repo and syncs contribution analytics to the INCODE platform.",
+  "version": "3.0.0",
   "publisher": "academic-innovation",
   "engines": {
     "vscode": "^1.74.0"
@@ -23,27 +23,27 @@
     "commands": [
       {
         "command": "collabintel.setup",
-        "title": "CollabIntel: Setup – Link Token & Assignment",
+        "title": "INCODE: Setup – Link Token & Assignment",
         "icon": "$(gear)"
       },
       {
         "command": "collabintel.openDashboard",
-        "title": "CollabIntel: Open Interactive Dashboard",
+        "title": "INCODE: Open Interactive Dashboard",
         "icon": "$(dashboard)"
       },
       {
         "command": "collabintel.sync",
-        "title": "CollabIntel: Sync Telemetry Now",
+        "title": "INCODE: Sync Telemetry Now",
         "icon": "$(sync)"
       },
       {
         "command": "collabintel.testConnection",
-        "title": "CollabIntel: Test Connection",
+        "title": "INCODE: Test Connection",
         "icon": "$(plug)"
       },
       {
         "command": "collabintel.status",
-        "title": "CollabIntel: Show Status",
+        "title": "INCODE: Show Status",
         "icon": "$(info)"
       },
       {
@@ -53,7 +53,7 @@
       },
       {
         "command": "collabintel.switchMode",
-        "title": "CollabIntel: Switch Operating Mode (Real vs Experimental)",
+        "title": "INCODE: Switch Operating Mode (Real vs Experimental)",
         "icon": "$(gear)"
       },
       {
@@ -73,7 +73,7 @@
       },
       {
         "command": "collabintel.exportLocalData",
-        "title": "CollabIntel: 1-Click Export Local Telemetry Database (.sqlite / JSON)",
+        "title": "INCODE: 1-Click Export Local Telemetry Database (.sqlite / JSON)",
         "icon": "$(cloud-download)"
       }
     ],
@@ -81,7 +81,7 @@
       "activitybar": [
         {
           "id": "collabintel-container",
-          "title": "CollabIntel Tracker",
+          "title": "INCODE Tracker",
           "icon": "media/icon.svg"
         }
       ]
@@ -96,7 +96,7 @@
       ]
     },
     "configuration": {
-      "title": "CollabIntel Student Tracker",
+      "title": "INCODE Student Tracker",
       "properties": {
         "collabintel.authToken": {
           "type": "string",

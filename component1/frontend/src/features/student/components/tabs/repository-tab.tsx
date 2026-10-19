@@ -364,7 +364,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
               </h3>
             </div>
             <p className="text-xs text-slate-500 font-light mt-1">
-              Connect your local cloned repository once. OffSync inspects the hidden{' '}
+              Connect your local cloned repository once. INCODE inspects the hidden{' '}
               <code className="text-emerald-800 bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">
                 .git/config
               </code>{' '}
@@ -1025,7 +1025,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                 No Local Project Workspace Connected
               </h4>
               <p className="text-xs text-slate-500 font-light max-w-md mx-auto mt-1">
-                Link your local cloned repository directory. OffSync verifies the hidden{' '}
+                Link your local cloned repository directory. INCODE verifies the hidden{' '}
                 <code className="text-emerald-800 font-mono">.git/config</code> remote path to ensure authentic provenance.
               </p>
             </div>

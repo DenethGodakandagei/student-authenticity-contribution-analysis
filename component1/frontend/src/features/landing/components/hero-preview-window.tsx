@@ -15,7 +15,7 @@ export const HeroPreviewWindow: React.FC = () => {
           <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" />
           <span className="w-3 h-3 rounded-full bg-[#22C55E] inline-block" />
           <span className="ml-2 font-medium text-slate-700">
-            OffSync Telemetry Bridge · Live Active Node
+            INCODE Telemetry Bridge · Live Active Node
           </span>
         </div>
 

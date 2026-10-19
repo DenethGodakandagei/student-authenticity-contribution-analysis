@@ -38,7 +38,7 @@ export default function HomePage() {
 
         {/* Subtitle */}
         <p className="text-slate-600 text-base sm:text-lg max-w-2xl font-normal leading-relaxed mb-8">
-          OffSync records keystroke cadence and AST file diffs inside VS Code, proving authentic human work and preventing unfair group project grades.
+          INCODE records keystroke cadence and AST file diffs inside VS Code, proving authentic human work and preventing unfair group project grades.
         </p>
 
         {/* CTAs */}

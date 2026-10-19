@@ -11,7 +11,7 @@ export const LandingHowItWorks: React.FC = () => {
           Simple Workflow
         </span>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-1 mb-3">
-          How OffSync Works in 3 Steps
+          How INCODE Works in 3 Steps
         </h2>
         <p className="text-slate-500 text-sm">
           Zero disruption to standard developer workflows. Code normally, online or offline.
@@ -48,7 +48,7 @@ export const LandingHowItWorks: React.FC = () => {
           </div>
           <h3 className="text-base font-bold text-slate-900 mb-2">Reconcile & Assess</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            When pushing code to GitHub, OffSync matches commits against telemetry to produce an objective, fair contribution score.
+            When pushing code to GitHub, INCODE matches commits against telemetry to produce an objective, fair contribution score.
           </p>
         </div>
       </div>

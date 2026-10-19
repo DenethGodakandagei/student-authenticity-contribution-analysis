@@ -80,7 +80,7 @@ export const AuthCard: React.FC = () => {
           <Code2 className="w-6 h-6 stroke-[2.2]" />
         </Link>
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-extrabold text-xl tracking-tight text-slate-900">OffSync</span>
+          <span className="font-extrabold text-xl tracking-tight text-slate-900">INCODE</span>
           <span className="text-[10px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-full border border-slate-200">
             Academic Node
           </span>

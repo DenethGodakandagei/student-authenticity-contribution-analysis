@@ -50,12 +50,12 @@ exports.getSafePendingCount = getSafePendingCount;
 function formatStatusBarText(status, pendingCount) {
     const cfg = (0, settings_1.getConfig)();
     const isExp = cfg.operatingMode === 'experimental';
-    const prefix = isExp ? '$(beaker) CollabIntel [Exp]' : '$(shield) CollabIntel';
+    const prefix = isExp ? '$(beaker) INCODE [Exp]' : '$(shield) INCODE';
     switch (status) {
         case 'synced':
             return `${prefix}: Synced`;
         case 'syncing':
-            return `$(sync~spin) CollabIntel: Syncing...`;
+            return `$(sync~spin) INCODE: Syncing...`;
         case 'offline_pending':
             return `$(cloud-offline) ${prefix}: ${pendingCount} Pending`;
     }
@@ -96,19 +96,19 @@ function updateTelemetryStatusBar(status, pendingCount, onUpdate) {
         case 'synced':
             currentStatusState = 'tracking';
             statusBarItem.text = formatStatusBarText('synced', count);
-            statusBarItem.tooltip = `CollabIntel ${modeLabel}: All telemetry events are synced. Click to open dashboard.`;
+            statusBarItem.tooltip = `INCODE ${modeLabel}: All telemetry events are synced. Click to open dashboard.`;
             statusBarItem.backgroundColor = undefined;
             break;
         case 'syncing':
             currentStatusState = 'syncing';
             statusBarItem.text = formatStatusBarText('syncing', count);
-            statusBarItem.tooltip = `CollabIntel ${modeLabel}: Syncing telemetry events to server...`;
+            statusBarItem.tooltip = `INCODE ${modeLabel}: Syncing telemetry events to server...`;
             statusBarItem.backgroundColor = undefined;
             break;
         case 'offline_pending':
             currentStatusState = 'error';
             statusBarItem.text = formatStatusBarText('offline_pending', count);
-            statusBarItem.tooltip = `CollabIntel ${modeLabel}: ${count} event(s) buffered in SQLite. Auto-syncs when online.`;
+            statusBarItem.tooltip = `INCODE ${modeLabel}: ${count} event(s) buffered in SQLite. Auto-syncs when online.`;
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             break;
     }
@@ -159,7 +159,7 @@ function updateStatusBar(state, onUpdate) {
             break;
         case 'syncing':
             statusBarItem.text = formatStatusBarText('syncing', count);
-            statusBarItem.tooltip = 'Syncing telemetry to CollabIntel server...';
+            statusBarItem.tooltip = 'Syncing telemetry to INCODE server...';
             statusBarItem.backgroundColor = undefined;
             break;
         case 'error':
@@ -168,8 +168,8 @@ function updateStatusBar(state, onUpdate) {
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
             break;
         case 'unconfigured':
-            statusBarItem.text = '$(warning) CollabIntel: Setup Needed';
-            statusBarItem.tooltip = 'Click to configure CollabIntel credentials and assignment.';
+            statusBarItem.text = '$(warning) INCODE: Setup Needed';
+            statusBarItem.tooltip = 'Click to configure INCODE credentials and assignment.';
             statusBarItem.backgroundColor = undefined;
             break;
     }

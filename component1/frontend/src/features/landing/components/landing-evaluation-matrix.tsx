@@ -137,7 +137,7 @@ export const LandingEvaluationMatrix: React.FC = () => {
           <span>
             Team Collaboration Equity: <strong>Optimal Balance</strong>
           </span>
-          <span className="text-emerald-700 font-bold">Signed by OffSync Attestation Protocol</span>
+          <span className="text-emerald-700 font-bold">Signed by INCODE Attestation Protocol</span>
         </div>
       </div>
     </section>

@@ -953,7 +953,7 @@ function activate(context) {
         if (dbInitialized) {
             await (0, batch_sync_1.triggerBatchSync)({ onStatusUpdate: broadcastStateToWebviews });
         }
-        vscode.window.showInformationMessage('✅ CollabIntel: Telemetry synced successfully!');
+        vscode.window.showInformationMessage('CollabIntel: Telemetry synced.');
     }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.reconcile', async () => {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
@@ -976,9 +976,9 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.testConnection', async () => {
         const res = await (0, http_client_1.testBackendConnection)((0, settings_1.getConfig)());
         if (res.success)
-            vscode.window.showInformationMessage(`✅ ${res.message}`);
+            vscode.window.showInformationMessage(`CollabIntel: ${res.message}`);
         else
-            vscode.window.showErrorMessage(`❌ ${res.message}`);
+            vscode.window.showErrorMessage(`CollabIntel: ${res.message}`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.status', () => openDashboard('overview')));
     context.subscriptions.push((0, audit_viewer_1.registerAuditViewerCommand)(context, globalStoragePath, async () => {
