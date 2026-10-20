@@ -226,37 +226,39 @@ export default function StudentDashboard() {
       const currentTeam = teamObj || team;
       if (currentTeam?._id) {
         try {
+          const totalFileSize = files.reduce((acc, f) => acc + (f.size || (f.lineCount || 1) * 35), 0);
           const sessionPayload = {
             sessionStart: new Date(Date.now() - Math.max(300000, files.length * 15000)).toISOString(),
             sessionEnd: new Date().toISOString(),
             durationMinutes: Math.max(5, Math.round((files.length * 15) / 60)),
-            keystrokes: files.reduce((acc, f) => acc + Math.round((f.lineCount || 1) * 35), 0),
-            charactersPasted: edits.reduce((acc, f) => acc + Math.round((f.lineCount || 1) * 4), 0),
-            pasteCount: edits.length > 0 ? 1 : 0,
+            keystrokes: 0,
+            charactersPasted: totalFileSize,
+            pasteCount: files.length,
             filesEdited: files.map(f => f.path),
             filesCreated: [],
             codingProvenance: {
-              manualPercent: 92,
-              pastePercent: 5,
-              aiPercent: 3,
-              style: 'Authentic Manual Typing'
+              manualPercent: 0,
+              pastePercent: 100,
+              aiPercent: 0,
+              style: 'Heavy Copy-Paste'
             },
             fileActivities: files.slice(0, 50).map(f => {
               const rawLines = f.lines || (f.content ? f.content.split('\n') : []);
               const fEndMs = f.lastModified ? new Date(f.lastModified).getTime() : Date.now();
               const fSpreadMs = Math.max(60000, Math.min(3600000, rawLines.length * 15000));
               const fStartMs = fEndMs - fSpreadMs;
+              const fChars = f.size || (f.content ? f.content.length : Math.round((f.lineCount || 1) * 35));
 
               return {
                 filePath: f.path,
                 action: 'edited',
-                manualChars: Math.round((f.lineCount || 1) * 35),
-                pasteChars: 0,
+                manualChars: 0,
+                pasteChars: fChars,
                 aiChars: 0,
-                manualKeystrokes: Math.round((f.lineCount || 1) * 35),
-                pasteEvents: 0,
+                manualKeystrokes: 0,
+                pasteEvents: 1,
                 aiEvents: 0,
-                typingProvenance: 'manual',
+                typingProvenance: 'copy_paste',
                 linesAdded: f.lineCount || 0,
                 linesRemoved: 0,
                 lineRecords: rawLines.slice(0, 300).map((lineText: string, idx: number) => {
@@ -265,8 +267,8 @@ export default function StudentDashboard() {
                   return {
                     lineNumber: idx + 1,
                     lineText,
-                    provenance: 'manual',
-                    isOffline: false,
+                    provenance: 'copy_paste',
+                    isOffline: true,
                     timestamp: lineTime.toISOString()
                   };
                 }),

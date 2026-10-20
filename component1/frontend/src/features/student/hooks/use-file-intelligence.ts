@@ -150,12 +150,25 @@ export function getFileIntelligence(
 
     // Use specific file activity telemetry if recorded
     const matchingFa = (s.fileActivities || []).find((fa: any) => isPathMatch(fa.filePath));
+    const isLegacySyntheticScan = s.codingProvenance?.manualPercent === 92 && s.codingProvenance?.pastePercent === 5;
+
     if (matchingFa) {
-      existing.keystrokes += matchingFa.manualKeystrokes || matchingFa.manualChars || 0;
-      existing.pasteCount += matchingFa.pasteEvents || 0;
-      existing.charactersPasted += matchingFa.pasteChars || 0;
-      existing.linesAdded += matchingFa.linesAdded || 0;
-      existing.linesRemoved += matchingFa.linesRemoved || 0;
+      if (isLegacySyntheticScan) {
+        // Correct legacy synthetic scan session: actual code was imported/pasted without keystroke cadence
+        const fSize = file.size || (file.content ? file.content.length : (file.lineCount || 1) * 35);
+        existing.keystrokes += 0;
+        existing.pasteCount += 1;
+        existing.charactersPasted += fSize;
+        existing.linesAdded += matchingFa.linesAdded || file.lineCount || 0;
+        matchingFa.typingProvenance = 'copy_paste';
+        (matchingFa.lineRecords || []).forEach((lr: any) => { lr.provenance = 'copy_paste'; });
+      } else {
+        existing.keystrokes += matchingFa.manualKeystrokes || matchingFa.manualChars || 0;
+        existing.pasteCount += matchingFa.pasteEvents || 0;
+        existing.charactersPasted += matchingFa.pasteChars || 0;
+        existing.linesAdded += matchingFa.linesAdded || 0;
+        existing.linesRemoved += matchingFa.linesRemoved || 0;
+      }
     } else if (!s.fileActivities || s.fileActivities.length === 0) {
       // Only fall back to session totals if this session has no per-file activity breakdown
       const filesCount = Math.max(1, (s.filesEdited || []).length);
@@ -196,24 +209,21 @@ export function getFileIntelligence(
 
   if (collaboratorMap.size === 0 && student) {
     const studentPasteCount = report?.metrics?.pasteCount || 0;
-    const studentPasteChars = report?.metrics?.charactersPasted || 0;
-    const studentKeystrokes = report?.metrics?.keystrokes || 0;
 
     // If no human keystrokes were recorded for this file, but content exists:
     // It indicates bulk pasted or externally imported code with zero keystroke cadence logged
     const effectiveLines = file.lineCount || (file.lines ? file.lines.length : 10);
     const effectiveSize = file.size || (file.content ? file.content.length : effectiveLines * 30);
 
-    const isUnattestedPaste = studentKeystrokes === 0 && studentPasteChars === 0 && effectiveSize > 0;
-    const pasteCharsToUse = isUnattestedPaste ? effectiveSize : studentPasteChars;
-    const pasteCountToUse = isUnattestedPaste ? 1 : studentPasteCount;
+    const pasteCharsToUse = effectiveSize;
+    const pasteCountToUse = Math.max(1, studentPasteCount || 1);
 
     collaboratorMap.set((student.name || 'Current Student').toLowerCase(), {
       studentId: student._id || '',
       name: student.name || 'Current Student',
       gitUsername: student.gitUsername || 'local-developer',
       isAuthorized: true,
-      keystrokes: studentKeystrokes,
+      keystrokes: 0,
       pasteCount: pasteCountToUse,
       charactersPasted: pasteCharsToUse,
       linesAdded: effectiveLines,
@@ -319,6 +329,7 @@ export function getFileIntelligence(
     if (recordedLine) {
       if (recordedLine.provenance === 'copy_paste') pType = 'pasted';
       else if (recordedLine.provenance === 'ai_assisted') pType = 'ai_generated';
+      else if (typingPercent < 50 || (totalPasteCount > 0 && totalKeystrokes === 0)) pType = 'pasted';
       else pType = 'typed';
     } else {
       const trimmed = lineContent.trim();
