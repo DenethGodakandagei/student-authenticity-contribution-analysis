@@ -66,24 +66,39 @@ export function getFileIntelligence(
   report?: any
 ) {
   if (!file) return null;
-  const filePath = (file.path || '').replace(/^\/+/, '');
+  const filePath = (file.path || '').replace(/\\/g, '/').replace(/^\/+/, '');
   const fileName = file.name || filePath.split('/').pop() || 'file';
+
+  const isPathMatch = (targetPath: string) => {
+    if (!targetPath) return false;
+    const normTarget = targetPath.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
+    const normFile = filePath.toLowerCase();
+    const fnLower = fileName.toLowerCase();
+    return normTarget === normFile ||
+           normTarget.endsWith('/' + fnLower) ||
+           normFile.endsWith('/' + normTarget) ||
+           normTarget === fnLower ||
+           normFile.endsWith(normTarget) ||
+           normTarget.endsWith(normFile);
+  };
 
   // 1. Commits touching this file
   const matchedCommits = commitsList.filter(c => {
     if (c.filesList && Array.isArray(c.filesList) && c.filesList.length > 0) {
-      return c.filesList.some((fp: string) => fp.includes(filePath) || filePath.includes(fp));
+      return c.filesList.some((fp: string) => isPathMatch(fp));
     }
     return (c.commitMessage || '').toLowerCase().includes(fileName.toLowerCase()) ||
            (c.commitMessage || '').toLowerCase().includes(filePath.toLowerCase());
   });
 
-  // 2. Sessions touching this file
+  // 2. Sessions touching this file (check filesEdited, filesCreated, and fileActivities)
   const matchedSessions = sessionsList.filter(s => {
-    const edited = (s.filesEdited || []).map((p: string) => p.replace(/^\/+/, ''));
-    const created = (s.filesCreated || []).map((p: string) => p.replace(/^\/+/, ''));
-    return edited.some((p: string) => p === filePath || filePath.endsWith(p) || p.endsWith(filePath)) ||
-           created.some((p: string) => p === filePath || filePath.endsWith(p) || p.endsWith(filePath));
+    const edited = (s.filesEdited || []);
+    const created = (s.filesCreated || []);
+    const inEdited = edited.some((p: string) => isPathMatch(p));
+    const inCreated = created.some((p: string) => isPathMatch(p));
+    const inActivities = (s.fileActivities || []).some((fa: any) => isPathMatch(fa.filePath));
+    return inEdited || inCreated || inActivities;
   });
 
   // 3. Collaborators
@@ -132,11 +147,25 @@ export function getFileIntelligence(
       lastActive: new Date(s.sessionEnd || Date.now()),
       colorIndex: colorIdx++ % MEMBER_COLORS.length
     };
-    existing.keystrokes += s.keystrokes || 0;
-    existing.pasteCount += s.pasteCount || 0;
-    existing.charactersPasted += s.charactersPasted || 0;
-    existing.linesAdded += s.linesAdded || 0;
-    existing.linesRemoved += s.linesRemoved || 0;
+
+    // Use specific file activity telemetry if recorded
+    const matchingFa = (s.fileActivities || []).find((fa: any) => isPathMatch(fa.filePath));
+    if (matchingFa) {
+      existing.keystrokes += matchingFa.manualKeystrokes || matchingFa.manualChars || 0;
+      existing.pasteCount += matchingFa.pasteEvents || 0;
+      existing.charactersPasted += matchingFa.pasteChars || 0;
+      existing.linesAdded += matchingFa.linesAdded || 0;
+      existing.linesRemoved += matchingFa.linesRemoved || 0;
+    } else if (!s.fileActivities || s.fileActivities.length === 0) {
+      // Only fall back to session totals if this session has no per-file activity breakdown
+      const filesCount = Math.max(1, (s.filesEdited || []).length);
+      existing.keystrokes += Math.round((s.keystrokes || 0) / filesCount);
+      existing.pasteCount += Math.round((s.pasteCount || 0) / filesCount);
+      existing.charactersPasted += Math.round((s.charactersPasted || 0) / filesCount);
+      existing.linesAdded += Math.round((s.linesAdded || 0) / filesCount);
+      existing.linesRemoved += Math.round((s.linesRemoved || 0) / filesCount);
+    }
+
     if (new Date(s.sessionEnd) > existing.lastActive) {
       existing.lastActive = new Date(s.sessionEnd);
     }
@@ -168,7 +197,16 @@ export function getFileIntelligence(
   if (collaboratorMap.size === 0 && student) {
     const studentPasteCount = report?.metrics?.pasteCount || 0;
     const studentPasteChars = report?.metrics?.charactersPasted || 0;
-    const studentKeystrokes = report?.metrics?.keystrokes || Math.round((file.size || 200) * 0.4 + 40);
+    const studentKeystrokes = report?.metrics?.keystrokes || 0;
+
+    // If no human keystrokes were recorded for this file, but content exists:
+    // It indicates bulk pasted or externally imported code with zero keystroke cadence logged
+    const effectiveLines = file.lineCount || (file.lines ? file.lines.length : 10);
+    const effectiveSize = file.size || (file.content ? file.content.length : effectiveLines * 30);
+
+    const isUnattestedPaste = studentKeystrokes === 0 && studentPasteChars === 0 && effectiveSize > 0;
+    const pasteCharsToUse = isUnattestedPaste ? effectiveSize : studentPasteChars;
+    const pasteCountToUse = isUnattestedPaste ? 1 : studentPasteCount;
 
     collaboratorMap.set((student.name || 'Current Student').toLowerCase(), {
       studentId: student._id || '',
@@ -176,9 +214,9 @@ export function getFileIntelligence(
       gitUsername: student.gitUsername || 'local-developer',
       isAuthorized: true,
       keystrokes: studentKeystrokes,
-      pasteCount: studentPasteCount,
-      charactersPasted: studentPasteChars,
-      linesAdded: file.lineCount || 10,
+      pasteCount: pasteCountToUse,
+      charactersPasted: pasteCharsToUse,
+      linesAdded: effectiveLines,
       linesRemoved: 0,
       commitsCount: 0,
       lastActive: new Date(file.lastModified || Date.now()),
@@ -188,22 +226,24 @@ export function getFileIntelligence(
 
   const collaborators = Array.from(collaboratorMap.values());
   const totalKeystrokes = collaborators.reduce((acc, c) => acc + c.keystrokes, 0);
-  const totalPasteCount = collaborators.reduce((acc, c) => acc + c.pasteCount, 0) + (report?.metrics?.pasteCount || 0);
-  const totalCharsPasted = collaborators.reduce((acc, c) => acc + c.charactersPasted, 0) + (report?.metrics?.charactersPasted || 0);
-  const totalLinesAdded = Math.max(file.lineCount || 1, collaborators.reduce((acc, c) => acc + c.linesAdded, 0));
+  const totalPasteCount = collaborators.reduce((acc, c) => acc + c.pasteCount, 0);
+  const totalCharsPasted = collaborators.reduce((acc, c) => acc + c.charactersPasted, 0);
+  const totalLinesAdded = Math.max(file.lineCount || (file.lines ? file.lines.length : 1), collaborators.reduce((acc, c) => acc + c.linesAdded, 0));
 
-  const keff = parseFloat((totalKeystrokes / totalLinesAdded).toFixed(2));
+  const keff = totalLinesAdded > 0 ? parseFloat((totalKeystrokes / totalLinesAdded).toFixed(2)) : 0;
   const totalInputVolume = totalKeystrokes + totalCharsPasted;
-  let typingPercent = totalPasteCount > 0 ? 35 : 94;
+  let typingPercent = 100;
   if (totalInputVolume > 0) {
-    typingPercent = Math.min(100, Math.max(5, Math.round((totalKeystrokes / totalInputVolume) * 100)));
+    typingPercent = Math.min(100, Math.max(0, Math.round((totalKeystrokes / totalInputVolume) * 100)));
+  } else if (totalPasteCount > 0) {
+    typingPercent = 0;
   }
 
   let authenticityVerdict: 'authentic' | 'mixed' | 'suspicious' = 'authentic';
   let authenticityMessage = 'Authentic Organic Human Typing (Normal Keystroke Cadence)';
-  if (totalPasteCount > 3 || (totalLinesAdded >= 40 && keff < 2.0) || typingPercent < 50) {
+  if (totalPasteCount > 3 || (totalLinesAdded >= 20 && keff < 2.0) || typingPercent < 50 || (totalKeystrokes === 0 && totalCharsPasted > 0)) {
     authenticityVerdict = 'suspicious';
-    authenticityMessage = 'Heavy Bulk Copy-Paste / AI Injected Code Anomaly Detected';
+    authenticityMessage = 'Heavy Bulk Copy-Paste / External Code Inserted (Low/Zero Keystroke Cadence)';
   } else if (totalPasteCount > 0 || typingPercent < 80) {
     authenticityVerdict = 'mixed';
     authenticityMessage = 'Snippet Pastes & Reference Inserts Logged alongside Human Keystrokes';
@@ -218,15 +258,7 @@ export function getFileIntelligence(
 
   matchedSessions.forEach((s: any) => {
     (s.fileActivities || []).forEach((fa: any) => {
-      const faPath = (fa.filePath || '').replace(/\\/g, '/').toLowerCase();
-      const fpLower = filePath.toLowerCase();
-      const fnLower = fileName.toLowerCase();
-      const matchesFile =
-        faPath === fpLower ||
-        faPath.endsWith('/' + fnLower) ||
-        fpLower.endsWith(faPath) ||
-        faPath === fnLower;
-      if (matchesFile) {
+      if (isPathMatch(fa.filePath)) {
         (fa.lineRecords || []).forEach((lr: any) => {
           fileLineRecordsMap.set(lr.lineNumber, lr);
         });
@@ -297,13 +329,15 @@ export function getFileIntelligence(
         trimmed === '}' ||
         trimmed === '};';
 
-      if (isShort || typingPercent >= 85) {
+      if (typingPercent === 0 || (totalPasteCount > 0 && totalKeystrokes === 0)) {
+        pType = 'pasted';
+      } else if (isShort || typingPercent >= 85) {
         pType = 'typed';
       } else {
         const hash = (idx * 31 + trimmed.length) % 100;
         if (hash < typingPercent) {
           pType = 'typed';
-        } else if (hash % 2 === 0) {
+        } else if (hash % 2 === 0 && (report?.metrics?.codingProvenance?.aiPercent || 0) > 0) {
           pType = 'ai_generated';
         } else {
           pType = 'pasted';

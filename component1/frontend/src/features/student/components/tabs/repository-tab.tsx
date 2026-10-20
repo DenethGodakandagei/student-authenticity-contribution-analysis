@@ -762,20 +762,20 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                           <div>
                             <div className="flex justify-between text-xs font-mono mb-1">
                               <span className="text-emerald-700 font-semibold">
-                                ⌨️ Human Keystrokes: {intel?.typingPercent}%
+                                ⌨️ Human Keystrokes: {intel?.typingPercent ?? 0}%
                               </span>
                               <span className="text-rose-600 font-semibold">
-                                📋 Pasted: {100 - (intel?.typingPercent || 94)}%
+                                📋 Pasted: {100 - (intel?.typingPercent ?? 0)}%
                               </span>
                             </div>
                             <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden flex">
                               <div
                                 className="bg-emerald-500 h-full transition-all duration-300"
-                                style={{ width: `${intel?.typingPercent || 94}%` }}
+                                style={{ width: `${intel?.typingPercent ?? 0}%` }}
                               />
                               <div
                                 className="bg-rose-500 h-full transition-all duration-300"
-                                style={{ width: `${100 - (intel?.typingPercent || 94)}%` }}
+                                style={{ width: `${100 - (intel?.typingPercent ?? 0)}%` }}
                               />
                             </div>
                           </div>
@@ -807,7 +807,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                             <div className="bg-white border border-slate-200 rounded-xl p-2.5 text-center">
                               <span className="text-[10px] text-slate-400 block font-mono">K_eff Efficiency</span>
                               <span className="text-sm font-bold font-mono text-emerald-700">
-                                {intel?.keff || 1.0}
+                                {intel?.keff !== undefined ? intel.keff : '0.00'}
                               </span>
                             </div>
                           </div>

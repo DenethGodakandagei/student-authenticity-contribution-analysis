@@ -124,6 +124,7 @@ function computeLiveProvenance(): CodingProvenanceItem {
 
   let style = 'Manual Typing';
   if (pastePercent > 50) style = 'Heavy Copy-Paste';
+  else if (pastePercent > 15) style = 'Snippet / Reference Pastes';
   else if (aiPercent > 40) style = 'AI-Assisted Development';
   else if (aiPercent > 15) style = 'Balanced Copilot-Assisted';
   else if (manualPercent >= 80) style = 'Authentic Manual Typing';
@@ -715,26 +716,55 @@ export function activate(context: vscode.ExtensionContext) {
       const textNorm = normEndings(text);
       const clipTrimmed = clipNorm.trim();
       const textTrimmed = textNorm.trim();
-      const isClipboardMatch = clipNorm.length > 0 && textTrimmed.length > 0 && (
+
+      // Whitespace-agnostic comparison for indented or reformatted code pastes
+      const stripWs = (s: string) => s.replace(/\s+/g, '');
+      const clipWs = stripWs(clipNorm);
+      const textWs = stripWs(textNorm);
+      const isWsMatch = clipWs.length > 0 && textWs.length > 0 && (
+        clipWs === textWs ||
+        clipWs.includes(textWs) ||
+        textWs.includes(clipWs)
+      );
+
+      // Line-by-line overlap comparison for multi-line pastes
+      const clipLines = clipNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
+      const textLines = textNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
+      const hasSharedLines = textLines.length > 0 && textLines.some(tl => clipLines.some(cl => cl === tl || cl.includes(tl) || tl.includes(cl)));
+
+      const isClipboardMatch = (clipTrimmed.length > 0 && textTrimmed.length > 0 && (
         textNorm === clipNorm ||
         textTrimmed === clipTrimmed ||
         clipNorm.startsWith(textNorm) ||
         clipTrimmed.startsWith(textTrimmed) ||
-        (textTrimmed.length >= 6 && clipTrimmed.includes(textTrimmed)) ||
-        (clipTrimmed.length >= 6 && textTrimmed.includes(clipTrimmed))
-      );
+        (textTrimmed.length >= 2 && clipTrimmed.includes(textTrimmed)) ||
+        (clipTrimmed.length >= 2 && textTrimmed.includes(clipTrimmed))
+      )) || isWsMatch || (textLines.length > 1 && hasSharedLines);
 
       // AI AGENT vs USER PASTE vs MANUAL TYPING SIGNALS:
       const lines = text.split(/\r?\n/);
       const nonEmptyLines = lines.filter(l => l.trim().length > 0);
       const isMultiLine = nonEmptyLines.length > 1;
-      const isLargeBlock = textLen >= 25 && isMultiLine;
-      const isInstantBurstWithoutClipboard = isMultiLine && textLen >= 40 && timeDelta < 80 && !isClipboardMatch;
+
+      // Realistic human typing patterns:
+      // A single keystroke produces 1 char, Enter (\n or \r\n), tab/indent (1-4 spaces), or auto-close pair
+      const isSingleKey = textLen === 1;
+      const isEnterKey = text === '\n' || text === '\r\n';
+      const isTabOrIndent = /^\s{1,4}$/.test(text);
+      const isAutoClosePair = /^(\(\)|\[\]|\{\}|""|''|``|<>)$/.test(text);
+      const isPlausibleKeystroke = (isSingleKey || isEnterKey || isTabOrIndent || isAutoClosePair) && !isClipboardMatch;
+
+      // Paste insertion detection:
+      // If clipboard matched, or multi-line inserted, or textLen >= 15, or non-whitespace insertion >= 2 chars not matching typing pattern
+      const isPastedBlock = isClipboardMatch || isMultiLine || textLen >= 15 || (!isPlausibleKeystroke && textLen >= 2);
+
+      // AI code synthesis (very fast burst without clipboard)
+      const isInstantBurstWithoutClipboard = !isClipboardMatch && isMultiLine && textLen >= 60 && timeDelta < 40;
 
       let lineProvenance: 'manual' | 'ai_assisted' | 'copy_paste' = 'manual';
 
-      // 1. User Clipboard Paste
-      if (isClipboardMatch || isLargeBlock) {
+      // 1. User Clipboard Paste (or pasted snippet / block)
+      if (isPastedBlock && !isInstantBurstWithoutClipboard) {
         pasteCount++;
         charactersPasted += textLen;
         fileItem.pasteEvents++;
@@ -818,8 +848,8 @@ export function activate(context: vscode.ExtensionContext) {
         const pasteRatioFile = fileItem.pasteChars / fTotal;
         const manualRatioFile = fileItem.manualChars / fTotal;
         if (aiRatioFile > 0.40) fileItem.typingProvenance = 'ai_assisted';
-        else if (pasteRatioFile > 0.30) fileItem.typingProvenance = 'copy_paste';
-        else if (manualRatioFile >= 0.55) fileItem.typingProvenance = 'manual';
+        else if (pasteRatioFile > 0.20 || (fileItem.pasteEvents > 0 && pasteRatioFile > 0.10)) fileItem.typingProvenance = 'copy_paste';
+        else if (manualRatioFile >= 0.70) fileItem.typingProvenance = 'manual';
         else fileItem.typingProvenance = 'mixed';
       }
     }
