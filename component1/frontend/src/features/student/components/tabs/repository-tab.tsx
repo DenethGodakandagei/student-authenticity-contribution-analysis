@@ -762,20 +762,20 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                           <div>
                             <div className="flex justify-between text-xs font-mono mb-1">
                               <span className="text-emerald-700 font-semibold">
-                                ⌨️ Human Keystrokes: {intel?.typingPercent}%
+                                ⌨️ Human Keystrokes: {intel?.typingPercent ?? 0}%
                               </span>
                               <span className="text-rose-600 font-semibold">
-                                📋 Pasted: {100 - (intel?.typingPercent || 94)}%
+                                📋 Pasted: {100 - (intel?.typingPercent ?? 0)}%
                               </span>
                             </div>
                             <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden flex">
                               <div
                                 className="bg-emerald-500 h-full transition-all duration-300"
-                                style={{ width: `${intel?.typingPercent || 94}%` }}
+                                style={{ width: `${intel?.typingPercent ?? 0}%` }}
                               />
                               <div
                                 className="bg-rose-500 h-full transition-all duration-300"
-                                style={{ width: `${100 - (intel?.typingPercent || 94)}%` }}
+                                style={{ width: `${100 - (intel?.typingPercent ?? 0)}%` }}
                               />
                             </div>
                           </div>
@@ -807,7 +807,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                             <div className="bg-white border border-slate-200 rounded-xl p-2.5 text-center">
                               <span className="text-[10px] text-slate-400 block font-mono">K_eff Efficiency</span>
                               <span className="text-sm font-bold font-mono text-emerald-700">
-                                {intel?.keff || 1.0}
+                                {intel?.keff !== undefined ? intel.keff : '0.00'}
                               </span>
                             </div>
                           </div>
@@ -1010,6 +1010,41 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                 </div>
               )}
             </div>
+          </div>
+        ) : gitVerification?.status === 'mismatch' ? (
+          <div className="p-10 text-center space-y-4 bg-rose-50/40">
+            <div className="w-14 h-14 rounded-3xl bg-rose-100/70 border border-rose-200 flex items-center justify-center mx-auto text-rose-600 shadow-xs">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-slate-900">
+                Repository Mismatch — Access Blocked
+              </h4>
+              <p className="text-xs text-rose-700 max-w-lg mx-auto mt-1 leading-relaxed">
+                {gitVerification.message || 'The selected folder is linked to a different Git repository. INCODE has blocked access to protect assignment integrity.'}
+              </p>
+            </div>
+            <div className="p-3.5 bg-white border border-rose-200/80 rounded-2xl text-left font-mono text-[11px] space-y-1.5 max-w-lg mx-auto shadow-xs">
+              <div className="flex justify-between gap-3 text-slate-600">
+                <span className="text-slate-400">Expected Repo:</span>
+                <span className="text-[#2d5849] font-bold truncate max-w-[280px]">
+                  {gitVerification.expectedRepoUrl || repoUrl || 'Not set'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3 text-slate-600">
+                <span className="text-slate-400">Selected Folder:</span>
+                <span className="text-rose-600 font-bold truncate max-w-[280px]">
+                  {gitVerification.localRemoteUrl || 'Unspecified'}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={onConnectFolder}
+              className="px-5 py-2.5 bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold rounded-xl text-xs transition inline-flex items-center gap-2 cursor-pointer shadow-xs"
+            >
+              <FolderCheck className="w-4 h-4 text-[#6FAF9A]" />
+              <span>Connect Correct Cloned Repository Folder</span>
+            </button>
           </div>
         ) : (
           <div className="p-12 text-center space-y-4">

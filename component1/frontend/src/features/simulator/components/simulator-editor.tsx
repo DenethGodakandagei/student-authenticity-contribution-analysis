@@ -9,6 +9,7 @@ interface SimulatorEditorProps {
   isCoding: boolean;
   isAutoTyping: boolean;
   onContentChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onAutoType: () => void;
   onSimulateAi: () => void;
   onSimulatePaste: () => void;
@@ -21,6 +22,7 @@ export const SimulatorEditor: React.FC<SimulatorEditorProps> = ({
   isCoding,
   isAutoTyping,
   onContentChange,
+  onPaste,
   onAutoType,
   onSimulateAi,
   onSimulatePaste,
@@ -91,6 +93,7 @@ export const SimulatorEditor: React.FC<SimulatorEditorProps> = ({
         <textarea
           value={fileContent}
           onChange={onContentChange}
+          onPaste={onPaste}
           placeholder="// Type code here or use the injection triggers above..."
           className="flex-grow p-4 resize-none outline-none leading-6 font-mono text-[#0D1110] bg-transparent selection:bg-[#6FAF9A] selection:text-white"
         />

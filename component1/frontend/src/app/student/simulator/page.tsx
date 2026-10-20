@@ -195,13 +195,39 @@ export default function VSCodeSimulator() {
     addLog(`[PASTE DETECTED] Bulk paste anomaly (+${addedChars} chars) inserted.`);
   };
 
+  const isPastingRef = useRef(false);
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!isCoding) {
+      addLog('[WARNING] Start coding session to track pasted text.');
+      return;
+    }
+    const pastedText = e.clipboardData.getData('text');
+    if (!pastedText) return;
+
+    isPastingRef.current = true;
+    const addedChars = pastedText.length;
+    const addedLines = (pastedText.match(/\n/g) || []).length;
+
+    setPasteCount((prev) => prev + 1);
+    setCharactersPasted((prev) => prev + addedChars);
+    if (addedLines > 0) {
+      setLinesAdded((prev) => prev + addedLines);
+    }
+    addLog(`[PASTE DETECTED] Clipboard paste (+${addedChars} chars, +${addedLines} lines) detected in ${selectedFile}.`);
+  };
+
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!isCoding) {
       addLog('[WARNING] Start coding session to track changes.');
       return;
     }
     const val = e.target.value;
-    setKeystrokes((prev) => prev + 1);
+    if (isPastingRef.current) {
+      isPastingRef.current = false;
+    } else {
+      setKeystrokes((prev) => prev + 1);
+    }
     setFiles((prev) => ({
       ...prev,
       [selectedFile]: {
@@ -244,15 +270,59 @@ export default function VSCodeSimulator() {
         setOfflineCacheCount((prev) => prev + 1);
         addLog('[OFFLINE BUFFER] Internet unreachable. Telemetry sealed in local cache.');
       } else {
-        await api.vscode.sync({
-          assignmentId: selectedAssignmentId,
+        const currentFile = files[selectedFile];
+        const lines = (currentFile?.content || '').split('\n');
+        const sessionPayload = {
+          sessionStart: new Date(Date.now() - 30 * 60000).toISOString(),
+          sessionEnd: new Date().toISOString(),
+          durationMinutes: 30,
           keystrokes,
           linesAdded,
           linesRemoved,
           pasteCount,
           charactersPasted,
-          aiEvents: aiEventsCount,
-          aiCharacters: aiCharsCount
+          filesEdited: [selectedFile],
+          filesCreated: [],
+          filesDeleted: [],
+          fileActivities: [
+            {
+              filePath: selectedFile,
+              action: 'edited',
+              manualChars: keystrokes,
+              pasteChars: charactersPasted,
+              aiChars: aiCharsCount,
+              manualKeystrokes: keystrokes,
+              pasteEvents: pasteCount,
+              aiEvents: aiEventsCount,
+              linesAdded,
+              linesRemoved,
+              typingProvenance: pasteCount > 0 ? 'copy_paste' : (aiCharsCount > 0 ? 'ai_assisted' : 'manual'),
+              lineRecords: lines.map((l, i) => ({
+                lineNumber: i + 1,
+                lineText: l.slice(0, 120),
+                provenance: pasteCount > 0 && i >= (currentFile?.originalLines || 0) ? 'copy_paste' : 'manual',
+                isOffline: !isOnline,
+                timestamp: new Date().toISOString()
+              }))
+            }
+          ],
+          codingProvenance: {
+            manualPercent: keystrokes + charactersPasted + aiCharsCount > 0
+              ? Math.round((keystrokes / (keystrokes + charactersPasted + aiCharsCount)) * 100)
+              : 100,
+            pastePercent: keystrokes + charactersPasted + aiCharsCount > 0
+              ? Math.round((charactersPasted / (keystrokes + charactersPasted + aiCharsCount)) * 100)
+              : 0,
+            aiPercent: keystrokes + charactersPasted + aiCharsCount > 0
+              ? Math.round((aiCharsCount / (keystrokes + charactersPasted + aiCharsCount)) * 100)
+              : 0,
+            style: pasteCount > 0 ? 'Heavy Copy-Paste' : 'Manual Typing'
+          }
+        };
+
+        await api.vscode.sync({
+          assignmentId: selectedAssignmentId,
+          sessions: [sessionPayload]
         });
         setOfflineCacheCount(0);
         addLog('[SYNC SUCCESS] Telemetry dispatched to backend and verified.');
@@ -366,6 +436,7 @@ export default function VSCodeSimulator() {
               isCoding={isCoding}
               isAutoTyping={isAutoTyping}
               onContentChange={handleContentChange}
+              onPaste={handlePaste}
               onAutoType={handleAutoType}
               onSimulateAi={handleSimulateAi}
               onSimulatePaste={handleSimulatePaste}

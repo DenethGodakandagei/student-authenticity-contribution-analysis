@@ -113,6 +113,8 @@ function computeLiveProvenance() {
     let style = 'Manual Typing';
     if (pastePercent > 50)
         style = 'Heavy Copy-Paste';
+    else if (pastePercent > 15)
+        style = 'Snippet / Reference Pastes';
     else if (aiPercent > 40)
         style = 'AI-Assisted Development';
     else if (aiPercent > 15)
@@ -650,21 +652,40 @@ function activate(context) {
             const textNorm = normEndings(text);
             const clipTrimmed = clipNorm.trim();
             const textTrimmed = textNorm.trim();
-            const isClipboardMatch = clipNorm.length > 0 && textTrimmed.length > 0 && (textNorm === clipNorm ||
+            // Whitespace-agnostic comparison for indented or reformatted code pastes
+            const stripWs = (s) => s.replace(/\s+/g, '');
+            const clipWs = stripWs(clipNorm);
+            const textWs = stripWs(textNorm);
+            const isWsMatch = clipWs.length > 0 && textWs.length > 0 && (clipWs === textWs ||
+                clipWs.includes(textWs) ||
+                textWs.includes(clipWs));
+            // Line-by-line overlap comparison for multi-line pastes
+            const clipLines = clipNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
+            const textLines = textNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
+            const hasSharedLines = textLines.length > 0 && textLines.some(tl => clipLines.some(cl => cl === tl || cl.includes(tl) || tl.includes(cl)));
+            const isClipboardMatch = (clipTrimmed.length > 0 && textTrimmed.length > 0 && (textNorm === clipNorm ||
                 textTrimmed === clipTrimmed ||
                 clipNorm.startsWith(textNorm) ||
                 clipTrimmed.startsWith(textTrimmed) ||
-                (textTrimmed.length >= 6 && clipTrimmed.includes(textTrimmed)) ||
-                (clipTrimmed.length >= 6 && textTrimmed.includes(clipTrimmed)));
+                (textTrimmed.length >= 2 && clipTrimmed.includes(textTrimmed)) ||
+                (clipTrimmed.length >= 2 && textTrimmed.includes(clipTrimmed)))) || isWsMatch || (textLines.length > 1 && hasSharedLines);
             // AI AGENT vs USER PASTE vs MANUAL TYPING SIGNALS:
             const lines = text.split(/\r?\n/);
             const nonEmptyLines = lines.filter(l => l.trim().length > 0);
             const isMultiLine = nonEmptyLines.length > 1;
-            const isLargeBlock = textLen >= 25 && isMultiLine;
-            const isInstantBurstWithoutClipboard = isMultiLine && textLen >= 40 && timeDelta < 80 && !isClipboardMatch;
+            // Realistic human typing patterns:
+            // A single keystroke produces 1 char, Enter (\n or \r\n), tab/indent (1-4 spaces), or auto-close pair
+            const isSingleKey = textLen === 1;
+            const isEnterKey = text === '\n' || text === '\r\n';
+            const isTabOrIndent = /^\s{1,4}$/.test(text);
+            const isAutoClosePair = /^(\(\)|\[\]|\{\}|""|''|``|<>)$/.test(text);
+            const isPlausibleKeystroke = (isSingleKey || isEnterKey || isTabOrIndent || isAutoClosePair) && !isClipboardMatch;
+            // AI assistant code generation:
+            // Multi-line code or multi-token block inserted without matching OS clipboard
+            const isAiGenerated = !isClipboardMatch && (isMultiLine || textLen >= 25);
             let lineProvenance = 'manual';
             // 1. User Clipboard Paste
-            if (isClipboardMatch || isLargeBlock) {
+            if (isClipboardMatch) {
                 pasteCount++;
                 charactersPasted += textLen;
                 fileItem.pasteEvents++;
@@ -685,8 +706,8 @@ function activate(context) {
                 });
                 idleSensor.reportActivity();
             }
-            // 2. AI Agent / Automated Code Synthesis
-            else if (isInstantBurstWithoutClipboard) {
+            // 2. AI Assistant / Automated Code Generation (Copilot, Cursor, Roo, ChatGPT, inline chat)
+            else if (isAiGenerated) {
                 aiEventsCount++;
                 aiCharsCount += textLen;
                 fileItem.aiEvents++;
@@ -694,12 +715,15 @@ function activate(context) {
                 lineProvenance = 'ai_assisted';
                 // Store AI event to SQLite
                 storeEvent('KEYSTROKE', fileItem.category, relativePath, {
-                    provenance: 'ai_assisted', charCount: textLen
+                    provenance: 'ai_assisted',
+                    action: 'ai_assistant_code_generation',
+                    charCount: textLen,
+                    lineCount: added
                 });
                 idleSensor.reportActivity();
             }
             // 3. Genuine Manual Keystroke
-            else {
+            else if (isPlausibleKeystroke) {
                 keystrokeCount++;
                 fileItem.manualKeystrokes++;
                 fileItem.manualChars += textLen;
@@ -709,6 +733,15 @@ function activate(context) {
                 storeEvent('KEYSTROKE', fileItem.category, relativePath, {
                     provenance: 'manual', charCount: textLen
                 });
+            }
+            // 4. Fallback snippet paste
+            else {
+                pasteCount++;
+                charactersPasted += textLen;
+                fileItem.pasteEvents++;
+                fileItem.pasteChars += textLen;
+                lineProvenance = 'copy_paste';
+                idleSensor.reportActivity();
             }
             // Record exact line-by-line provenance
             if (!fileItem.lineRecords)
@@ -743,9 +776,9 @@ function activate(context) {
                 const manualRatioFile = fileItem.manualChars / fTotal;
                 if (aiRatioFile > 0.40)
                     fileItem.typingProvenance = 'ai_assisted';
-                else if (pasteRatioFile > 0.30)
+                else if (pasteRatioFile > 0.20 || (fileItem.pasteEvents > 0 && pasteRatioFile > 0.10))
                     fileItem.typingProvenance = 'copy_paste';
-                else if (manualRatioFile >= 0.55)
+                else if (manualRatioFile >= 0.70)
                     fileItem.typingProvenance = 'manual';
                 else
                     fileItem.typingProvenance = 'mixed';
@@ -815,15 +848,55 @@ function activate(context) {
                 editedFiles.add(rel);
                 const fileItem = getOrCreateFileActivity(rel, uri);
                 fileItem.action = 'edited';
-                storeEvent('BACKGROUND_MUTATION', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                // Read updated content from disk
+                let content = '';
+                try {
+                    content = await fs.promises.readFile(fsPath, 'utf8');
+                }
+                catch { }
+                const lines = content ? content.split(/\r?\n/) : [];
+                const newDocLen = content.length;
+                const loggedChars = fileItem.manualChars + fileItem.pasteChars + fileItem.aiChars;
+                const deltaChars = Math.max(0, newDocLen - loggedChars);
+                fileItem.aiChars += deltaChars;
+                fileItem.aiEvents += 1;
+                fileItem.typingProvenance = 'ai_assisted';
+                fileItem.linesAdded = Math.max(fileItem.linesAdded, lines.length);
+                aiCharsCount += deltaChars;
+                aiEventsCount += 1;
+                const mtimeIso = new Date(stats.mtimeMs).toISOString();
+                if (!fileItem.lineRecords)
+                    fileItem.lineRecords = [];
+                lines.forEach((lineText, idx) => {
+                    const lNum = idx + 1;
+                    const exist = fileItem.lineRecords.find(r => r.lineNumber === lNum);
+                    if (!exist) {
+                        fileItem.lineRecords.push({
+                            lineNumber: lNum,
+                            lineText: lineText.slice(0, 120),
+                            provenance: 'ai_assisted',
+                            isOffline: false,
+                            timestamp: mtimeIso
+                        });
+                    }
+                    else if (exist.lineText !== lineText.slice(0, 120)) {
+                        exist.lineText = lineText.slice(0, 120);
+                        exist.provenance = 'ai_assisted';
+                        exist.timestamp = mtimeIso;
+                    }
+                });
+                storeEvent('KEYSTROKE', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                    provenance: 'ai_assisted',
                     action: 'external_agent_file_mod',
                     isExternalDiskWrite: true,
-                    isOpenInEditor: vscode.workspace.textDocuments.some(doc => doc.uri.fsPath === fsPath),
+                    isOpenInEditor: false,
+                    charCount: deltaChars,
                     sizeBytes: stats.size,
                     mtimeMs: stats.mtimeMs,
                     description: 'Background edit on disk made to closed file by external AI agent / tool'
                 });
                 broadcastStateToWebviews();
+                triggerDebouncedAutoSync(context, 1000);
             }
             catch { }
         }
@@ -832,24 +905,52 @@ function activate(context) {
         if (uri.scheme !== 'file' || !(0, noise_filter_1.shouldTrackFile)(uri))
             return;
         const fsPath = uri.fsPath;
-        const isActivelyOpen = vscode.window.activeTextEditor?.document.uri.fsPath === fsPath;
-        if (!isActivelyOpen) {
+        try {
+            const stats = await fs.promises.stat(fsPath);
+            const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
+            createdFiles.add(rel);
+            const fileItem = getOrCreateFileActivity(rel, uri);
+            fileItem.action = 'created';
+            // Read created content from disk
+            let content = '';
             try {
-                const stats = await fs.promises.stat(fsPath);
-                const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
-                createdFiles.add(rel);
-                const fileItem = getOrCreateFileActivity(rel, uri);
-                fileItem.action = 'created';
-                storeEvent('FILE_CREATE', (0, noise_filter_1.categorizeFile)(uri), rel, {
-                    action: 'external_agent_file_create',
-                    isExternalDiskWrite: true,
-                    sizeBytes: stats.size,
-                    description: 'New file created on disk by external AI agent / tool'
-                });
-                broadcastStateToWebviews();
+                content = await fs.promises.readFile(fsPath, 'utf8');
             }
             catch { }
+            const lines = content ? content.split(/\r?\n/) : [];
+            const docLen = content.length;
+            // If a file was created with code content and zero manual keystrokes were typed for it:
+            // It was built/generated by an AI assistant or external generator
+            if (docLen > 0 && fileItem.manualKeystrokes === 0) {
+                fileItem.aiChars = docLen;
+                fileItem.aiEvents = Math.max(1, fileItem.aiEvents);
+                fileItem.typingProvenance = 'ai_assisted';
+                fileItem.linesAdded = lines.length;
+                aiCharsCount += docLen;
+                aiEventsCount += 1;
+                linesAddedCount += lines.length;
+                const mtimeIso = new Date(stats.mtimeMs).toISOString();
+                fileItem.lineRecords = lines.map((lineText, idx) => ({
+                    lineNumber: idx + 1,
+                    lineText: lineText.slice(0, 120),
+                    provenance: 'ai_assisted',
+                    isOffline: false,
+                    timestamp: mtimeIso
+                }));
+                storeEvent('FILE_CREATE', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                    provenance: 'ai_assisted',
+                    action: 'ai_assistant_file_create',
+                    isExternalDiskWrite: true,
+                    charCount: docLen,
+                    sizeBytes: stats.size,
+                    mtimeMs: stats.mtimeMs,
+                    description: 'New file created and populated by AI assistant'
+                });
+                broadcastStateToWebviews();
+                triggerDebouncedAutoSync(context, 1000);
+            }
         }
+        catch { }
     });
     context.subscriptions.push(bgWatcher);
     // ── Save Handler (enhanced with save count) ────────────────────────────

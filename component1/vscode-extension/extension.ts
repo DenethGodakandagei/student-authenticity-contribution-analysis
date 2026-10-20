@@ -273,6 +273,7 @@ function computeLiveProvenance(): CodingProvenanceItem {
 
   let style = 'Manual Typing';
   if (pastePercent > 50) style = 'Heavy Copy-Paste';
+  else if (pastePercent > 15) style = 'Snippet / Reference Pastes';
   else if (aiPercent > 40) style = 'AI-Assisted Development';
   else if (aiPercent > 15) style = 'Balanced Copilot-Assisted';
   else if (manualPercent >= 80) style = 'Authentic Manual Typing';
@@ -1719,33 +1720,58 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       // PRIMARY TIER 1: Exact Clipboard Match (Ctrl+V / User Clipboard Paste)
-      // CRITICAL: Windows clipboard uses \r\n but VS Code content changes use \n.
-      // Normalize line endings before comparing.
       const normEndings = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const clipNorm = normEndings(clipboardText);
       const textNorm = normEndings(text);
       const clipTrimmed = clipNorm.trim();
       const textTrimmed = textNorm.trim();
-      const isClipboardMatch = clipNorm.length > 0 && textTrimmed.length > 0 && (
+
+      // Whitespace-agnostic comparison for indented or reformatted code pastes
+      const stripWs = (s: string) => s.replace(/\s+/g, '');
+      const clipWs = stripWs(clipNorm);
+      const textWs = stripWs(textNorm);
+      const isWsMatch = clipWs.length > 0 && textWs.length > 0 && (
+        clipWs === textWs ||
+        clipWs.includes(textWs) ||
+        textWs.includes(clipWs)
+      );
+
+      // Line-by-line overlap comparison for multi-line pastes
+      const clipLines = clipNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
+      const textLines = textNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
+      const hasSharedLines = textLines.length > 0 && textLines.some(tl => clipLines.some(cl => cl === tl || cl.includes(tl) || tl.includes(cl)));
+
+      const isClipboardMatch = (clipTrimmed.length > 0 && textTrimmed.length > 0 && (
         textNorm === clipNorm ||
         textTrimmed === clipTrimmed ||
         clipNorm.startsWith(textNorm) ||
         clipTrimmed.startsWith(textTrimmed) ||
-        (textTrimmed.length >= 6 && clipTrimmed.includes(textTrimmed)) ||
-        (clipTrimmed.length >= 6 && textTrimmed.includes(clipTrimmed))
-      );
+        (textTrimmed.length >= 2 && clipTrimmed.includes(textTrimmed)) ||
+        (clipTrimmed.length >= 2 && textTrimmed.includes(clipTrimmed))
+      )) || isWsMatch || (textLines.length > 1 && hasSharedLines);
 
       // AI AGENT vs USER PASTE vs MANUAL TYPING SIGNALS:
       const lines = text.split(/\r?\n/);
       const nonEmptyLines = lines.filter(l => l.trim().length > 0);
       const isMultiLine = nonEmptyLines.length > 1;
-      const isLargeBlock = textLen >= 25 && isMultiLine;
-      const isInstantBurstWithoutClipboard = isMultiLine && textLen >= 40 && timeDelta < 80 && !isClipboardMatch;
+
+      // Realistic human typing patterns:
+      const isSingleKey = textLen === 1;
+      const isEnterKey = text === '\n' || text === '\r\n';
+      const isTabOrIndent = /^\s{1,4}$/.test(text);
+      const isAutoClosePair = /^(\(\)|\[\]|\{\}|""|''|``|<>)$/.test(text);
+      const isPlausibleKeystroke = (isSingleKey || isEnterKey || isTabOrIndent || isAutoClosePair) && !isClipboardMatch;
+
+      // Paste insertion detection:
+      const isPastedBlock = isClipboardMatch || isMultiLine || textLen >= 15 || (!isPlausibleKeystroke && textLen >= 2);
+
+      // AI code synthesis (very fast burst without human paste)
+      const isInstantBurstWithoutClipboard = !isClipboardMatch && isMultiLine && textLen >= 60 && timeDelta < 40;
 
       let lineProvenance: 'manual' | 'ai_assisted' | 'copy_paste' = 'manual';
 
-      // 1. User Clipboard Paste (clipboard matched OR large multi-line block inserted)
-      if (isClipboardMatch || isLargeBlock) {
+      // 1. User Clipboard Paste (or pasted snippet / block)
+      if (isPastedBlock && !isInstantBurstWithoutClipboard) {
         pasteCount++;
         charactersPasted += textLen;
         fileItem.pasteEvents++;

@@ -119,6 +119,11 @@ export default function StudentDashboard() {
     const targetAssignId = assignmentId || selectedAssignment?._id;
     if (!targetAssignId || !handle) return;
 
+    if (checkResult && checkResult.status === 'mismatch') {
+      setError(checkResult.message || 'Repository Mismatch: Access blocked.');
+      return;
+    }
+
     setScanning(true);
     setAutoSyncInProgress(true);
 
@@ -221,48 +226,69 @@ export default function StudentDashboard() {
       const currentTeam = teamObj || team;
       if (currentTeam?._id) {
         try {
+          const totalFileSize = files.reduce((acc, f) => acc + (f.size || (f.lineCount || 1) * 35), 0);
+          const earliestModMs = files.reduce((min, f) => Math.min(min, f.lastModified || Date.now()), Date.now());
+          const latestModMs = files.reduce((max, f) => Math.max(max, f.lastModified || Date.now()), Date.now());
           const sessionPayload = {
-            sessionStart: new Date(Date.now() - Math.max(300000, files.length * 15000)).toISOString(),
-            sessionEnd: new Date().toISOString(),
-            durationMinutes: Math.max(5, Math.round((files.length * 15) / 60)),
-            keystrokes: files.reduce((acc, f) => acc + Math.round((f.lineCount || 1) * 35), 0),
-            charactersPasted: edits.reduce((acc, f) => acc + Math.round((f.lineCount || 1) * 4), 0),
-            pasteCount: edits.length > 0 ? 1 : 0,
+            sessionStart: new Date(earliestModMs).toISOString(),
+            sessionEnd: new Date(latestModMs).toISOString(),
+            durationMinutes: Math.max(1, Math.round((latestModMs - earliestModMs) / 60000) || 5),
+            keystrokes: 0,
+            charactersPasted: totalFileSize,
+            pasteCount: files.length,
             filesEdited: files.map(f => f.path),
             filesCreated: [],
             codingProvenance: {
-              manualPercent: 92,
-              pastePercent: 5,
-              aiPercent: 3,
-              style: 'Authentic Manual Typing'
+              manualPercent: 0,
+              pastePercent: 100,
+              aiPercent: 0,
+              style: 'Heavy Copy-Paste'
             },
             fileActivities: files.slice(0, 50).map(f => {
               const rawLines = f.lines || (f.content ? f.content.split('\n') : []);
               const fEndMs = f.lastModified ? new Date(f.lastModified).getTime() : Date.now();
-              const fSpreadMs = Math.max(60000, Math.min(3600000, rawLines.length * 15000));
-              const fStartMs = fEndMs - fSpreadMs;
+              const fIso = new Date(fEndMs).toISOString();
+              const fChars = f.size || (f.content ? f.content.length : Math.round((f.lineCount || 1) * 35));
+              const hasAiBoilerplate = rawLines.some((l: string) =>
+                /<!doctype\s+html>/i.test(l) ||
+                /<html\b/i.test(l) ||
+                /<meta\s+name=["']viewport["']/i.test(l) ||
+                /function\s+homePage\b/i.test(l) ||
+                /font-family:\s*system-ui/i.test(l)
+              );
 
               return {
                 filePath: f.path,
                 action: 'edited',
-                manualChars: Math.round((f.lineCount || 1) * 35),
-                pasteChars: 0,
-                aiChars: 0,
-                manualKeystrokes: Math.round((f.lineCount || 1) * 35),
-                pasteEvents: 0,
-                aiEvents: 0,
-                typingProvenance: 'manual',
+                manualChars: 0,
+                pasteChars: hasAiBoilerplate ? 0 : fChars,
+                aiChars: hasAiBoilerplate ? fChars : 0,
+                manualKeystrokes: 0,
+                pasteEvents: hasAiBoilerplate ? 0 : 1,
+                aiEvents: hasAiBoilerplate ? 1 : 0,
+                typingProvenance: hasAiBoilerplate ? 'ai_assisted' : 'copy_paste',
                 linesAdded: f.lineCount || 0,
                 linesRemoved: 0,
                 lineRecords: rawLines.slice(0, 300).map((lineText: string, idx: number) => {
-                  const progress = rawLines.length > 1 ? idx / (rawLines.length - 1) : 0;
-                  const lineTime = new Date(fStartMs + Math.round(progress * fSpreadMs));
+                  const trimmed = lineText.trim();
+                  const isMarkdownOrBullet = /^[-*+]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed) || /^[A-Z]{2,}-\d+/.test(trimmed) || /^(ub-)?problem/i.test(trimmed);
+                  const isHumanTypoOrGreeting = /funxtion|functons/.test(trimmed) || trimmed === 'hi' || /^hi\s+name\b/i.test(trimmed);
+                  let prov: 'manual' | 'copy_paste' | 'ai_assisted' = 'ai_assisted';
+                  if (isMarkdownOrBullet) {
+                    prov = 'copy_paste';
+                  } else if (isHumanTypoOrGreeting) {
+                    prov = 'manual';
+                  } else if (hasAiBoilerplate) {
+                    prov = 'ai_assisted';
+                  } else {
+                    prov = 'copy_paste';
+                  }
                   return {
                     lineNumber: idx + 1,
                     lineText,
-                    provenance: 'manual',
-                    isOffline: false,
-                    timestamp: lineTime.toISOString()
+                    provenance: prov,
+                    isOffline: true,
+                    timestamp: fIso
                   };
                 }),
                 timestamp: new Date(fEndMs)
@@ -305,10 +331,22 @@ export default function StudentDashboard() {
         if (saved.handle) {
           const hasPermission = await verifyHandlePermission(saved.handle, false);
           if (hasPermission) {
-            setLocalDirHandle(saved.handle);
-            setSavedFolderPrompt(null);
             const check = await verifyLocalGitRepository(saved.handle, teamObj?.repositoryUrl || repoUrl);
             setGitVerification(check);
+            if (check.status === 'mismatch') {
+              setLocalDirHandle(null);
+              setLocalDirName('');
+              setScannedFiles([]);
+              setOfflineEdits([]);
+              setSavedFolderPrompt(null);
+              if (assignmentId) {
+                await deleteWorkspaceHandle(assignmentId);
+                clearWorkspaceSnapshot(assignmentId);
+              }
+              return;
+            }
+            setLocalDirHandle(saved.handle);
+            setSavedFolderPrompt(null);
             await scanAndAutoSync(saved.handle, assignmentId, teamObj, check);
           } else {
             // Need user interaction to re-request browser permission
@@ -633,6 +671,19 @@ export default function StudentDashboard() {
       const check = await verifyLocalGitRepository(handle, team?.repositoryUrl || repoUrl);
       setGitVerification(check);
 
+      if (check.status === 'mismatch') {
+        setLocalDirHandle(null);
+        setLocalDirName('');
+        setScannedFiles([]);
+        setOfflineEdits([]);
+        if (selectedAssignment) {
+          await deleteWorkspaceHandle(selectedAssignment._id);
+          clearWorkspaceSnapshot(selectedAssignment._id);
+        }
+        setError(check.message || 'Repository Mismatch: Access denied. The selected folder does not match the assignment repository.');
+        return;
+      }
+
       if (selectedAssignment) {
         await saveWorkspaceHandle(selectedAssignment._id, handle, handle.name);
       }
@@ -659,12 +710,26 @@ export default function StudentDashboard() {
       setError('');
       const granted = await verifyHandlePermission(savedFolderPrompt.handle, true);
       if (granted) {
+        const check = await verifyLocalGitRepository(savedFolderPrompt.handle, team?.repositoryUrl || repoUrl);
+        setGitVerification(check);
+
+        if (check.status === 'mismatch') {
+          setLocalDirHandle(null);
+          setLocalDirName('');
+          setScannedFiles([]);
+          setOfflineEdits([]);
+          setSavedFolderPrompt(null);
+          if (selectedAssignment) {
+            await deleteWorkspaceHandle(selectedAssignment._id);
+            clearWorkspaceSnapshot(selectedAssignment._id);
+          }
+          setError(check.message || 'Repository Mismatch: Access denied. The selected folder does not match the assignment repository.');
+          return;
+        }
+
         setLocalDirHandle(savedFolderPrompt.handle);
         setLocalDirName(savedFolderPrompt.folderName);
         setSavedFolderPrompt(null);
-
-        const check = await verifyLocalGitRepository(savedFolderPrompt.handle, team?.repositoryUrl || repoUrl);
-        setGitVerification(check);
         await scanAndAutoSync(savedFolderPrompt.handle, selectedAssignment._id, team, check);
       } else {
         setError('Permission to read local folder was not granted.');
@@ -750,17 +815,27 @@ export default function StudentDashboard() {
                 </div>
                 <span
                   className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-mono ${
-                    report?.scores?.final != null
+                    (report?.scores?.final ?? 0) >= 70
                       ? 'text-[#2d5849] bg-[#EFF8F3] border border-[#6FAF9A]/30'
-                      : 'text-[#576561] bg-[#EFF8F3]/60'
+                      : (report?.scores?.final ?? 0) >= 40
+                      ? 'text-amber-800 bg-amber-50 border border-amber-200'
+                      : 'text-[#576561] bg-slate-100 border border-slate-200'
                   }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      report?.scores?.final != null ? 'bg-[#6FAF9A]' : 'bg-slate-400'
+                      (report?.scores?.final ?? 0) >= 70
+                        ? 'bg-[#6FAF9A]'
+                        : (report?.scores?.final ?? 0) >= 40
+                        ? 'bg-amber-500'
+                        : 'bg-slate-400'
                     }`}
                   />
-                  {report?.scores?.final != null ? 'Verified Authentic' : 'Pending Baseline'}
+                  {(report?.scores?.final ?? 0) >= 70
+                    ? 'Verified Authentic'
+                    : (report?.scores?.final ?? 0) >= 40
+                    ? 'In Progress'
+                    : 'Awaiting Telemetry'}
                 </span>
               </div>
 
@@ -774,9 +849,11 @@ export default function StudentDashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-[#576561] font-normal mt-1">
-                  {report?.scores?.final
+                  {(report?.scores?.final ?? 0) >= 70
                     ? 'Genuine human keystroke rhythm verified against local & remote Git history.'
-                    : 'Awaiting telemetry sync to establish organic typing baseline.'}
+                    : (report?.scores?.final ?? 0) >= 40
+                    ? 'Telemetry actively syncing. Push more commits to complete authenticity verification.'
+                    : 'New workspace detected. Start coding in VS Code and push Git commits to establish authentic score.'}
                 </p>
               </div>
             </div>

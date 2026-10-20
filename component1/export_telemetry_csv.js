@@ -5,7 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const jwt = require('./component1/backend/node_modules/jsonwebtoken');
+const jwt = require('./backend/node_modules/jsonwebtoken');
 
 const JWT_SECRET = 'hybrid_student_contribution_tracker_jwt_secret_key_2026_xyz';
 const BACKEND_URL = 'http://127.0.0.1:5000';
@@ -40,12 +40,12 @@ async function run() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const reportsData = await reportsRes.json();
-      
+
       // If team exists for assignment
       const teamRes = await fetch(`${BACKEND_URL}/api/teams/assignment/${a._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       }).catch(() => null);
-      
+
       if (teamRes && teamRes.ok) {
         const tData = await teamRes.json();
         if (tData.team?._id) {
@@ -93,7 +93,7 @@ async function run() {
         }
       });
     }
-  } catch (_) {}
+  } catch (_) { }
 
   console.log(`Aggregated ${allSessions.length} total telemetry sessions for export.`);
 
@@ -172,10 +172,10 @@ async function run() {
     const cpm = (manualChars / durMin).toFixed(2);
     const keff = added > 0 ? (keys / added).toFixed(2) : (keys > 0 ? keys.toFixed(2) : '0.00');
     const pasteRatio = totalChars > 0 ? (pasteChars / totalChars).toFixed(4) : '0.0000';
-    
+
     const filesList = (s.filesEdited || []).join(';').replace(/,/g, '|');
     const primaryFile = (s.filesEdited && s.filesEdited[0]) ? s.filesEdited[0] : 'none';
-    
+
     let style = 'Manual Typing';
     if (pastePct > 45 || charsPasted > 300) style = 'Heavy Copy-Paste';
     else if (aiPct > 35 || aiChars > 400) style = 'AI-Assisted Development';
