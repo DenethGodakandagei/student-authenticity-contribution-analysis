@@ -68,6 +68,10 @@ export default function ImportDocumentModal({
         }
       };
       checkGoogle();
+      try {
+        const savedToken = localStorage.getItem('google_access_token');
+        if (savedToken) setGoogleAccessToken(savedToken);
+      } catch (e) {}
     }
   }, []);
 
@@ -89,6 +93,9 @@ export default function ImportDocumentModal({
         callback: (tokenResponse: any) => {
           if (tokenResponse?.access_token) {
             setGoogleAccessToken(tokenResponse.access_token);
+            try {
+              localStorage.setItem('google_access_token', tokenResponse.access_token);
+            } catch (e) {}
             // Optionally fetch basic profile info
             fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
               headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
@@ -449,7 +456,11 @@ export default function ImportDocumentModal({
                     {googleAccessToken ? (
                       <button
                         type="button"
-                        onClick={() => { setGoogleAccessToken(null); setGoogleUserEmail(null); }}
+                        onClick={() => {
+                          setGoogleAccessToken(null);
+                          setGoogleUserEmail(null);
+                          try { localStorage.removeItem('google_access_token'); } catch (e) {}
+                        }}
                         style={{
                           background: 'transparent',
                           border: '1px solid #cbd5e1',

@@ -32,6 +32,9 @@ interface DocumentMenuBarProps {
   onToggleGrowthChart: () => void;
   onToggleHeatmap: () => void;
   syncStatus: string;
+  onSyncExternal?: () => void;
+  isSyncingExternal?: boolean;
+  onOpenVersionHistory?: () => void;
 }
 
 export default function DocumentMenuBar({
@@ -63,11 +66,16 @@ export default function DocumentMenuBar({
   onToggleMLAnalytics,
   onToggleGrowthChart,
   onToggleHeatmap,
-  syncStatus
+  syncStatus,
+  onSyncExternal,
+  isSyncingExternal = false,
+  onOpenVersionHistory
 }: DocumentMenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [wordActiveTab, setWordActiveTab] = useState<'Home' | 'Insert' | 'Layout' | 'Review' | 'View'>('Home');
   const menuBarRef = useRef<HTMLDivElement>(null);
+
+  const isGoogleDocLinked = selectedDocId?.startsWith('google_docs_') || docDetails?.source === 'google_docs' || docDetails?.externalId?.includes('docs.google.com');
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -127,6 +135,10 @@ export default function DocumentMenuBar({
       { divider: true, label: "" },
       { label: "✏️ Rename Document", action: onRename },
       { label: "💾 Save Changes", action: onSave, shortcut: "Ctrl+S" },
+      { label: "⏱️ Version History", action: onOpenVersionHistory, shortcut: "Ctrl+Alt+Shift+H" },
+      ...(isGoogleDocLinked && onSyncExternal ? [
+        { label: isSyncingExternal ? "⏳ Syncing Google Docs..." : "🔄 Pull Edits from Google Docs", action: onSyncExternal, shortcut: "Ctrl+Shift+G" }
+      ] : []),
       { label: "📊 Document Details & Counts", action: onOpenDetailsModal, shortcut: "Ctrl+Shift+C" },
       { divider: true, label: "" },
       { label: "🖨️ Print / Export to PDF", action: handlePrint, shortcut: "Ctrl+P" },
@@ -169,6 +181,7 @@ export default function DocumentMenuBar({
       { label: "Clear Formatting", action: () => editor?.chain().focus().unsetAllMarks().clearNodes().run() }
     ],
     Tools: [
+      { label: "⏱️ See Version History & Diffs", action: onOpenVersionHistory, shortcut: "Ctrl+Alt+Shift+H" },
       { label: "📊 Word Count & Reading Time", action: onOpenDetailsModal, shortcut: "Ctrl+Shift+C" },
       { label: isHighlightMode ? "✓ Hide Author Highlights" : "👥 Show Author Highlights", action: onToggleAuthorHighlights },
       { label: "⏱️ Document Timeline & Revisions", action: onToggleTimeline },
@@ -275,16 +288,62 @@ export default function DocumentMenuBar({
                   <strong style={{ background: '#10b981', color: '#fff', padding: '0.05rem 0.25rem', borderRadius: '4px', fontSize: '0.65rem' }}>ON</strong>
                 </div>
               ) : (
-                <span style={{
-                  fontSize: '0.72rem',
-                  color: isGoogle ? '#1a73e8' : '#225243',
-                  background: isGoogle ? '#e8f0fe' : '#eff8f3',
-                  padding: '0.12rem 0.45rem',
-                  borderRadius: '10px',
-                  fontWeight: 600
-                }}>
-                  {isGoogle ? '☁️ Saved to Drive & Inkie' : syncStatus === 'synced' ? '✓ Synced' : syncStatus}
+                <span
+                  title={isGoogleDocLinked ? "Linked to Google Docs. Click 'Sync Google Docs' to pull edits made on docs.google.com" : undefined}
+                  style={{
+                    fontSize: '0.72rem',
+                    color: isGoogleDocLinked ? '#1a73e8' : isGoogle ? '#1a73e8' : '#225243',
+                    background: isGoogleDocLinked ? '#e8f0fe' : isGoogle ? '#e8f0fe' : '#eff8f3',
+                    padding: '0.12rem 0.5rem',
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    border: isGoogleDocLinked ? '1px solid #c2e7ff' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}
+                >
+                  {isGoogleDocLinked ? (
+                    <>
+                      <span style={{ fontSize: '0.7rem' }}>🌐</span>
+                      <span>Google Doc Linked</span>
+                    </>
+                  ) : isGoogle ? (
+                    '☁️ Saved to Drive & Inkie'
+                  ) : syncStatus === 'synced' ? (
+                    '✓ Synced'
+                  ) : (
+                    syncStatus
+                  )}
                 </span>
+              )}
+
+              {onOpenVersionHistory && (
+                <button
+                  type="button"
+                  onClick={onOpenVersionHistory}
+                  title="Open full Google Docs revision history (Ctrl+Alt+Shift+H)"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    color: isWord ? '#ffffff' : '#5f6368',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.1rem 0.35rem',
+                    borderRadius: '4px',
+                    fontWeight: 500
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = isWord ? '#e0f2fe' : '#1a73e8'}
+                  onMouseLeave={e => e.currentTarget.style.color = isWord ? '#ffffff' : '#5f6368'}
+                >
+                  <span>⏱️</span>
+                  <span>Version history</span>
+                </button>
               )}
             </div>
 
@@ -372,6 +431,48 @@ export default function DocumentMenuBar({
         {/* Right Side Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           
+          {/* Sync Google Docs Button (visible for imported Google Docs) */}
+          {isGoogleDocLinked && onSyncExternal && (
+            <button
+              type="button"
+              onClick={onSyncExternal}
+              disabled={isSyncingExternal}
+              title="Pull latest edits and additions made directly on Google Docs (docs.google.com)"
+              style={{
+                background: isSyncingExternal ? '#f1f5f9' : '#e8f0fe',
+                color: isSyncingExternal ? '#64748b' : '#1a73e8',
+                border: '1.5px solid #4285f4',
+                padding: '0.32rem 0.8rem',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: isSyncingExternal ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: isSyncingExternal ? 'none' : '0 1px 4px rgba(66, 133, 244, 0.25)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  animation: isSyncingExternal ? 'spin 0.8s linear infinite' : 'none'
+                }}
+              >
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
+              </svg>
+              <span>{isSyncingExternal ? 'Syncing with Google Docs...' : 'Sync Google Docs'}</span>
+            </button>
+          )}
+
           {/* Prominent Import Button */}
           <button
             type="button"
