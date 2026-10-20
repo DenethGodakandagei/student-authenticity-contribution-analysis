@@ -19,6 +19,7 @@ from app.pdf_processor import process_pdf
 from app.misconception_generator import generate_student_misconceptions
 from app.nova_agent import NovaStudentAgent, understanding_summary
 from app.auth import router as auth_router, get_current_user, check_connection
+from app.learning_eval import router as learning_eval_router
 
 
 @asynccontextmanager
@@ -32,6 +33,9 @@ app = FastAPI(title="AI-Based Virtual Student API", lifespan=lifespan)
 
 # Auth routes (registration, login, /me, logout)
 app.include_router(auth_router)
+
+# Stage 9 pre/post test routes
+app.include_router(learning_eval_router)
 
 # Setup CORS middleware
 app.add_middleware(
@@ -210,7 +214,7 @@ def get_nova_session(session_id: str, user: dict = Depends(get_current_user)):
     try:
         nova = NovaStudentAgent.load_state(session_file)
         _check_session_owner(nova, user)
-        return nova.to_dict()
+        return nova.to_public_dict()
     except HTTPException:
         raise
     except Exception as e:
@@ -356,7 +360,7 @@ def chat_with_nova(session_id: str, req: ChatMessageRequest, user: dict = Depend
             "understanding": result["understanding"],
             "detection": result["detection"],
             "conversation_history": nova.state.conversation_history,
-            "updated_state": nova.to_dict()
+            "updated_state": nova.to_public_dict()
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in Nova teaching session: {str(e)}")

@@ -160,13 +160,22 @@ export async function apiRequest<T>(
   const init: RequestInit = {
     method,
     headers: {
-      'Content-Type': 'application/json',
       ...authHeaders(),
     },
     credentials: 'same-origin',
   };
 
-  if (body !== undefined) init.body = JSON.stringify(body);
+  if (body !== undefined) {
+    if (typeof FormData !== 'undefined' && body instanceof FormData) {
+      // Let the browser set the multipart boundary itself.
+      init.body = body;
+    } else {
+      (init.headers as Record<string, string>)['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(body);
+    }
+  } else {
+    (init.headers as Record<string, string>)['Content-Type'] = 'application/json';
+  }
 
   try {
     const res = await fetch(url, init);

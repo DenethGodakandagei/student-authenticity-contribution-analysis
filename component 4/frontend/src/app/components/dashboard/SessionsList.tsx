@@ -89,6 +89,13 @@ export default function SessionsList({ sessions, error }: SessionsListProps) {
                   <button
                     type="button"
                     className="dash-btn dash-btn--sm"
+                    onClick={() => router.push(`/session/${session.session_id}/details`)}
+                  >
+                    Details
+                  </button>
+                  <button
+                    type="button"
+                    className="dash-btn dash-btn--sm"
                     onClick={() => router.push(`/session/${session.session_id}/chat`)}
                   >
                     Open

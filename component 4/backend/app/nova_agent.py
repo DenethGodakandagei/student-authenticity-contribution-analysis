@@ -64,6 +64,10 @@ class NovaState(BaseModel):
     misconceptions: List[MisconceptionState] = Field(default_factory=list, description="Misconceptions and correction states.")
     conversation_history: List[Dict[str, str]] = Field(default_factory=list, description="Chat message history.")
     events: List[Dict[str, Any]] = Field(default_factory=list, description="Timestamped interaction event log.")
+    tests: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Pre/post test records keyed by form: {questions, answers, score, submitted_at}.",
+    )
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
@@ -265,6 +269,21 @@ class NovaStudentAgent:
     def to_dict(self) -> Dict[str, Any]:
         """Serializes current state to dictionary."""
         return self.state.model_dump()
+
+    def to_public_dict(self) -> Dict[str, Any]:
+        """
+        Serializes the state for API responses, hiding answer keys and explanations
+        for every test form that has not been submitted yet.
+        """
+        data = self.to_dict()
+        for test in (data.get("tests") or {}).values():
+            if not isinstance(test, dict) or test.get("submitted_at"):
+                continue
+            for question in test.get("questions") or []:
+                if isinstance(question, dict):
+                    question.pop("correct_index", None)
+                    question.pop("explanation", None)
+        return data
 
     @classmethod
     def from_dict(cls, state_dict: Dict[str, Any], provider: Optional[BaseLLMProvider] = None) -> "NovaStudentAgent":
@@ -853,7 +872,7 @@ Return ONLY valid JSON:
             "check_feedback": outcome["check_feedback"],
             "understanding": understanding_summary(self.state),
             "detection": detection,
-            "state": self.to_dict()
+            "state": self.to_public_dict()
         }
 
 

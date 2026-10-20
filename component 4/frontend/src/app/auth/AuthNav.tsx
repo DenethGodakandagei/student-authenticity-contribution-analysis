@@ -15,8 +15,8 @@ import {
 } from '../utils/api';
 
 const HOME_LINK = {
-  href: '/',
-  label: 'Home',
+  href: '/dashboard',
+  label: 'Dashboard',
   className: 'auth-nav__link auth-nav__link--home',
 } as const;
 
@@ -72,6 +72,13 @@ export default function AuthNav() {
 
         {token ? (
           <>
+            <Link
+              href="/sessions/new"
+              className="auth-nav__link"
+              aria-current={pathname === '/sessions/new' ? 'page' : undefined}
+            >
+              New session
+            </Link>
             {userName && <span className="auth-nav__user">{userName}</span>}
             <button
               type="button"

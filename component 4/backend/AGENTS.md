@@ -24,7 +24,8 @@ teaches it.
 
 - Stages 1–6: fully implemented.
 - Stages 7–8: minimal implementation.
-- Stages 9–10: out of scope.
+- Stages 9–10: in scope (pre/post-test, learning-gain evaluation, student report, lecturer
+  analytics, feedback loop).
 
 ## Stack
 
@@ -83,9 +84,25 @@ teaches it.
 - Every misconception must carry source page numbers and a short verbatim source quote.
 - Keep new code in small modules under `backend/app` with simple functions and
   docstrings.
+- New backend code goes in small modules under `backend/app`; routers in their own file,
+  included from `main.py`. Never rename existing routes or response keys.
+- New `NovaState` fields must have defaults so old session JSON files still load.
+- Test scoring and all metrics are computed in plain Python, never by the LLM. LLM output
+  that drives logic uses `generate_json` + Pydantic.
+- Never send answer keys (`correct_index`) to the client before a test is submitted,
+  including through `GET /sessions/{id}`.
+- Frontend: use `apiRequest` from `utils/api.ts`, put response types in
+  `utils/types.ts`, match the existing dark card styling. Read
+  `node_modules/next/dist/docs` before writing Next.js code.
+- After each task: run the related backend test script and `npx tsc --noEmit` in
+  frontend, and fix errors.
 
 ## Notes
 
 - Session state is persisted as JSON files under `backend/sessions/`; uploads land in
   `backend/uploads/`.
 - Test scripts live at the `backend/` root (`test_*.py`).
+
+# code for run the model
+
+.venv\Scripts\Activate.ps1

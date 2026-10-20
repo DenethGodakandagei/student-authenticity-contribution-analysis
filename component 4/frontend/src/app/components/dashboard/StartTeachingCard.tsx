@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '../../utils/api';
 import type { ApiError, CreateSessionResponse } from '../../utils/types';
@@ -24,7 +25,7 @@ export default function StartTeachingCard() {
     setStarting(false);
 
     if (res.ok && res.data?.session_id) {
-      router.push(`/session/${res.data.session_id}/chat`);
+      router.push(`/session/${res.data.session_id}/pretest`);
       return;
     }
     setError(
@@ -37,7 +38,7 @@ export default function StartTeachingCard() {
       <h2 className="dash-card__title">Start teaching Nova</h2>
       <p className="dash-card__text">
         Creates a fresh Nova with two misconceptions from the demo knowledge base and
-        opens the teaching chat.
+        opens the pre-test before the teaching chat.
       </p>
 
       {error && (
@@ -46,16 +47,21 @@ export default function StartTeachingCard() {
         </p>
       )}
 
-      <button
-        type="button"
-        className="dash-btn"
-        onClick={handleStart}
-        disabled={starting}
-        aria-busy={starting || undefined}
-      >
-        {starting && <span className="dash-btn__spinner" aria-hidden="true" />}
-        {starting ? 'Starting…' : 'Start session'}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="dash-btn"
+          onClick={handleStart}
+          disabled={starting}
+          aria-busy={starting || undefined}
+        >
+          {starting && <span className="dash-btn__spinner" aria-hidden="true" />}
+          {starting ? 'Starting…' : 'Start session'}
+        </button>
+        <Link href="/sessions/new" className="dash-btn dash-btn--sm">
+          More creation options
+        </Link>
+      </div>
     </section>
   );
 }
