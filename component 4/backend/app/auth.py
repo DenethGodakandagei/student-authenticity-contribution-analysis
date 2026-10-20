@@ -131,6 +131,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+    role: Optional[str] = None  # optional: if omitted, user logs in directly with their registered role
 
 
 # ---------------------------------------------------------------------------
@@ -328,12 +329,41 @@ def register(req: RegisterRequest) -> Dict[str, Any]:
 
 @router.post("/login")
 def login(req: LoginRequest) -> Dict[str, Any]:
-    """Logs in a user; returns a bearer token. One generic error for bad credentials."""
+    """Logs in a user; returns a bearer token.
+
+    Order of checks:
+    1. Validate ``req.role`` is a known role (400).
+    2. Verify email + password – generic 401 for bad credentials (never
+       reveal role information before the password is verified).
+    3. Compare ``req.role`` with the stored role and raise 403 if they
+       differ, including a human-readable hint about the correct role.
+    """
+    requested_role: Optional[str] = None
+    if req.role:
+        requested_role = req.role.strip().lower()
+        if requested_role not in VALID_ROLES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Role must be one of: {', '.join(VALID_ROLES)}.",
+            )
+
     email = req.email.strip().lower()
     doc = _get_users().find_one({"email": email})
 
+    # 401 for bad credentials – intentionally generic (never reveal role before auth).
     if doc is None or not verify_password(req.password, doc["password_hash"], doc["salt"]):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    # Role mismatch check (only performed if client specified a role)
+    actual_role: str = doc.get("role", DEFAULT_ROLE)
+    if requested_role and requested_role != actual_role:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"This account is registered as a {actual_role}. "
+                f"Please select '{actual_role}' to sign in."
+            ),
+        )
 
     login_at = datetime.now(timezone.utc).isoformat()
     _get_users().update_one({"_id": doc["_id"]}, {"$set": {"last_login_at": login_at}})

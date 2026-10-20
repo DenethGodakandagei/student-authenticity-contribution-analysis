@@ -8,9 +8,9 @@ import AuthFooter from './AuthFooter';
 import Checkbox from './Checkbox';
 import FormField from './FormField';
 import PasswordField from './PasswordField';
-import RoleSelector from './RoleSelector';
 import { delay } from './anim';
 import {
+  destinationFor,
   loadRememberedEmail,
   login,
   type AuthRole,
@@ -23,11 +23,6 @@ import {
 } from '../utils/api';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Students land on /dashboard, lecturers on /lecturer. */
-function destinationForRole(role: AuthRole | undefined): string {
-  return role === 'lecturer' ? '/lecturer' : '/dashboard';
-}
 
 /** Reads the role the API stored on the signed-in user. */
 function storedRole(): AuthRole | undefined {
@@ -50,7 +45,10 @@ interface LoginErrors {
   password?: string;
 }
 
-function validate(email: string, password: string): LoginErrors {
+function validate(
+  email: string,
+  password: string
+): LoginErrors {
   const errors: LoginErrors = {};
   const trimmed = email.trim();
   if (!trimmed) errors.email = 'Enter your email address.';
@@ -74,7 +72,6 @@ export default function LoginForm() {
 
   const [emailOverride, setEmailOverride] = useState<string | null>(null);
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<AuthRole>('student');
   const [rememberOverride, setRememberOverride] = useState<boolean | null>(null);
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [submitted, setSubmitted] = useState(false);
@@ -92,9 +89,10 @@ export default function LoginForm() {
   const skipAutoRedirect = useRef(false);
   const timerRef = useRef<number | null>(null);
 
+  // Already logged-in → send to their role's home.
   useEffect(() => {
     if (token && !skipAutoRedirect.current) {
-      router.replace(destinationForRole(storedRole()));
+      router.replace(destinationFor(storedRole() ?? 'student'));
     }
   }, [token, router]);
 
@@ -112,8 +110,11 @@ export default function LoginForm() {
     setServerError('');
     const current = validate(email, password);
     if (current.email || current.password) {
-      const first = current.email ? 'login-email' : 'login-password';
-      document.getElementById(first)?.focus();
+      if (current.email) {
+        document.getElementById('login-email')?.focus();
+      } else {
+        document.getElementById('login-password')?.focus();
+      }
       return;
     }
 
@@ -122,7 +123,6 @@ export default function LoginForm() {
     const outcome = await login({
       email: email.trim(),
       password,
-      role,
       remember,
     });
     setBusy(false);
@@ -134,8 +134,9 @@ export default function LoginForm() {
     }
 
     setSuccess(true);
+    // Always redirect to the role the SERVER returned
     timerRef.current = window.setTimeout(
-      () => router.push(destinationForRole(outcome.role)),
+      () => router.push(destinationFor(outcome.role)),
       650
     );
   };
@@ -144,7 +145,7 @@ export default function LoginForm() {
     <>
       <header className="auth-head">
         <p className="auth-kicker a-up" style={delay(40)}>
-          {role === 'student' ? 'Student access' : 'Lecturer access'}
+          Sign in
         </p>
         <h1 className="auth-title a-up" style={delay(95)}>
           Welcome back
@@ -155,20 +156,6 @@ export default function LoginForm() {
       </header>
 
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
-        <div className="a-up" style={delay(205)}>
-          <RoleSelector
-            value={role}
-            onChange={setRole}
-            name="login-role"
-            variant="segmented"
-            delayMs={0}
-          />
-          <p className="auth-note" style={{ marginTop: '0.55rem' }}>
-            Sets your landing page after signin -permissions are always granted by
-            the NOVA server.
-          </p>
-        </div>
-
         <FormField
           id="login-email"
           label="Email address"
@@ -245,7 +232,7 @@ export default function LoginForm() {
                 />
               </svg>
             </span>
-            Signedin -taking you to your workspace…
+            Signed in — taking you to your workspace…
           </p>
         )}
 

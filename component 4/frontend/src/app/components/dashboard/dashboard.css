@@ -26,10 +26,11 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid var(--d-line);
-  background: rgba(6, 8, 18, 0.72);
+  border-bottom: 1.5px solid rgba(111, 175, 154, 0.35);
+  background: linear-gradient(135deg, rgba(239, 248, 243, 0.94) 0%, rgba(255, 255, 255, 0.96) 65%, rgba(239, 248, 243, 0.90) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px -2px rgba(111, 175, 154, 0.15), 0 1px 3px 0 rgba(13, 17, 16, 0.05);
 }
 
 .dash-nav__inner {
@@ -46,10 +47,26 @@
 .dash-nav__brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  color: inherit;
+  gap: 0.65rem;
+  color: #0d1110;
   text-decoration: none;
-  border-radius: 12px;
+  border-radius: 14px;
+  padding: 0.35rem 0.65rem;
+  background: linear-gradient(135deg, rgba(111, 175, 154, 0.12), rgba(239, 248, 243, 0.8));
+  border: 1px solid rgba(111, 175, 154, 0.3);
+  box-shadow: 0 2px 8px rgba(111, 175, 154, 0.12);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dash-nav__brand:hover {
+  background: linear-gradient(135deg, rgba(111, 175, 154, 0.22), rgba(239, 248, 243, 1));
+  border-color: #6faf9a;
+  box-shadow: 0 4px 14px rgba(111, 175, 154, 0.28);
+  transform: translateY(-1.5px);
 }
 
 .dash-nav__word {
@@ -57,6 +74,7 @@
   font-size: 0.95rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
+  color: #0d1110;
 }
 
 .dash-nav__right {
@@ -67,30 +85,54 @@
 }
 
 .dash-nav__user {
-  color: var(--d-muted);
-  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #eff8f3;
+  border: 1px solid rgba(111, 175, 154, 0.4);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0d1110;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 40vw;
+  box-shadow: 0 1px 4px rgba(111, 175, 154, 0.12);
+}
+
+.dash-nav__role-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #6faf9a;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .dash-nav__logout {
   flex: none;
-  border: 1px solid var(--d-line-strong);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--d-ink);
+  border: 1px solid rgba(13, 17, 16, 0.18);
+  background: #ffffff;
+  color: #0d1110;
   border-radius: 10px;
-  padding: 0.4rem 0.85rem;
+  padding: 0.45rem 0.9rem;
   font: inherit;
-  font-size: 0.85rem;
+  font-weight: 550;
+  font-size: 0.84rem;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 1px 3px rgba(13, 17, 16, 0.05);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
 .dash-nav__logout:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: #0d1110;
+  color: #ffffff;
+  border-color: #0d1110;
+  transform: translateY(-1px);
 }
 
 .dash-nav__logout:disabled {
@@ -645,3 +687,327 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* ── Nova Avatar Interactive Showcase Card ──────────────────────────────── */
+.nova-avatar-card {
+  padding: clamp(1.5rem, 3.5vw, 2.4rem);
+  background: linear-gradient(135deg, rgba(13, 17, 16, 0.96) 0%, rgba(20, 29, 26, 0.94) 55%, rgba(13, 17, 16, 0.98) 100%);
+  border: 1px solid rgba(111, 175, 154, 0.35);
+  box-shadow: 0 16px 40px -10px rgba(13, 17, 16, 0.5), 0 0 35px -10px rgba(111, 175, 154, 0.25);
+  border-radius: 26px;
+  overflow: hidden;
+}
+
+.nova-avatar-card__inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+@media (min-width: 860px) {
+  .nova-avatar-card__inner {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+.nova-avatar-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.nova-avatar-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(111, 175, 154, 0.16);
+  border: 1px solid rgba(111, 175, 154, 0.38);
+  color: #6faf9a;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nova-avatar-card__badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6faf9a;
+  box-shadow: 0 0 10px #6faf9a;
+  animation: novaPulseDot 2s ease-in-out infinite;
+}
+
+@keyframes novaPulseDot {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+.nova-avatar-card__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.nova-avatar-card__desc {
+  margin: 0;
+  color: #eff8f3;
+  opacity: 0.85;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 32rem;
+}
+
+.nova-avatar-card__stats {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  background: rgba(239, 248, 243, 0.05);
+  border: 1px solid rgba(111, 175, 154, 0.22);
+  margin-top: 0.5rem;
+}
+
+.nova-avatar-card__stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.nova-avatar-card__stat-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.nova-avatar-card__stat-lbl {
+  font-size: 0.78rem;
+  color: #6faf9a;
+  font-weight: 500;
+}
+
+.nova-avatar-card__stat-divider {
+  width: 1px;
+  height: 2.2rem;
+  background: rgba(111, 175, 154, 0.25);
+}
+
+.nova-avatar-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.nova-avatar-card__btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.45rem;
+  border-radius: 12px;
+  background: #6faf9a;
+  color: #0d1110;
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-decoration: none;
+  box-shadow: 0 4px 18px rgba(111, 175, 154, 0.35);
+  transition: all 0.25s ease;
+}
+
+.nova-avatar-card__btn-primary:hover {
+  background: #ffffff;
+  color: #0d1110;
+  box-shadow: 0 6px 22px rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.nova-avatar-card__hint {
+  font-size: 0.82rem;
+  color: #eff8f3;
+  opacity: 0.75;
+}
+
+/* ── Nova Avatar Display (Image / Visual Mirror) ────────────────────────── */
+.nova-avatar-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 1.5rem 0.5rem;
+}
+
+/* Dashed orbital ring mirroring user's image */
+.nova-avatar-display__orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  width: 290px;
+  height: 290px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(111, 175, 154, 0.45);
+  pointer-events: none;
+  transition: border-color 0.3s ease;
+}
+
+.nova-avatar-display__orbit--active {
+  border-color: rgba(111, 175, 154, 0.8);
+  box-shadow: 0 0 24px rgba(111, 175, 154, 0.2);
+}
+
+/* Speech Bubble on top left */
+.nova-avatar-display__speech {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.48rem 1rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  margin-bottom: -18px;
+  margin-left: -55px;
+  z-index: 5;
+  box-shadow: 0 6px 18px rgba(13, 17, 16, 0.4);
+  transition: all 0.25s ease;
+}
+
+.nova-avatar-display__speech--ready {
+  background: #0d1110;
+  color: #eff8f3;
+  border: 1.5px solid #6faf9a;
+}
+
+.nova-avatar-display__speech--confused {
+  background: #0d1110;
+  color: #eff8f3;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+.nova-avatar-display__speech::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  right: 22px;
+  width: 10px;
+  height: 10px;
+  background: #0d1110;
+  border-right: 1.5px solid #6faf9a;
+  border-bottom: 1.5px solid #6faf9a;
+  transform: rotate(45deg);
+}
+
+.nova-avatar-display__check-icon {
+  color: #6faf9a;
+}
+
+/* Avatar Frame holding the character */
+.nova-avatar-display__avatar-frame {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, #1e4d3e 0%, #0d1110 75%);
+  box-shadow:
+    0 18px 45px -12px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(111, 175, 154, 0.35);
+  overflow: visible;
+  transition: transform 0.3s ease;
+}
+
+.nova-avatar-display__avatar-frame:hover {
+  transform: scale(1.02);
+}
+
+.nova-avatar-display__svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
+}
+
+/* Misconceptions Pill at the bottom center of the avatar */
+.nova-avatar-display__misconceptions-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  padding: 0.35rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s ease;
+}
+
+.nova-avatar-display__misconceptions-pill--zero {
+  background: #6faf9a;
+  color: #0d1110;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.nova-avatar-display__misconceptions-pill--warn {
+  background: #0d1110;
+  color: #eff8f3;
+  border: 1px solid rgba(111, 175, 154, 0.7);
+}
+
+/* Segmented Toggle: Before Teaching / After Teaching */
+.nova-avatar-display__toggle {
+  display: flex;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding: 4px;
+  border-radius: 999px;
+  background: #0d1110;
+  border: 1px solid rgba(111, 175, 154, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.nova-avatar-display__toggle-btn {
+  padding: 0.48rem 1.15rem;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: #eff8f3;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nova-avatar-display__toggle-btn:hover:not(.nova-avatar-display__toggle-btn--active) {
+  color: #ffffff;
+}
+
+.nova-avatar-display__toggle-btn--active {
+  background: #6faf9a;
+  color: #0d1110;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(111, 175, 154, 0.4);
+}
+

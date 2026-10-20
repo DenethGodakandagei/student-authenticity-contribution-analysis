@@ -10,6 +10,7 @@ import {
   getServerAuthSnapshot,
   subscribeAuth,
 } from '../../utils/api';
+import { useRoleGuard } from '../../utils/useRoleGuard';
 import type {
   ApiError,
   CreateNovaResponse,
@@ -58,6 +59,7 @@ function tabClass(active: boolean): string {
 export default function NewSessionPage() {
   const router = useRouter();
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
+  const { ready } = useRoleGuard('student');
 
   const [tab, setTab] = useState<Tab>('kb');
   const [busy, setBusy] = useState(false);
@@ -185,7 +187,7 @@ export default function NewSessionPage() {
     fail(res, 'Could not create a session from that Atlas JSON.');
   };
 
-  if (!token) {
+  if (!ready) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <span className="spinner" />

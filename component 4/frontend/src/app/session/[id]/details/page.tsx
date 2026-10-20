@@ -11,6 +11,7 @@ import {
   getServerAuthSnapshot,
   subscribeAuth,
 } from '../../../utils/api';
+import { useRoleGuard } from '../../../utils/useRoleGuard';
 import type {
   ApiError,
   SessionState,
@@ -54,6 +55,7 @@ export default function SessionDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
+  const { ready } = useRoleGuard('student');
 
   const { id: sessionId } = use(params);
   const [state, setState] = useState<SessionState | null>(null);
@@ -94,7 +96,7 @@ export default function SessionDetailsPage({
     };
   }, [sessionId, token]);
 
-  if (!token || loading) {
+  if (!ready || loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <span className="spinner" />

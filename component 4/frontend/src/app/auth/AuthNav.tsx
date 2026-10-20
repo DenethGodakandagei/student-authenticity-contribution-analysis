@@ -38,9 +38,12 @@ export default function AuthNav() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   let userName = '';
+  let roleBadge = '';
   if (userRaw) {
     try {
-      userName = (JSON.parse(userRaw) as { name?: string }).name ?? '';
+      const parsed = JSON.parse(userRaw) as { name?: string; role?: string };
+      userName = parsed.name ?? '';
+      roleBadge = parsed.role === 'lecturer' ? 'Lecturer' : 'Student';
     } catch {
       userName = '';
     }
@@ -74,15 +77,24 @@ export default function AuthNav() {
           <>
             <Link
               href="/sessions/new"
-              className="auth-nav__link"
+              className="auth-nav__link auth-nav__link--action"
               aria-current={pathname === '/sessions/new' ? 'page' : undefined}
             >
-              New session
+              + New session
             </Link>
-            {userName && <span className="auth-nav__user">{userName}</span>}
+            {userName && (
+              <span className="auth-nav__user">
+                <span className="auth-nav__user-name">{userName}</span>
+                {roleBadge && (
+                  <span className="auth-nav__role-badge" aria-label={`Role: ${roleBadge}`}>
+                    {roleBadge}
+                  </span>
+                )}
+              </span>
+            )}
             <button
               type="button"
-              className="auth-nav__link"
+              className="auth-nav__link auth-nav__logout-btn"
               onClick={handleLogout}
               disabled={loggingOut}
             >
@@ -94,7 +106,7 @@ export default function AuthNav() {
             <Link
               key={link.href}
               href={link.href}
-              className={link.className}
+              className={`${link.className} ${link.href === '/register' ? 'auth-nav__link--cta' : ''}`}
               aria-current={pathname === link.href ? 'page' : undefined}
             >
               {link.label}

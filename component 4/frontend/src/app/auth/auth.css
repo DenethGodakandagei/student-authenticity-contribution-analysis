@@ -354,15 +354,19 @@
   top: 0;
   left: 0;
   right: 0;
-  z-index: 3;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   height: var(--nova-nav-h);
   padding-inline: clamp(1.75rem, 4vw, 3.5rem);
-  border-bottom: 1px solid var(--nova-line);
-  background: #ffffff;
+  background: linear-gradient(135deg, rgba(239, 248, 243, 0.94) 0%, rgba(255, 255, 255, 0.96) 65%, rgba(239, 248, 243, 0.90) 100%);
+  border-bottom: 1.5px solid rgba(111, 175, 154, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px -2px rgba(111, 175, 154, 0.15), 0 1px 3px 0 rgba(13, 17, 16, 0.05);
+  transition: all 0.25s ease;
 }
 
 .auth-nav__left {
@@ -374,16 +378,25 @@
 
 .auth-nav__brand {
   display: inline-flex;
+  align-items: center;
   flex: none;
-  border-radius: 12px;
+  border-radius: 14px;
+  padding: 0.35rem 0.65rem;
+  background: linear-gradient(135deg, rgba(111, 175, 154, 0.12), rgba(239, 248, 243, 0.8));
+  border: 1px solid rgba(111, 175, 154, 0.3);
+  box-shadow: 0 2px 8px rgba(111, 175, 154, 0.12);
   transition:
     opacity 0.2s ease,
-    transform 0.25s var(--nova-ease);
+    transform 0.25s var(--nova-ease),
+    background 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .auth-nav__brand:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(111, 175, 154, 0.22), rgba(239, 248, 243, 1));
+  border-color: #6faf9a;
+  box-shadow: 0 4px 14px rgba(111, 175, 154, 0.28);
+  transform: translateY(-1.5px);
 }
 
 .auth-nav__brand:focus-visible {
@@ -394,30 +407,141 @@
 .auth-nav__links {
   display: flex;
   align-items: center;
-  gap: clamp(0.25rem, 1.2vw, 0.75rem);
+  gap: clamp(0.35rem, 1.2vw, 0.75rem);
 }
 
 .auth-nav__link {
-  padding: 0.45rem 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.85rem;
   border-radius: 10px;
   font-size: 0.84rem;
-  font-weight: 500;
-  color: var(--nova-muted);
+  font-weight: 550;
+  color: #0d1110;
   text-decoration: none;
   white-space: nowrap;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
   transition:
     color 0.2s ease,
-    background 0.2s ease;
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 
 .auth-nav__link:hover {
-  color: var(--nova-ink);
+  color: #0d1110;
   background: #eff8f3;
+  border-color: rgba(111, 175, 154, 0.4);
+  box-shadow: 0 2px 8px rgba(111, 175, 154, 0.15);
+  transform: translateY(-1px);
 }
 
 .auth-nav__link[aria-current="page"] {
-  color: var(--nova-ink);
+  color: #0d1110;
   background: #eff8f3;
+  border-color: #6faf9a;
+  box-shadow: 0 2px 8px rgba(111, 175, 154, 0.18);
+  font-weight: 600;
+}
+
+/* Home / Dashboard link with special accent */
+.auth-nav__link--home {
+  color: #0d1110;
+  font-weight: 600;
+  background: rgba(111, 175, 154, 0.12);
+  border: 1px solid rgba(111, 175, 154, 0.3);
+}
+
+.auth-nav__link--home:hover {
+  background: #6faf9a;
+  color: #ffffff;
+  border-color: #6faf9a;
+  box-shadow: 0 3px 12px rgba(111, 175, 154, 0.35);
+}
+
+/* New session primary pill button */
+.auth-nav__link--action {
+  background: #6faf9a;
+  color: #ffffff;
+  border: 1px solid #6faf9a;
+  box-shadow: 0 2px 10px rgba(111, 175, 154, 0.35);
+  font-weight: 600;
+}
+
+.auth-nav__link--action:hover {
+  background: #0d1110;
+  color: #ffffff;
+  border-color: #0d1110;
+  box-shadow: 0 4px 14px rgba(13, 17, 16, 0.25);
+  transform: translateY(-1.5px);
+}
+
+/* Call to action: Create account button */
+.auth-nav__link--cta {
+  background: #6faf9a;
+  color: #ffffff;
+  border: 1px solid #6faf9a;
+  box-shadow: 0 2px 10px rgba(111, 175, 154, 0.32);
+  font-weight: 600;
+}
+
+.auth-nav__link--cta:hover {
+  background: #0d1110;
+  color: #ffffff;
+  border-color: #0d1110;
+  box-shadow: 0 4px 14px rgba(13, 17, 16, 0.25);
+  transform: translateY(-1.5px);
+}
+
+/* Logout button */
+.auth-nav__logout-btn {
+  border: 1px solid rgba(13, 17, 16, 0.18);
+  background: #ffffff;
+  color: #0d1110;
+}
+
+.auth-nav__logout-btn:hover {
+  background: #0d1110;
+  color: #ffffff;
+  border-color: #0d1110;
+}
+
+/* User name pill & role badge */
+.auth-nav__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #eff8f3;
+  border: 1px solid rgba(111, 175, 154, 0.4);
+  font-size: 0.82rem;
+  color: #0d1110;
+  box-shadow: 0 1px 4px rgba(111, 175, 154, 0.12);
+}
+
+.auth-nav__user-name {
+  font-weight: 600;
+  color: #0d1110;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-nav__role-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #6faf9a;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .auth-nav__link:focus-visible {

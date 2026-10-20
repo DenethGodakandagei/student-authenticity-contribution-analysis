@@ -1,24 +1,16 @@
 // app/lecturer/page.tsx — placeholder landing page for lecturer accounts
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  getAccessToken,
-  getServerAuthSnapshot,
-  logoutRequest,
-  subscribeAuth,
-} from '../utils/api';
+import { logoutRequest } from '../utils/api';
+import { useRoleGuard } from '../utils/useRoleGuard';
 import '../components/dashboard/dashboard.css';
 
 export default function LecturerPage() {
   const router = useRouter();
-  const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
+  const { ready } = useRoleGuard('lecturer');
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    if (!token) router.replace('/login');
-  }, [token, router]);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -27,7 +19,7 @@ export default function LecturerPage() {
     router.push('/login');
   };
 
-  if (!token) {
+  if (!ready) {
     return (
       <main className="dash-loading">
         <span className="dash-spinner" aria-hidden="true" />

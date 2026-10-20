@@ -1,0 +1,43 @@
+{
+  "quiz_id": "bdff0ac01e2d5a87",
+  "owner_id": "6ad78370060e557f05fc8cfa",
+  "kb_id": "demo",
+  "concepts": [
+    {
+      "name": "class and object",
+      "status": "new",
+      "streak": 0,
+      "wrong_count": 0,
+      "angles_used": [],
+      "misconceptions_hit": []
+    },
+    {
+      "name": "constructor",
+      "status": "new",
+      "streak": 0,
+      "wrong_count": 0,
+      "angles_used": [],
+      "misconceptions_hit": []
+    },
+    {
+      "name": "encapsulation",
+      "status": "new",
+      "streak": 0,
+      "wrong_count": 0,
+      "angles_used": [],
+      "misconceptions_hit": []
+    },
+    {
+      "name": "inheritance",
+      "status": "new",
+      "streak": 0,
+      "wrong_count": 0,
+      "angles_used": [],
+      "misconceptions_hit": []
+    }
+  ],
+  "history": [],
+  "current_concept": "class and object",
+  "created_at": "2026-10-20T15:39:35.586871+00:00",
+  "current_question": null
+}

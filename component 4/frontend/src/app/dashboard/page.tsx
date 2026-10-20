@@ -4,6 +4,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import GreetingCard from '../components/dashboard/GreetingCard';
+import NovaAvatarCard from '../components/dashboard/NovaAvatarCard';
 import StartTeachingCard from '../components/dashboard/StartTeachingCard';
 import SessionsList from '../components/dashboard/SessionsList';
 import MaterialsCard from '../components/dashboard/MaterialsCard';
@@ -16,6 +17,7 @@ import {
   getStoredUserRaw,
   subscribeAuth,
 } from '../utils/api';
+import { useRoleGuard } from '../utils/useRoleGuard';
 import type { ApiError, SessionListItem } from '../utils/types';
 import '../components/dashboard/dashboard.css';
 
@@ -23,6 +25,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
   const userRaw = useSyncExternalStore(subscribeAuth, getStoredUserRaw, getServerAuthSnapshot);
+  const { ready } = useRoleGuard('student');
 
   const [sessions, setSessions] = useState<SessionListItem[] | null>(null);
   const [sessionsError, setSessionsError] = useState('');
@@ -36,13 +39,9 @@ export default function DashboardPage() {
     }
   }
 
-  // No valid token → /login (apiRequest also clears + redirects on a 401).
+  // Fetch sessions once the guard has cleared.
   useEffect(() => {
-    if (!token) router.replace('/login');
-  }, [token, router]);
-
-  useEffect(() => {
-    if (!token) return;
+    if (!ready) return;
     let cancelled = false;
 
     apiRequest<SessionListItem[] | ApiError>('/sessions', 'GET').then((res) => {
@@ -60,9 +59,9 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [ready]);
 
-  if (!token) {
+  if (!ready) {
     return (
       <main className="dash-loading">
         <span className="dash-spinner" aria-hidden="true" />
@@ -74,6 +73,8 @@ export default function DashboardPage() {
     <div className="dash-page">
       <main className="dash-container">
         <GreetingCard userName={userName} />
+
+        <NovaAvatarCard userName={userName} />
 
         <div className="dash-grid">
           <StartTeachingCard />

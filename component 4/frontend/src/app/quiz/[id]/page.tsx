@@ -11,6 +11,7 @@ import {
   getServerAuthSnapshot,
   subscribeAuth,
 } from '../../utils/api';
+import { useRoleGuard } from '../../utils/useRoleGuard';
 import type {
   ApiError,
   QuizAnswerResponse,
@@ -98,6 +99,7 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
   const { id: quizId } = use(params);
   const router = useRouter();
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
+  const { ready } = useRoleGuard('student');
   const startedRef = useRef(false);
   const generatingRef = useRef(false);
 
@@ -113,9 +115,7 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
   const [reasoning, setReasoning] = useState('');
   const [feedback, setFeedback] = useState<QuizAnswerResponse | null>(null);
 
-  useEffect(() => {
-    if (!token) router.replace('/login');
-  }, [token, router]);
+  // Guard handles unauthenticated redirect; keep token watch for runtime expiry.
 
   const refreshQuiz = useCallback(async () => {
     const res = await apiRequest<QuizStateResponse & ApiError>(

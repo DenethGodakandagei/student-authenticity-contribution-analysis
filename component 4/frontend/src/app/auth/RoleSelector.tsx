@@ -78,7 +78,8 @@ export const ROLE_OPTIONS: Record<
 };
 
 export interface RoleSelectorProps {
-  value: AuthRole;
+  /** null means nothing selected yet (initial state). */
+  value: AuthRole | null;
   onChange: (role: AuthRole) => void;
   name: string;
   variant?: 'cards' | 'segmented';
@@ -96,7 +97,7 @@ export default function RoleSelector({
     return (
       <div
         className="seg a-up"
-        data-value={value}
+        data-value={value ?? ''}
         role="radiogroup"
         aria-label="Choose the account you are signing in with"
         style={delay(delayMs)}

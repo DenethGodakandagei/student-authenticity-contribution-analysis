@@ -112,11 +112,11 @@ def test_register_validation():
 
 
 def test_login():
-    wrong = client.post("/auth/login", json={"email": USER_A["email"], "password": "wrongpass1"})
+    wrong = client.post("/auth/login", json={"email": USER_A["email"], "password": "wrongpass1", "role": "student"})
     assert wrong.status_code == 401, wrong.text
     print("  OK wrong password gives 401.")
 
-    resp = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"]})
+    resp = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"], "role": "student"})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["access_token"]
@@ -127,8 +127,37 @@ def test_login():
     print("  OK login works and sets last_login_at.")
 
 
+def test_login_role_check():
+    """Login with correct credentials but the WRONG role -> 403 with a helpful message."""
+    # USER_A was registered as a student (default role).
+    resp = client.post(
+        "/auth/login",
+        json={"email": USER_A["email"], "password": USER_A["password"], "role": "lecturer"},
+    )
+    assert resp.status_code == 403, resp.text
+    detail = resp.json().get("detail", "")
+    assert "student" in detail.lower(), f"Expected role hint in detail: {detail}"
+    print("  OK signing in with the wrong role gives 403 with a role hint.")
+
+    # Correct role must succeed.
+    resp = client.post(
+        "/auth/login",
+        json={"email": USER_A["email"], "password": USER_A["password"], "role": "student"},
+    )
+    assert resp.status_code == 200, resp.text
+    print("  OK signing in with the correct role gives 200.")
+
+    # Unknown role -> 400 (no credentials check at all).
+    resp = client.post(
+        "/auth/login",
+        json={"email": USER_A["email"], "password": USER_A["password"], "role": "admin"},
+    )
+    assert resp.status_code == 400, resp.text
+    print("  OK an unknown role value gives 400.")
+
+
 def test_me_and_protected_route():
-    token = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"]}).json()["access_token"]
+    token = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"], "role": "student"}).json()["access_token"]
 
     resp = client.get("/auth/me", headers=_auth_headers(token))
     assert resp.status_code == 200, resp.text
@@ -141,7 +170,7 @@ def test_me_and_protected_route():
 
 
 def test_bad_tokens():
-    token = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"]}).json()["access_token"]
+    token = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"], "role": "student"}).json()["access_token"]
 
     # Tampered: flip one character in the middle of the token.
     mid = len(token) // 2
@@ -184,8 +213,8 @@ def test_bad_tokens():
 
 def test_session_ownership():
     assert client.post("/auth/register", json=USER_B).status_code == 200
-    token_a = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"]}).json()["access_token"]
-    token_b = client.post("/auth/login", json={"email": USER_B["email"], "password": USER_B["password"]}).json()["access_token"]
+    token_a = client.post("/auth/login", json={"email": USER_A["email"], "password": USER_A["password"], "role": "student"}).json()["access_token"]
+    token_b = client.post("/auth/login", json={"email": USER_B["email"], "password": USER_B["password"], "role": "student"}).json()["access_token"]
 
     # User A creates a session.
     atlas_output = {
@@ -235,6 +264,7 @@ def run_test():
     test_lecturer_registration()
     test_register_validation()
     test_login()
+    test_login_role_check()
     test_me_and_protected_route()
     test_bad_tokens()
     test_session_ownership()

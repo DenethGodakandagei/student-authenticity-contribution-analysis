@@ -13,6 +13,7 @@ import {
   getServerAuthSnapshot,
   subscribeAuth,
 } from '../../../utils/api';
+import { useRoleGuard } from '../../../utils/useRoleGuard';
 import type {
   ApiError,
   DetectionItem,
@@ -23,6 +24,7 @@ import type {
 export default function ChatShell({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
+  const { ready } = useRoleGuard('student');
 
   const [summary, setSummary] = useState<UnderstandingSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -31,7 +33,7 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
   const [stateError, setStateError] = useState('');
   const [detection, setDetection] = useState<DetectionItem[] | null>(null);
 
-  // Not logged in → back to /login (apiRequest handles token expiry the same way)
+  // Guard handles redirect — suppress the old manual check.
   useEffect(() => {
     if (!token) router.replace('/login');
   }, [token, router]);

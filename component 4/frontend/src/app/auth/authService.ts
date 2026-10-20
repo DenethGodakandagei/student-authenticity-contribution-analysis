@@ -6,27 +6,25 @@
 //
 // Role notes
 // ----------
-// The backend (backend/app/auth.py) currently issues JWTs with no role claim:
-// every account is a single, server-defined identity. The role the user picks
-// in the UI is therefore used for two harmless things only:
-//   1. where to send the browser after a successful request,
-//   2. a forward-compatible `role` field included in the register payload.
-// It is never treated as proof of authorisation — a lecturer account can only
-// ever be granted lecturer privileges by the server.
+// The backend issues JWTs that include a `role` claim ("student" or "lecturer").
+// After a successful login or register, we ALWAYS use the role the server
+// returns (res.data.user.role) to decide where to redirect — never the UI
+// selection alone.  destinationFor() is the single source of truth for
+// role-based redirect targets; both LoginForm and RegisterForm must use it.
 import { apiRequest, saveAuth, type AuthResponse } from '../utils/api';
 import type { ApiError } from '../utils/types';
 
 export type AuthRole = 'student' | 'lecturer';
 
-/** Where each role lands after a successful sign-in / registration. */
+/** Single source of truth: where each role lands after sign-in / registration. */
 export function destinationFor(role: AuthRole): string {
-  return role === 'lecturer' ? '/lecturer' : '/';
+  return role === 'lecturer' ? '/lecturer' : '/dashboard';
 }
 
 export interface LoginInput {
   email: string;
   password: string;
-  role: AuthRole;
+  role?: AuthRole;
   remember: boolean;
 }
 
@@ -39,6 +37,8 @@ export interface RegisterInput {
   identifier: string;
   /** Lecturer only — sent as extra data the backend may ignore today. */
   department?: string;
+  /** Lecturer only — required for lecturer registration if configured. */
+  lecturer_code?: string;
   consent: boolean;
 }
 
@@ -71,16 +71,21 @@ function mapError(
 
 /** POST /auth/login — the server decides whether the credentials are valid. */
 export async function login(input: LoginInput): Promise<AuthOutcome> {
-  const res = await apiRequest<AuthResponse & ApiError>('/auth/login', 'POST', {
+  const payload: Record<string, unknown> = {
     email: input.email,
     password: input.password,
-  });
+  };
+  if (input.role) {
+    payload.role = input.role;
+  }
+
+  const res = await apiRequest<AuthResponse & ApiError>('/auth/login', 'POST', payload);
 
   if (res.ok && res.data?.access_token) {
     saveAuth(res.data, { remember: input.remember });
     if (input.remember) rememberEmail(input.email);
     else clearRememberedEmail();
-    return { ok: true, role: resolveRole(res.data.user, input.role) };
+    return { ok: true, role: resolveRole(res.data.user, input.role ?? 'student') };
   }
 
   return { ok: false, error: mapError(res, 'sign in') };
@@ -99,6 +104,7 @@ export async function register(input: RegisterInput): Promise<AuthOutcome> {
     student_id: input.identifier || null,
     consent: input.consent,
     role: input.role,
+    ...(input.lecturer_code ? { lecturer_code: input.lecturer_code } : {}),
     ...(input.department ? { department: input.department } : {}),
   });
 

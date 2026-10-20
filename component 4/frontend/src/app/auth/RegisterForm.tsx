@@ -1,7 +1,7 @@
 // app/auth/RegisterForm.tsx
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthButton from './AuthButton';
 import AuthFooter from './AuthFooter';
@@ -14,28 +14,46 @@ import { destinationFor, register, type AuthRole } from './authService';
 import {
   getAccessToken,
   getServerAuthSnapshot,
+  getStoredUserRaw,
   subscribeAuth,
 } from '../utils/api';
-import { useSyncExternalStore } from 'react';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Reads the role the API stored on the signed-in user. */
+function storedRole(): AuthRole | undefined {
+  const raw = getStoredUserRaw();
+  if (!raw) return undefined;
+  try {
+    const role = (JSON.parse(raw) as { role?: string }).role;
+    return role === 'student' || role === 'lecturer' ? role : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 interface RegisterErrors {
+  role?: string;
   name?: string;
   email?: string;
+  lecturerCode?: string;
   password?: string;
   confirm?: string;
   consent?: string;
 }
 
 function validate(values: {
+  role: AuthRole | null;
   name: string;
   email: string;
   password: string;
   confirm: string;
   consent: boolean;
+  lecturerCode: string;
 }): RegisterErrors {
   const errors: RegisterErrors = {};
+  if (!values.role) errors.role = 'Please select Student or Lecturer.';
+
   const name = values.name.trim();
   const email = values.email.trim();
 
@@ -44,6 +62,12 @@ function validate(values: {
 
   if (!email) errors.email = 'Enter your email address.';
   else if (!EMAIL_RE.test(email)) errors.email = 'Enter a valid email address.';
+
+  if (values.role === 'lecturer') {
+    if (!values.lecturerCode.trim()) {
+      errors.lecturerCode = 'Enter the lecturer access code.';
+    }
+  }
 
   if (!values.password) errors.password = 'Choose a password.';
   else if (values.password.length < 8) errors.password = 'Use at least 8 characters.';
@@ -72,11 +96,13 @@ export default function RegisterForm() {
   const router = useRouter();
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
 
-  const [role, setRole] = useState<AuthRole>('student');
+  // null = nothing selected yet (user must pick before submitting)
+  const [role, setRole] = useState<AuthRole | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [lecturerCode, setLecturerCode] = useState('');
   const [consent, setConsent] = useState(false);
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -89,26 +115,36 @@ export default function RegisterForm() {
   const skipAutoRedirect = useRef(false);
   const timerRef = useRef<number | null>(null);
 
+  // Already logged-in → send to their role's home.
   useEffect(() => {
-    if (token && !skipAutoRedirect.current) router.replace('/');
+    if (token && !skipAutoRedirect.current) {
+      router.replace(destinationFor(storedRole() ?? 'student'));
+    }
   }, [token, router]);
 
   useEffect(() => () => void (timerRef.current && window.clearTimeout(timerRef.current)), []);
 
-  const errors = validate({ name, email, password, confirm, consent });
+  const errors = validate({ role, name, email, password, confirm, consent, lecturerCode });
   const errorFor = (key: keyof RegisterErrors) =>
     submitted || touched[key] ? errors[key] : undefined;
 
   const handleRoleChange = (next: AuthRole) => {
-    if (next === role) return;
     setRole(next);
     setServerError('');
+    // clear lecturer code when switching away from lecturer
+    if (next !== 'lecturer') setLecturerCode('');
   };
 
   const focusFirstError = (current: RegisterErrors) => {
+    if (current.role) {
+      const el = document.querySelector<HTMLElement>('input[name="register-role"]');
+      el?.focus();
+      return;
+    }
     const order: Array<[keyof RegisterErrors, string]> = [
       ['name', 'reg-name'],
       ['email', 'reg-email'],
+      ['lecturerCode', 'reg-lecturer-code'],
       ['password', 'reg-password'],
       ['confirm', 'reg-confirm'],
       ['consent', 'reg-consent'],
@@ -123,11 +159,14 @@ export default function RegisterForm() {
 
     setSubmitted(true);
     setServerError('');
-    const current = validate({ name, email, password, confirm, consent });
+    const current = validate({ role, name, email, password, confirm, consent, lecturerCode });
     if (Object.values(current).some(Boolean)) {
       focusFirstError(current);
       return;
     }
+
+    // role is guaranteed non-null here (validated above)
+    const chosenRole = role!;
 
     setBusy(true);
     skipAutoRedirect.current = true;
@@ -135,8 +174,9 @@ export default function RegisterForm() {
       name: name.trim(),
       email: email.trim(),
       password,
-      role,
+      role: chosenRole,
       identifier: '',
+      lecturer_code: chosenRole === 'lecturer' ? lecturerCode.trim() : undefined,
       consent,
     });
     setBusy(false);
@@ -148,19 +188,21 @@ export default function RegisterForm() {
     }
 
     setSuccess(true);
+    // Always redirect to the role the SERVER returned — not the UI selection.
     timerRef.current = window.setTimeout(
       () => router.push(destinationFor(outcome.role)),
       750
     );
   };
 
+  const roleError = submitted ? errors.role : undefined;
   const alertMessage = serverError || (submitted && errors.consent ? errors.consent : '');
 
   return (
     <>
       <header className="auth-head">
         <p className="auth-kicker a-up" style={delay(40)}>
-          {role === 'student' ? 'Student account' : 'Lecturer account'}
+          {role === 'lecturer' ? 'Lecturer account' : 'Student account'}
         </p>
         <h1 className="auth-title a-up" style={delay(95)}>
           Create your account
@@ -168,13 +210,21 @@ export default function RegisterForm() {
       </header>
 
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
-        <RoleSelector
-          value={role}
-          onChange={handleRoleChange}
-          name="register-role"
-          variant="segmented"
-          delayMs={180}
-        />
+        <div className="a-up" style={delay(180)}>
+          <RoleSelector
+            value={role}
+            onChange={handleRoleChange}
+            name="register-role"
+            variant="segmented"
+            delayMs={0}
+          />
+          {roleError && (
+            <p className="auth-alert" role="alert" style={{ marginTop: '0.5rem' }}>
+              <AlertIcon />
+              <span>{roleError}</span>
+            </p>
+          )}
+        </div>
 
         <div className="auth-row">
           <FormField
@@ -209,6 +259,25 @@ export default function RegisterForm() {
             delayMs={280}
           />
         </div>
+
+        {role === 'lecturer' && (
+          <FormField
+            id="reg-lecturer-code"
+            label="Lecturer Access Code"
+            type="password"
+            value={lecturerCode}
+            onChange={(value) => {
+              setLecturerCode(value);
+              setServerError('');
+            }}
+            onBlur={() => setTouched((t) => ({ ...t, lecturerCode: true }))}
+            placeholder="Enter lecturer code provided by institution"
+            autoComplete="off"
+            error={errorFor('lecturerCode')}
+            hint="Required to verify educator credentials."
+            delayMs={295}
+          />
+        )}
 
         <div className="auth-row">
           <PasswordField
@@ -313,7 +382,7 @@ export default function RegisterForm() {
         )}
 
         <AuthButton loading={busy} loadingText="Creating account…" delayMs={500}>
-          {role === 'student' ? 'Create Student Account' : 'Create Lecturer Account'}
+          {role === 'lecturer' ? 'Create Lecturer Account' : 'Create Student Account'}
         </AuthButton>
       </form>
 

@@ -34,6 +34,7 @@ from app.auth import router as auth_router, get_current_user, check_connection
 from app.learning_eval import router as learning_eval_router
 from app.materials import router as materials_router, check_kb_access
 from app.quiz_routes import router as quiz_router
+from app.lecturer_routes import router as lecturer_router
 from app.config import settings
 from app.demo_log import DEMO_LOG_ENABLED, step
 
@@ -58,6 +59,9 @@ app.include_router(materials_router)
 
 # Adaptive quiz sessions
 app.include_router(quiz_router)
+
+# Lecturer-only analytics and student management
+app.include_router(lecturer_router)
 
 # Setup CORS middleware
 app.add_middleware(
