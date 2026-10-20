@@ -92,6 +92,7 @@ function DashboardComponent() {
   const loadStudents = async () => {
     try {
       const res = await fetch(`${getBackendUrl()}/api/auth/users`);
+      if (!res.ok) return;
       const data = await res.json();
       const studentsOnly = (data || []).filter((u: any) => {
         const r = (u.role || '').toLowerCase();
@@ -99,8 +100,8 @@ function DashboardComponent() {
         return r !== 'admin' && r !== 'lecturer' && r !== 'teacher' && r !== 'evaluator' && un !== 'admin' && un !== 'sansala';
       });
       setRegisteredStudents(studentsOnly);
-    } catch (err) {
-      console.error("Failed to fetch registered students", err);
+    } catch (err: any) {
+      console.warn("Could not fetch registered students:", err?.message || err);
     }
   };
 
@@ -124,6 +125,7 @@ function DashboardComponent() {
       url += `?${params.toString()}`;
 
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const docs = await res.json();
       const list = Array.isArray(docs) ? docs : [];
       setAvailableDocs(list);
@@ -146,8 +148,8 @@ function DashboardComponent() {
       if (list.length > 0 && (!teamTargetDocId || !list.some((d: any) => d._id === teamTargetDocId))) {
         setTeamTargetDocId(list[0]._id);
       }
-    } catch (err) {
-      console.error("Failed to fetch documents", err);
+    } catch (err: any) {
+      console.warn("Could not fetch documents:", err?.message || err);
     } finally {
       setDocsLoading(false);
     }
@@ -1559,26 +1561,34 @@ function DashboardComponent() {
                         )}
                       </div>
 
-                      {/* Card Action Buttons */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      {/* Card Action Buttons - Compact & Sleek */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.4rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
                           <button
                             onClick={() => router.push(`/editor?docId=${doc._id}`)}
                             style={{
                               background: '#6FAF9A',
                               color: '#0D1110',
                               border: 'none',
-                              borderRadius: '8px',
-                              padding: '0.55rem 0.75rem',
-                              fontSize: '0.82rem',
-                              fontWeight: 800,
+                              borderRadius: '6px',
+                              padding: '0.28rem 0.5rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
                               cursor: 'pointer',
-                              textAlign: 'center',
-                              boxShadow: '0 2px 6px rgba(111, 175, 154, 0.35)'
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.3rem',
+                              boxShadow: '0 1px 3px rgba(111, 175, 154, 0.25)',
+                              transition: 'all 0.15s ease'
                             }}
                             onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
                             onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
                           >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
                             Open in Editor
                           </button>
 
@@ -1591,21 +1601,32 @@ function DashboardComponent() {
                               background: '#ffffff',
                               border: '1px solid #e2e8f0',
                               color: '#0f172a',
-                              borderRadius: '8px',
-                              padding: '0.55rem 0.75rem',
-                              fontSize: '0.82rem',
+                              borderRadius: '6px',
+                              padding: '0.28rem 0.5rem',
+                              fontSize: '0.72rem',
                               fontWeight: 600,
                               cursor: 'pointer',
-                              textAlign: 'center'
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.3rem',
+                              transition: 'all 0.15s ease'
                             }}
+                            onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
+                            onMouseOut={e => e.currentTarget.style.background = '#ffffff'}
                           >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="20" x2="18" y2="10" />
+                              <line x1="12" y1="20" x2="12" y2="4" />
+                              <line x1="6" y1="20" x2="6" y2="14" />
+                            </svg>
                             ML Analytics
                           </button>
                         </div>
 
                         {/* Leader Quick Share / Add Member (Only for Group Projects) */}
                         {(isOwner || isUserLeader) && doc.assignmentType !== 'individual' && (
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
                             <button
                               onClick={() => {
                                 setTeamTargetDocId(doc._id);
@@ -1615,14 +1636,27 @@ function DashboardComponent() {
                                 background: '#f1f5f9',
                                 border: '1px solid #e2e8f0',
                                 color: '#0f172a',
-                                borderRadius: '8px',
-                                padding: '0.45rem',
-                                fontSize: '0.78rem',
+                                borderRadius: '6px',
+                                padding: '0.26rem 0.45rem',
+                                fontSize: '0.7rem',
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.25rem',
+                                transition: 'all 0.15s ease'
                               }}
+                              onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'}
+                              onMouseOut={e => e.currentTarget.style.background = '#f1f5f9'}
                             >
-                              + Add Member
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="8.5" cy="7" r="4" />
+                                <line x1="20" y1="8" x2="20" y2="14" />
+                                <line x1="23" y1="11" x2="17" y2="11" />
+                              </svg>
+                              Add Member
                             </button>
 
                             <button
@@ -1631,13 +1665,24 @@ function DashboardComponent() {
                                 background: '#121417',
                                 color: '#ffffff',
                                 border: 'none',
-                                borderRadius: '8px',
-                                padding: '0.45rem',
-                                fontSize: '0.78rem',
+                                borderRadius: '6px',
+                                padding: '0.26rem 0.45rem',
+                                fontSize: '0.7rem',
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.25rem',
+                                transition: 'all 0.15s ease'
                               }}
+                              onMouseOver={e => e.currentTarget.style.background = '#27272a'}
+                              onMouseOut={e => e.currentTarget.style.background = '#121417'}
                             >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
                               Manage Access
                             </button>
                           </div>

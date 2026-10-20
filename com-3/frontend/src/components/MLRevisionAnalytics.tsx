@@ -101,8 +101,8 @@ export default function MLRevisionAnalytics({ documentId, docTitle }: MLRevision
           setSelectedRevision(rData[0]);
         }
       }
-    } catch (err) {
-      console.error("Failed to load ML revision analytics:", err);
+    } catch (err: any) {
+      console.warn("Could not load ML revision analytics:", err?.message || err);
     } finally {
       setLoading(false);
     }

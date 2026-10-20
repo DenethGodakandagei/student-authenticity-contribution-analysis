@@ -19,6 +19,8 @@ export default function Integrations() {
   const [rawContent, setRawContent] = useState('');
   const [docxBase64, setDocxBase64] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
+  const [googleUserEmail, setGoogleUserEmail] = useState<string | null>(null);
   
   const [importing, setImporting] = useState(false);
   const [importStep, setImportStep] = useState(0);
@@ -27,6 +29,42 @@ export default function Integrations() {
   const [selectedCollaborators, setSelectedCollaborators] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '974057963404-f6kmvobfa9v486hermc6sj9ndvn7b8kp.apps.googleusercontent.com';
+
+  const handleGoogleSignIn = () => {
+    setError('');
+    try {
+      const google = (window as any).google;
+      if (!google?.accounts?.oauth2) {
+        showToast("Google Identity Services is still loading. Please retry in a few seconds.", "error", "Google Auth");
+        return;
+      }
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: googleClientId,
+        scope: 'https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.readonly',
+        callback: (tokenResponse: any) => {
+          if (tokenResponse?.access_token) {
+            setGoogleAccessToken(tokenResponse.access_token);
+            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+            })
+              .then(res => res.json())
+              .then(info => {
+                if (info?.email) setGoogleUserEmail(info.email);
+              })
+              .catch(() => {});
+            showToast("Google Account connected! Private documents & revision history enabled.", "success", "Google Authorized");
+          } else if (tokenResponse?.error) {
+            setError(`Google authorization error: ${tokenResponse.error}`);
+          }
+        }
+      });
+      client.requestAccessToken({ prompt: 'consent' });
+    } catch (err: any) {
+      setError(`Google Sign-In failed: ${err.message}`);
+    }
+  };
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', title?: string) => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
@@ -37,23 +75,29 @@ export default function Integrations() {
   };
 
   const fetchLinkedDocs = () => {
-    fetch(API_BASE)
-      .then(res => res.json())
+    fetch(getApiBase())
+      .then(res => {
+        if (!res.ok) return [];
+        return res.json();
+      })
       .then(data => {
         const external = (data || []).filter((doc: any) =>
-          doc._id.startsWith('google_docs_') || doc._id.startsWith('microsoft_365_') ||
+          doc._id?.startsWith('google_docs_') || doc._id?.startsWith('microsoft_365_') ||
           doc.source === 'google_docs' || doc.source === 'microsoft_365'
         );
         setLinkedDocs(external);
       })
-      .catch(err => console.error("Failed to fetch linked docs", err));
+      .catch(err => console.warn("Could not fetch linked docs:", err?.message || err));
   };
 
   const fetchStudents = () => {
     fetch(`${getBackendUrl()}/api/auth/users`)
-      .then(res => res.json())
-      .then(data => setRegisteredStudents(data || []))
-      .catch(err => console.error("Failed to fetch students", err));
+      .then(res => {
+        if (!res.ok) return [];
+        return res.json();
+      })
+      .then(data => setRegisteredStudents(Array.isArray(data) ? data : []))
+      .catch(err => console.warn("Could not fetch students:", err?.message || err));
   };
 
   useEffect(() => {
@@ -155,6 +199,7 @@ export default function Integrations() {
         body: JSON.stringify({
           source: activeTab === 'google' ? 'google_docs' : 'microsoft_365',
           docUrl: docUrl.trim() || undefined,
+          accessToken: (activeTab === 'google' && googleAccessToken) ? googleAccessToken : undefined,
           rawContent: docxBase64 ? undefined : (rawContent.trim() || undefined),
           docxBase64: docxBase64 || undefined,
           title: docTitle.trim() || undefined,
@@ -368,6 +413,76 @@ export default function Integrations() {
 
                 {importMode === 'link' ? (
                   <div>
+                    {activeTab === 'google' && (
+                      <div style={{
+                        background: googleAccessToken ? '#f0fdf4' : '#f8fafc',
+                        border: `1px solid ${googleAccessToken ? '#bbf7d0' : '#e2e8f0'}`,
+                        borderRadius: '10px',
+                        padding: '0.75rem 0.9rem',
+                        marginBottom: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                          </svg>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                              {googleAccessToken ? 'Google Account Connected' : 'Google Cloud OAuth 2.0'}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: googleAccessToken ? '#16a34a' : '#64748b' }}>
+                              {googleAccessToken
+                                ? `Authorized${googleUserEmail ? ` (${googleUserEmail})` : ''} — Revision history unlocked`
+                                : 'Sign in to fetch private docs and Drive revision history'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {googleAccessToken ? (
+                          <button
+                            type="button"
+                            onClick={() => { setGoogleAccessToken(null); setGoogleUserEmail(null); }}
+                            style={{
+                              background: 'transparent',
+                              border: '1px solid #cbd5e1',
+                              color: '#64748b',
+                              padding: '0.3rem 0.55rem',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Disconnect
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleGoogleSignIn}
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              color: '#1f2937',
+                              padding: '0.4rem 0.75rem',
+                              borderRadius: '6px',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                            }}
+                          >
+                            Sign in with Google
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
                       {activeTab === 'google' ? "Google Docs Shareable Link" : "Word Online / Cloud Link"}
                     </label>
@@ -390,7 +505,9 @@ export default function Integrations() {
                       }}
                     />
                     <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
-                      Ensure link sharing in Google Docs or Word is set to <strong>&quot;Anyone with the link can view&quot;</strong> so Inkie can fetch your real document text without authentication errors.
+                      {activeTab === 'google'
+                        ? 'Ensure link sharing in Google Docs is set to "Anyone with the link can view" or sign in with Google above for private docs.'
+                        : 'Ensure link sharing in Word/OneDrive is set to "Anyone with the link can view" so Inkie can fetch real document text.'}
                     </p>
                   </div>
                 ) : (
