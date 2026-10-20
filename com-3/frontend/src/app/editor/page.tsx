@@ -15,12 +15,58 @@ import { FontFamily } from '@tiptap/extension-font-family';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
+import { Extension } from '@tiptap/core';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 import ShareModal from '../../components/ShareModal';
 import ReportsManagerModal from '../../components/ReportsManagerModal';
 import { ToastContainer, CustomPromptDialog, CustomConfirmDialog, ToastItem } from '../../components/CustomDialog';
 import { getBackendUrl } from '../../utils/apiConfig';
+
+// Custom Tiptap Font Size Extension (MS Word Style)
+const FontSize = Extension.create({
+  name: 'fontSize',
+  addOptions() {
+    return {
+      types: ['textStyle'],
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize?.replace(/['"]+/g, '') || null,
+            renderHTML: attributes => {
+              if (!attributes.fontSize) {
+                return {};
+              }
+              return {
+                style: `font-size: ${attributes.fontSize}`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize: (fontSize: string) => ({ chain }: any) => {
+        return chain()
+          .setMark('textStyle', { fontSize })
+          .run();
+      },
+      unsetFontSize: () => ({ chain }: any) => {
+        return chain()
+          .setMark('textStyle', { fontSize: null })
+          .run();
+      },
+    };
+  },
+});
 
 const getSocketUrl = () => getBackendUrl();
 
@@ -101,68 +147,500 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
   };
 
   return (
-    <div className="editor-toolbar" style={{ flexWrap: 'wrap', justifyContent: 'space-between' }}>
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <button onClick={() => editor.chain().focus().toggleBold().run()} className={`toolbar-btn ${editor.isActive('bold') ? 'active' : ''}`}>Bold</button>
-        <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`toolbar-btn ${editor.isActive('italic') ? 'active' : ''}`}>Italic</button>
-        <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={`toolbar-btn ${editor.isActive('underline') ? 'active' : ''}`}>Underline</button>
+    <div className="editor-toolbar" style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '0.4rem',
+      background: '#FFFFFF',
+      borderBottom: '1px solid rgba(111, 175, 154, 0.25)',
+      padding: '0.25rem 0.75rem',
+      minHeight: '36px',
+      flexWrap: 'nowrap',
+      overflowX: 'auto',
+      boxSizing: 'border-box'
+    }}>
+      <div style={{
+        display: 'flex',
+        gap: '0.15rem',
+        alignItems: 'center',
+        flexWrap: 'nowrap',
+        flexShrink: 1
+      }}>
         
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-        
-        <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={`toolbar-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`}>H1</button>
-        <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`toolbar-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`}>H2</button>
-        <button onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={`toolbar-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`}>H3</button>
-        
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
+        {/* 1. History Controls (Undo / Redo like Word) */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className="toolbar-btn toolbar-icon-btn"
+          title="Undo (Ctrl+Z)"
+          style={{ opacity: editor.can().undo() ? 1 : 0.4 }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7v6h6" />
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+          </svg>
+        </button>
 
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className="toolbar-btn toolbar-icon-btn"
+          title="Redo (Ctrl+Y)"
+          style={{ opacity: editor.can().redo() ? 1 : 0.4 }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 7v6h-6" />
+            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+          </svg>
+        </button>
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
+
+        {/* 2. Character Styles: Bold, Italic, Underline, Strikethrough (Icons) */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('bold') ? 'active' : ''}`}
+          title="Bold (Ctrl+B)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
+            <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('italic') ? 'active' : ''}`}
+          title="Italic (Ctrl+I)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="4" x2="10" y2="4" />
+            <line x1="14" y1="20" x2="5" y2="20" />
+            <line x1="15" y1="4" x2="9" y2="20" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('underline') ? 'active' : ''}`}
+          title="Underline (Ctrl+U)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3" />
+            <line x1="4" y1="21" x2="20" y2="21" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('strike') ? 'active' : ''}`}
+          title="Strikethrough"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 4H9a3 3 0 0 0-2.83 4" />
+            <path d="M14 12a4 4 0 0 1 0 8H6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+          </svg>
+        </button>
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
+
+        {/* 3. Heading Levels (H1, H2, H3 Styled Icons) */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`}
+          title="Heading 1"
+        >
+          <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>H₁</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`}
+          title="Heading 2"
+        >
+          <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>H₂</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`}
+          title="Heading 3"
+        >
+          <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>H₃</span>
+        </button>
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
+
+        {/* 4. Font Family Selector */}
         <select 
           onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()} 
           className="toolbar-btn" 
-          style={{ border: '1px solid #d1d5db', padding: '0.2rem' }}
+          style={{ height: '28px', padding: '0 0.35rem', fontSize: '0.78rem', border: '1px solid rgba(111, 175, 154, 0.35)', borderRadius: '5px', maxWidth: '120px' }}
           value={editor.getAttributes('textStyle').fontFamily || ''}
+          title="Font Family"
         >
-          <option value="">Font</option>
+          <option value="">Aptos / Sans</option>
           <option value="Arial">Arial</option>
           <option value="Times New Roman">Times New Roman</option>
           <option value="Courier New">Courier New</option>
           <option value="Georgia">Georgia</option>
         </select>
 
-        <input 
-          type="color" 
-          onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()} 
-          value={editor.getAttributes('textStyle').color || '#000000'}
-          title="Text Color"
-          style={{ width: '30px', height: '30px', padding: '0', border: 'none', cursor: 'pointer', background: 'transparent' }}
-        />
-        
-        <button onClick={() => editor.chain().focus().toggleHighlight().run()} className={`toolbar-btn ${editor.isActive('highlight') ? 'active' : ''}`}>Highlight</button>
-        <button onClick={() => editor.chain().focus().toggleBlockquote().run()} className={`toolbar-btn ${editor.isActive('blockquote') ? 'active' : ''}`}>Quote Border</button>
-        
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-
+        {/* 4b. Microsoft Word Style Font Size Selector & Increase/Decrease Buttons */}
         <select
           onChange={(e) => {
-            const el = document.querySelector('.ProseMirror');
-            if (el) {
-              el.classList.remove('page-border', 'page-border-solid', 'page-border-double', 'page-border-academic', 'page-border-dashed');
-              if (e.target.value !== 'none') {
-                el.classList.add('page-border', `page-border-${e.target.value}`);
-              }
+            const val = e.target.value;
+            if (val) {
+              (editor.chain().focus() as any).setFontSize(val).run();
+            } else {
+              (editor.chain().focus() as any).unsetFontSize().run();
             }
           }}
-          defaultValue="none"
           className="toolbar-btn"
-          style={{ border: '1px solid #d1d5db', padding: '0.25rem 0.5rem', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
-          title="Apply page border to document"
+          style={{
+            height: '28px',
+            padding: '0 0.25rem',
+            fontSize: '0.78rem',
+            border: '1px solid rgba(111, 175, 154, 0.35)',
+            borderRadius: '5px',
+            minWidth: '52px',
+            width: '52px'
+          }}
+          value={editor.getAttributes('textStyle').fontSize || '11pt'}
+          title="Font Size (like Word: 8, 9, 10, 11, 12, 14, 16, 18, 24...)"
         >
-          <option value="none">Border: None</option>
-          <option value="solid">Border: Box (Solid)</option>
-          <option value="double">Border: Classic Double</option>
-          <option value="academic">Border: Academic Frame</option>
-          <option value="dashed">Border: Dashed</option>
+          <option value="8pt">8</option>
+          <option value="9pt">9</option>
+          <option value="10pt">10</option>
+          <option value="11pt">11</option>
+          <option value="12pt">12</option>
+          <option value="14pt">14</option>
+          <option value="16pt">16</option>
+          <option value="18pt">18</option>
+          <option value="20pt">20</option>
+          <option value="24pt">24</option>
+          <option value="28pt">28</option>
+          <option value="32pt">32</option>
+          <option value="36pt">36</option>
+          <option value="48pt">48</option>
+          <option value="72pt">72</option>
         </select>
+
         <button
+          type="button"
+          onClick={() => {
+            const sizes = ['8pt', '9pt', '10pt', '11pt', '12pt', '14pt', '16pt', '18pt', '20pt', '24pt', '28pt', '32pt', '36pt', '48pt', '72pt'];
+            const cur = editor.getAttributes('textStyle').fontSize || '11pt';
+            const idx = sizes.indexOf(cur);
+            const next = idx < sizes.length - 1 ? sizes[idx + 1] : sizes[sizes.length - 1];
+            (editor.chain().focus() as any).setFontSize(next).run();
+          }}
+          className="toolbar-btn toolbar-icon-btn"
+          title="Increase Font Size (Ctrl+Shift+>)"
+        >
+          <span style={{ fontSize: '0.82rem', fontWeight: 900, display: 'inline-flex', alignItems: 'baseline' }}>
+            A<span style={{ fontSize: '0.55rem', fontWeight: 900, transform: 'translateY(-3px)' }}>▲</span>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const sizes = ['8pt', '9pt', '10pt', '11pt', '12pt', '14pt', '16pt', '18pt', '20pt', '24pt', '28pt', '32pt', '36pt', '48pt', '72pt'];
+            const cur = editor.getAttributes('textStyle').fontSize || '11pt';
+            const idx = sizes.indexOf(cur);
+            const prev = idx > 0 ? sizes[idx - 1] : sizes[0];
+            (editor.chain().focus() as any).setFontSize(prev).run();
+          }}
+          className="toolbar-btn toolbar-icon-btn"
+          title="Decrease Font Size (Ctrl+Shift+<)"
+        >
+          <span style={{ fontSize: '0.82rem', fontWeight: 900, display: 'inline-flex', alignItems: 'baseline' }}>
+            A<span style={{ fontSize: '0.55rem', fontWeight: 900, transform: 'translateY(1px)' }}>▼</span>
+          </span>
+        </button>
+
+        {/* 5. Word-style Font Color (Letter 'A' with color bar) */}
+        <div title="Font Color" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="toolbar-btn toolbar-icon-btn"
+            onClick={() => document.getElementById('inkie-font-color')?.click()}
+            title="Font Color"
+            style={{ flexDirection: 'column', gap: '1px' }}
+          >
+            <span style={{ fontSize: '0.88rem', fontWeight: 900, lineHeight: 1 }}>A</span>
+            <span style={{
+              width: '14px',
+              height: '3px',
+              background: editor.getAttributes('textStyle').color || '#0D1110',
+              borderRadius: '1px'
+            }} />
+          </button>
+          <input
+            id="inkie-font-color"
+            type="color"
+            onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
+            value={editor.getAttributes('textStyle').color || '#000000'}
+            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+          />
+        </div>
+
+        {/* 6. Highlight Marker Pen Icon */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('highlight') ? 'active' : ''}`}
+          title="Highlight Marker"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+        </button>
+
+        {/* 7. Blockquote Quote Icon */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('blockquote') ? 'active' : ''}`}
+          title="Blockquote"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
+          </svg>
+        </button>
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
+
+        {/* 8. Lists (Bullet & Numbered Icons) */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('bulletList') ? 'active' : ''}`}
+          title="Bulleted List (Ctrl+Shift+8)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="9" y1="6" x2="20" y2="6" />
+            <line x1="9" y1="12" x2="20" y2="12" />
+            <line x1="9" y1="18" x2="20" y2="18" />
+            <circle cx="4" cy="6" r="1.5" fill="currentColor" />
+            <circle cx="4" cy="12" r="1.5" fill="currentColor" />
+            <circle cx="4" cy="18" r="1.5" fill="currentColor" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('orderedList') ? 'active' : ''}`}
+          title="Numbered List (Ctrl+Shift+7)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="10" y1="6" x2="21" y2="6" />
+            <line x1="10" y1="12" x2="21" y2="12" />
+            <line x1="10" y1="18" x2="21" y2="18" />
+            <path d="M4 6h1v4" />
+            <path d="M4 10h2" />
+            <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+          </svg>
+        </button>
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
+
+        {/* 9. Alignment Icons (Left, Center, Right, Justify) */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
+          title="Align Left (Ctrl+L)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="17" y1="10" x2="3" y2="10" />
+            <line x1="21" y1="6" x2="3" y2="6" />
+            <line x1="21" y1="14" x2="3" y2="14" />
+            <line x1="17" y1="18" x2="3" y2="18" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
+          title="Align Center (Ctrl+E)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="10" x2="6" y2="10" />
+            <line x1="21" y1="6" x2="3" y2="6" />
+            <line x1="21" y1="14" x2="3" y2="14" />
+            <line x1="18" y1="18" x2="6" y2="18" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
+          title="Align Right (Ctrl+R)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="21" y1="10" x2="7" y2="10" />
+            <line x1="21" y1="6" x2="3" y2="6" />
+            <line x1="21" y1="14" x2="3" y2="14" />
+            <line x1="21" y1="18" x2="7" y2="18" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`}
+          title="Justify Text (Ctrl+J)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="21" y1="6" x2="3" y2="6" />
+            <line x1="21" y1="10" x2="3" y2="10" />
+            <line x1="21" y1="14" x2="3" y2="14" />
+            <line x1="21" y1="18" x2="3" y2="18" />
+          </svg>
+        </button>
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
+
+        {/* 10. Links & Images (Icons) */}
+        <button
+          type="button"
+          onClick={setLink}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('link') ? 'active' : ''}`}
+          title="Insert Hyperlink (Ctrl+K)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={addImage}
+          className="toolbar-btn toolbar-icon-btn"
+          title="Insert Picture / Image"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </button>
+
+        {/* 11. Table Grid Icon & Actions */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          className={`toolbar-btn toolbar-icon-btn ${editor.isActive('table') ? 'active' : ''}`}
+          title="Insert Table (3x3)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="3" y1="15" x2="21" y2="15" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+            <line x1="15" y1="3" x2="15" y2="21" />
+          </svg>
+        </button>
+
+        {editor.isActive('table') && (
+          <div style={{ display: 'inline-flex', gap: '0.2rem', alignItems: 'center', background: '#EFF8F3', padding: '0.15rem 0.3rem', borderRadius: '6px' }}>
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              className="toolbar-btn toolbar-icon-btn"
+              title="Add Column After"
+              style={{ width: '28px', height: '28px' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="11" height="18" rx="1" />
+                <line x1="18" y1="9" x2="18" y2="15" />
+                <line x1="15" y1="12" x2="21" y2="12" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              className="toolbar-btn toolbar-icon-btn"
+              title="Add Row After"
+              style={{ width: '28px', height: '28px' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="11" rx="1" />
+                <line x1="9" y1="18" x2="15" y2="18" />
+                <line x1="12" y1="15" x2="12" y2="21" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              className="toolbar-btn toolbar-icon-btn"
+              title="Delete Table"
+              style={{ width: '28px', height: '28px', color: '#ef4444' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="8" y1="8" x2="16" y2="16" />
+                <line x1="16" y1="8" x2="8" y2="16" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
+
+        {/* 12. Page Border Selector (with Border Icon) */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+          <span title="Page Border Style" style={{ display: 'inline-flex', alignItems: 'center', color: '#43574f' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+              <line x1="9" y1="21" x2="9" y2="9" />
+            </svg>
+          </span>
+          <select
+            onChange={(e) => {
+              const el = document.querySelector('.ProseMirror');
+              if (el) {
+                el.classList.remove('page-border', 'page-border-solid', 'page-border-double', 'page-border-academic', 'page-border-dashed');
+                if (e.target.value !== 'none') {
+                  el.classList.add('page-border', `page-border-${e.target.value}`);
+                }
+              }
+            }}
+            defaultValue="none"
+            className="toolbar-btn"
+            style={{ height: '28px', padding: '0 0.35rem', fontSize: '0.78rem', border: '1px solid rgba(111, 175, 154, 0.35)', borderRadius: '5px', maxWidth: '105px' }}
+            title="Apply Page Border"
+          >
+            <option value="none">No Border</option>
+            <option value="solid">Box Border</option>
+            <option value="double">Double Border</option>
+            <option value="academic">Academic Frame</option>
+            <option value="dashed">Dashed Border</option>
+          </select>
+        </div>
+
+        {/* 13. Spellcheck Toggle Icon */}
+        <button
+          type="button"
           onClick={(e) => {
             const el = document.querySelector('.ProseMirror');
             if (el) {
@@ -172,51 +650,38 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
               e.currentTarget.classList.toggle('active', next === 'true');
             }
           }}
-          className="toolbar-btn active"
-          title="Toggle browser spellcheck & correction suggestions"
+          className="toolbar-btn toolbar-icon-btn active"
+          title="Spellcheck & Correction Suggestions (ABC✓)"
         >
-          Spellcheck
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 16l3-8 3 8" />
+            <path d="M4 13h4" />
+            <polyline points="14 13 16 15 21 10" />
+          </svg>
         </button>
 
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-
-        <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`toolbar-btn ${editor.isActive('bulletList') ? 'active' : ''}`}>Bullets</button>
-        <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`toolbar-btn ${editor.isActive('orderedList') ? 'active' : ''}`}>Numbered</button>
-        
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-
-        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} title="Align Left">Align Left</button>
-        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} title="Align Center">Align Center</button>
-        <button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} title="Align Right">Align Right</button>
-        <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={`toolbar-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`} title="Justify Text">Justify</button>
-        
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-        
-        <button onClick={setLink} className={`toolbar-btn ${editor.isActive('link') ? 'active' : ''}`}>Link</button>
-        <button onClick={addImage} className="toolbar-btn">Image</button>
-        
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 8px' }}></div>
-
-        <button onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} className="toolbar-btn">Insert Table</button>
-        {editor.isActive('table') && (
-          <>
-            <button onClick={() => editor.chain().focus().addColumnAfter().run()} className="toolbar-btn">+ Col</button>
-            <button onClick={() => editor.chain().focus().addRowAfter().run()} className="toolbar-btn">+ Row</button>
-            <button onClick={() => editor.chain().focus().deleteTable().run()} className="toolbar-btn" style={{color: 'var(--accent-rose)'}}>Del Table</button>
-          </>
-        )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'var(--bg-secondary)', padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.3rem',
+          background: '#EFF8F3',
+          padding: '0.2rem 0.5rem',
+          borderRadius: '5px',
+          border: '1px solid rgba(111, 175, 154, 0.35)',
+          height: '28px',
+          boxSizing: 'border-box'
+        }}>
           <span style={{
-            width: '10px',
-            height: '10px',
+            width: '7px',
+            height: '7px',
             borderRadius: '50%',
             background: syncStatus === 'synced' ? '#10b981' : syncStatus === 'syncing' ? '#fbbf24' : '#ef4444',
             display: 'inline-block'
           }}></span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
-            {syncStatus === 'synced' ? 'Online' : syncStatus === 'syncing' ? 'Syncing...' : 'Offline (Cached)'}
+          <span style={{ fontSize: '0.74rem', color: '#225243', fontWeight: 700 }}>
+            {syncStatus === 'synced' ? 'Online' : syncStatus === 'syncing' ? 'Sync...' : 'Offline'}
           </span>
         </div>
 
@@ -224,44 +689,45 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
           onClick={toggleOffline}
           className="toolbar-btn"
           style={{
+            height: '28px',
+            padding: '0 0.55rem',
             background: isOffline ? '#0D9488' : '#F8FAFC',
             borderColor: isOffline ? '#0D9488' : '#CBD5E1',
             color: isOffline ? '#FFFFFF' : '#334155',
             fontWeight: 700,
-            fontSize: '0.82rem'
+            fontSize: '0.76rem'
           }}
+          title={isOffline ? 'Go Online & Sync' : 'Go Offline'}
         >
-          {isOffline ? 'Go Online & Sync' : 'Go Offline'}
+          {isOffline ? 'Sync Online' : 'Offline'}
         </button>
 
         <button 
           onClick={onSave} 
           className="toolbar-btn" 
-          title="Save Document"
+          title="Save Document (Ctrl+S)"
           style={{ 
-            background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)', 
+            height: '28px',
+            padding: '0 0.65rem',
+            background: '#6FAF9A', 
             border: 'none',
-            color: '#FFFFFF', 
-            fontWeight: 700,
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
+            color: '#0D1110', 
+            fontWeight: 800,
+            fontSize: '0.76rem',
+            boxShadow: '0 1px 4px rgba(111, 175, 154, 0.35)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem'
           }}
+          onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+          onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
         >
-          Save
-        </button>
-
-        <button 
-          onClick={onSaveAndRename} 
-          className="toolbar-btn" 
-          title="Save & Rename Document"
-          style={{ 
-            background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)', 
-            border: 'none',
-            color: '#FFFFFF', 
-            fontWeight: 700,
-            boxShadow: '0 2px 8px rgba(13, 148, 136, 0.3)'
-          }}
-        >
-          Save & Rename
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
+          </svg>
+          <span>Save</span>
         </button>
 
         {onSubmitAssignment && (
@@ -270,18 +736,31 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
             className="toolbar-btn" 
             title="Save and submit completed assignment to lecturer"
             style={{ 
-              background: submissionStatus === 'submitted' ? 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
-              border: 'none',
-              color: '#FFFFFF', 
+              height: '28px',
+              padding: '0 0.75rem',
+              background: submissionStatus === 'submitted' ? 'rgba(111, 175, 154, 0.2)' : '#0D1110', 
+              border: submissionStatus === 'submitted' ? '1px solid #6FAF9A' : 'none',
+              color: submissionStatus === 'submitted' ? '#225243' : '#FFFFFF', 
               fontWeight: 800,
-              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.35)',
+              fontSize: '0.76rem',
+              boxShadow: '0 1px 4px rgba(13, 17, 16, 0.2)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.4rem',
+              gap: '0.3rem',
               cursor: 'pointer'
             }}
           >
-            <span>{submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Save & Submit Assignment'}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              {submissionStatus === 'submitted' ? (
+                <polyline points="20 6 9 17 4 12" />
+              ) : (
+                <>
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </>
+              )}
+            </svg>
+            <span>{submissionStatus === 'submitted' ? 'Submitted' : 'Submit'}</span>
           </button>
         )}
       </div>
@@ -419,7 +898,13 @@ function EditorComponent() {
   const fetchMarkupData = async () => {
     if (!selectedDocId) return;
     try {
-      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/author-markup`);
+      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/author-markup?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       const data = await res.json();
       if (data && data.authors) {
         setMarkupData(data);
@@ -487,13 +972,17 @@ function EditorComponent() {
         const docs = Array.isArray(data) ? data : [];
         setAvailableDocs(docs);
         if (docs.length > 0) {
-          if (docIdParam) {
+          if (docIdParam && docs.some((d: any) => d._id === docIdParam)) {
             setSelectedDocId(docIdParam);
+            setAccessDenied(false);
+            setAccessDeniedInfo(null);
           } else {
             setSelectedDocId(prev => {
               const stillValid = docs.some((d: any) => d._id === prev);
               return stillValid && prev ? prev : docs[0]._id;
             });
+            setAccessDenied(false);
+            setAccessDeniedInfo(null);
           }
         } else {
           setSelectedDocId('');
@@ -510,24 +999,43 @@ function EditorComponent() {
 
   const fetchDocDetails = () => {
     if (!selectedDocId || !user) return;
-    setAccessDenied(false);
 
-    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
-    fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`)
+    // If availableDocs already confirms user is an authorized member or owner, guarantee access
+    const isKnownPermitted = availableDocs.some((d: any) => d._id === selectedDocId);
+    if (isKnownPermitted) {
+      setAccessDenied(false);
+      setAccessDeniedInfo(null);
+    }
+
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}&_t=${Date.now()}`;
+    fetch(`${getSocketUrl()}/api/documents/${selectedDocId}?${query}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    })
       .then(async res => {
         const data = await res.json();
-        if (res.status === 403 || data.isAccessDenied) {
-          setAccessDenied(true);
-          setAccessDeniedInfo(data);
+        if (res.status === 403 || (data.isAccessDenied && res.status !== 401)) {
+          if (!isKnownPermitted) {
+            setAccessDenied(true);
+            setAccessDeniedInfo(data);
+          } else {
+            setAccessDenied(false);
+            setAccessDeniedInfo(null);
+          }
         } else if (res.status === 404 || data.error) {
           // Document not found (or deleted)
           if (availableDocs.length > 0) {
             setSelectedDocId(availableDocs[0]._id);
+            setAccessDenied(false);
           } else {
             setSelectedDocId('');
           }
         } else {
           setAccessDenied(false);
+          setAccessDeniedInfo(null);
           setDocDetails(data);
           if (editor && !editor.isDestroyed && data.content !== undefined) {
             editor.commands.setContent(data.content || '<p></p>', { emitUpdate: false });
@@ -564,7 +1072,8 @@ function EditorComponent() {
       TextStyle,
       FontFamily,
       Color,
-      Highlight
+      Highlight,
+      FontSize
     ],
     content: '<p></p>',
     editorProps: {
@@ -617,7 +1126,10 @@ function EditorComponent() {
             documentId: selectedDocId,
             content: html,
             author: effectiveAuthor,
-            studentId: user?.studentId || user?.username
+            username: user?.username,
+            studentId: user?.studentId || user?.username,
+            email: user?.email,
+            role: user?.role
           });
         }
       }
@@ -632,6 +1144,17 @@ function EditorComponent() {
       }, 500);
     },
   });
+
+  // Ensure editor content syncs if docDetails loads before editor is mounted
+  useEffect(() => {
+    if (editor && !editor.isDestroyed && docDetails?.content !== undefined) {
+      const current = editor.getHTML();
+      if (current === '<p></p>' || current === '' || current === '<p></p>\n') {
+        editor.commands.setContent(docDetails.content || '<p></p>', { emitUpdate: false });
+        setLastText(editor.getText());
+      }
+    }
+  }, [editor, docDetails?.content]);
 
   // Setup Socket Connection with Security Guard
   useEffect(() => {
@@ -874,7 +1397,10 @@ function EditorComponent() {
             documentId: selectedDocId,
             content: html,
             author: effectiveAuthor,
-            studentId: user?.studentId || user?.username
+            username: user?.username,
+            studentId: user?.studentId || user?.username,
+            email: user?.email,
+            role: user?.role
           });
         }
         showToast(`Document "${docDetails?.title || selectedDocId}" saved to cloud database!`, "success", "Saved Successfully");
@@ -1024,6 +1550,8 @@ function EditorComponent() {
         onSelectDocument={(id: string) => {
           setSelectedDocId(id);
           setAccessDenied(false);
+          setAccessDeniedInfo(null);
+          router.replace(`/editor?docId=${id}`);
         }}
         onShareDocument={(doc: any) => {
           setSelectedDocId(doc._id);
@@ -1068,9 +1596,9 @@ function EditorComponent() {
             boxShadow: '0 25px 50px -12px rgba(30, 58, 138, 0.25)',
             overflow: 'hidden'
           }}>
-            {/* Deep Navy Institutional Header */}
+            {/* Brand Header */}
             <div style={{
-              background: 'linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%)',
+              background: '#0D1110',
               padding: '1.25rem 1.5rem',
               color: '#FFFFFF',
               display: 'flex',
@@ -1078,11 +1606,11 @@ function EditorComponent() {
               alignItems: 'center'
             }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em', color: '#FFFFFF' }}>
                   Create New Group Document
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: '#93C5FD' }}>
-                  Institutional Collaborative Workspace
+                <span style={{ fontSize: '0.8rem', color: '#6FAF9A', fontWeight: 600 }}>
+                  Collaborative Workspace
                 </span>
               </div>
               <button
@@ -1092,7 +1620,7 @@ function EditorComponent() {
                   setSelectedMembersForCreate([]);
                 }}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.15)',
+                  background: 'rgba(255, 255, 255, 0.12)',
                   border: 'none',
                   color: '#FFFFFF',
                   width: '28px',
@@ -1124,9 +1652,9 @@ function EditorComponent() {
                     style={{
                       padding: '0.65rem 0.85rem',
                       borderRadius: '8px',
-                      border: newDocAssignmentType === 'group' ? '2px solid #4F46E5' : '1px solid #CBD5E1',
-                      background: newDocAssignmentType === 'group' ? '#EEF2FF' : '#F8FAFC',
-                      color: newDocAssignmentType === 'group' ? '#1E3A8A' : '#475569',
+                      border: newDocAssignmentType === 'group' ? '2px solid #6FAF9A' : '1px solid #CBD5E1',
+                      background: newDocAssignmentType === 'group' ? '#EFF8F3' : '#F8FAFC',
+                      color: newDocAssignmentType === 'group' ? '#0D1110' : '#475569',
                       fontWeight: 700,
                       fontSize: '0.82rem',
                       cursor: 'pointer',
@@ -1149,9 +1677,9 @@ function EditorComponent() {
                     style={{
                       padding: '0.65rem 0.85rem',
                       borderRadius: '8px',
-                      border: newDocAssignmentType === 'individual' ? '2px solid #0284C7' : '1px solid #CBD5E1',
-                      background: newDocAssignmentType === 'individual' ? '#F0F9FF' : '#F8FAFC',
-                      color: newDocAssignmentType === 'individual' ? '#0369A1' : '#475569',
+                      border: newDocAssignmentType === 'individual' ? '2px solid #6FAF9A' : '1px solid #CBD5E1',
+                      background: newDocAssignmentType === 'individual' ? '#EFF8F3' : '#F8FAFC',
+                      color: newDocAssignmentType === 'individual' ? '#0D1110' : '#475569',
                       fontWeight: 700,
                       fontSize: '0.82rem',
                       cursor: 'pointer',
@@ -1188,7 +1716,7 @@ function EditorComponent() {
                     outline: 'none',
                     boxSizing: 'border-box'
                   }}
-                  onFocus={e => (e.target.style.borderColor = '#4F46E5')}
+                  onFocus={e => (e.target.style.borderColor = '#6FAF9A')}
                   onBlur={e => (e.target.style.borderColor = '#CBD5E1')}
                 />
               </div>
@@ -1200,7 +1728,7 @@ function EditorComponent() {
                     <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
                       Initial Group Members (Optional):
                     </label>
-                    <span style={{ fontSize: '0.75rem', background: '#CCFBF1', color: '#0F766E', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
+                    <span style={{ fontSize: '0.75rem', background: '#EFF8F3', border: '1px solid rgba(111, 175, 154, 0.4)', color: '#225243', padding: '0.15rem 0.5rem', borderRadius: '12px', fontWeight: 700 }}>
                       {selectedMembersForCreate.length} Selected
                     </span>
                   </div>
@@ -1244,8 +1772,8 @@ function EditorComponent() {
                               gap: '0.6rem',
                               padding: '0.5rem 0.65rem',
                               borderRadius: '6px',
-                              background: isSelected ? '#EEF2FF' : '#FFFFFF',
-                              border: `1px solid ${isSelected ? '#818CF8' : '#E2E8F0'}`,
+                              background: isSelected ? '#EFF8F3' : '#FFFFFF',
+                              border: `1px solid ${isSelected ? '#6FAF9A' : '#E2E8F0'}`,
                               cursor: 'pointer',
                               fontSize: '0.83rem',
                               transition: 'all 0.15s ease'
@@ -1255,9 +1783,9 @@ function EditorComponent() {
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => {}}
-                              style={{ cursor: 'pointer', accentColor: '#4F46E5' }}
+                              style={{ cursor: 'pointer', accentColor: '#6FAF9A' }}
                             />
-                            <div style={{ flex: 1, color: isSelected ? '#1E3A8A' : '#334155' }}>
+                            <div style={{ flex: 1, color: isSelected ? '#0D1110' : '#334155' }}>
                               <strong>{displayName}</strong>
                               <span style={{ fontSize: '0.72rem', color: '#64748B', marginLeft: '0.4rem' }}>
                                 ({u.role || 'student'})
@@ -1273,10 +1801,10 @@ function EditorComponent() {
                 <div style={{
                   marginBottom: '1.5rem',
                   padding: '0.85rem 1rem',
-                  background: '#F0F9FF',
-                  border: '1px solid #BAE6FD',
+                  background: '#EFF8F3',
+                  border: '1px solid rgba(111, 175, 154, 0.4)',
                   borderRadius: '8px',
-                  color: '#0369A1',
+                  color: '#225243',
                   fontSize: '0.82rem',
                   lineHeight: 1.5
                 }}>
@@ -1307,16 +1835,19 @@ function EditorComponent() {
                 <button
                   type="submit"
                   style={{
-                    background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                    background: '#6FAF9A',
                     border: 'none',
-                    color: '#FFFFFF',
-                    fontWeight: 700,
+                    color: '#0D1110',
+                    fontWeight: 800,
                     padding: '0.65rem 1.35rem',
                     borderRadius: '8px',
                     fontSize: '0.85rem',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)'
+                    boxShadow: '0 4px 12px rgba(111, 175, 154, 0.35)',
+                    transition: 'background 0.15s ease'
                   }}
+                  onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+                  onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
                 >
                   Create Document
                 </button>
@@ -1358,61 +1889,71 @@ function EditorComponent() {
   // Require Authentication Screen
   if (!isAuthenticated) {
     return (
-      <div className="login-overlay" style={{
-        minHeight: '80vh',
+      <div style={{
+        minHeight: '85vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem'
+        padding: '2rem',
+        background: '#EFF8F3'
       }}>
         <div style={{
           maxWidth: '480px',
           width: '100%',
           padding: '2.5rem',
-          borderRadius: '16px',
+          borderRadius: '18px',
           background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 25px 50px -12px rgba(30, 58, 138, 0.15)',
+          border: '1px solid rgba(111, 175, 154, 0.35)',
+          boxShadow: '0 20px 40px -15px rgba(13, 17, 16, 0.08), 0 0 0 1px rgba(111, 175, 154, 0.1)',
           textAlign: 'center'
         }}>
           <div style={{
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            background: '#EEF2FF',
-            color: '#4F46E5',
+            background: '#EFF8F3',
+            border: '1.5px solid rgba(111, 175, 154, 0.45)',
+            color: '#225243',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1rem',
+            fontSize: '0.9rem',
             fontWeight: 800,
-            margin: '0 auto 1.25rem auto'
+            margin: '0 auto 1.25rem auto',
+            boxShadow: '0 4px 12px rgba(111, 175, 154, 0.18)'
           }}>
             AUTH
           </div>
-          <h2 style={{ color: '#1E3A8A', marginBottom: '0.5rem', fontSize: '1.4rem', fontWeight: 800 }}>
+          <h2 style={{ color: '#0D1110', marginBottom: '0.5rem', fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
             Student Authentication Required
           </h2>
-          <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
+          <p style={{ color: '#43574f', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
             To accurately recognize who is working on the document and enforce group security permissions, please log in or create a student account.
           </p>
           
           <button 
             onClick={openAuthModal}
             style={{ 
-              background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)', 
-              color: 'white', 
+              background: '#6FAF9A', 
+              color: '#0D1110', 
               width: '100%', 
               padding: '0.85rem', 
               borderRadius: '8px', 
               border: 'none', 
-              fontWeight: 700, 
+              fontWeight: 800, 
               fontSize: '0.95rem',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
+              boxShadow: '0 4px 14px rgba(111, 175, 154, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.45rem',
+              transition: 'background 0.15s ease'
             }}
+            onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+            onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
           >
-            Sign In / Register Account
+            <span>Sign In / Register Account</span>
           </button>
         </div>
       </div>
@@ -1422,51 +1963,55 @@ function EditorComponent() {
   // Friendly Onboarding Screen when no documents exist yet
   if (!selectedDocId && availableDocs.length === 0) {
     return (
-      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <div style={{ minHeight: '85vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#EFF8F3' }}>
         <div style={{
           maxWidth: '520px',
           width: '100%',
           padding: '2.5rem',
-          borderRadius: '16px',
+          borderRadius: '18px',
           background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 20px 25px -5px rgba(30, 58, 138, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+          border: '1px solid rgba(111, 175, 154, 0.35)',
+          boxShadow: '0 20px 40px -15px rgba(13, 17, 16, 0.08), 0 0 0 1px rgba(111, 175, 154, 0.1)',
           textAlign: 'center'
         }}>
           <div style={{
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            background: '#CCFBF1',
-            color: '#0D9488',
+            background: '#EFF8F3',
+            border: '1.5px solid rgba(111, 175, 154, 0.45)',
+            color: '#225243',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1rem',
+            fontSize: '0.9rem',
             fontWeight: 800,
             margin: '0 auto 1.25rem auto'
           }}>
             DOC
           </div>
-          <h2 style={{ color: '#1E3A8A', fontSize: '1.45rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+          <h2 style={{ color: '#0D1110', fontSize: '1.45rem', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '-0.01em' }}>
             Welcome, {user?.name || 'Student'}!
           </h2>
-          <p style={{ color: '#475569', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
+          <p style={{ color: '#43574f', fontSize: '0.92rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
             You do not have any collaborative group reports yet. Create your first document to start writing with your team!
           </p>
           <button
             onClick={() => setCreateModalOpen(true)}
             style={{
-              background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-              color: 'white',
+              background: '#6FAF9A',
+              color: '#0D1110',
               padding: '0.85rem 1.6rem',
               borderRadius: '8px',
               border: 'none',
-              fontWeight: 700,
+              fontWeight: 800,
               fontSize: '0.95rem',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
+              boxShadow: '0 4px 14px rgba(111, 175, 154, 0.35)',
+              transition: 'background 0.15s ease'
             }}
+            onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+            onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
           >
             + Create My First Group Document
           </button>
@@ -1480,20 +2025,21 @@ function EditorComponent() {
   if (accessDenied) {
     return (
       <div className="access-denied-screen" style={{
-        minHeight: '80vh',
+        minHeight: '85vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem'
+        padding: '2rem',
+        background: '#EFF8F3'
       }}>
         <div style={{
           maxWidth: '540px',
           width: '100%',
           padding: '2.5rem',
-          borderRadius: '16px',
+          borderRadius: '18px',
           background: '#FFFFFF',
           border: '1px solid #FEE2E2',
-          boxShadow: '0 20px 25px -5px rgba(239, 68, 68, 0.1)',
+          boxShadow: '0 20px 40px -15px rgba(239, 68, 68, 0.08)',
           textAlign: 'center'
         }}>
           <div style={{
@@ -1505,16 +2051,16 @@ function EditorComponent() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '1rem',
+            fontSize: '0.9rem',
             fontWeight: 800,
             margin: '0 auto 1rem auto'
           }}>
             DENIED
           </div>
-          <h2 style={{ color: '#1E3A8A', margin: '0 0 0.5rem 0', fontSize: '1.45rem', fontWeight: 800 }}>
+          <h2 style={{ color: '#0D1110', margin: '0 0 0.5rem 0', fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
             Access Denied &mdash; Restricted Document
           </h2>
-          <p style={{ color: '#475569', fontSize: '0.92rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+          <p style={{ color: '#43574f', fontSize: '0.92rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
             You do not have permission to view or edit this document. Only members explicitly granted permission by the group leader (<strong>{accessDeniedInfo?.ownerName || 'Group Leader'}</strong>) can access it.
           </p>
 
@@ -1524,7 +2070,15 @@ function EditorComponent() {
             </label>
             <select
               value={selectedDocId}
-              onChange={e => { setSelectedDocId(e.target.value); setAccessDenied(false); }}
+              onChange={e => {
+                const nextId = e.target.value;
+                if (nextId) {
+                  setSelectedDocId(nextId);
+                  setAccessDenied(false);
+                  setAccessDeniedInfo(null);
+                  router.replace(`/editor?docId=${nextId}`);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -1548,11 +2102,34 @@ function EditorComponent() {
             </select>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => {
+                setAccessDenied(false);
+                setAccessDeniedInfo(null);
+                fetchDocDetails();
+              }}
+              style={{
+                flex: 1,
+                minWidth: '120px',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(111, 175, 154, 0.4)',
+                background: '#EFF8F3',
+                color: '#225243',
+                fontWeight: 800,
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              Retry Opening
+            </button>
+
             <button
               onClick={() => setReportsModalOpen(true)}
               style={{
                 flex: 1,
+                minWidth: '130px',
                 padding: '0.75rem',
                 borderRadius: '8px',
                 border: '1px solid #CBD5E1',
@@ -1563,25 +2140,29 @@ function EditorComponent() {
                 cursor: 'pointer'
               }}
             >
-              View All My Reports
+              View My Reports
             </button>
 
             <button
               onClick={() => setCreateModalOpen(true)}
               style={{
                 flex: 1,
+                minWidth: '150px',
                 padding: '0.75rem',
                 borderRadius: '8px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
-                color: '#fff',
-                fontWeight: 700,
+                background: '#6FAF9A',
+                color: '#0D1110',
+                fontWeight: 800,
                 fontSize: '0.85rem',
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                boxShadow: '0 4px 12px rgba(111, 175, 154, 0.35)',
+                transition: 'background 0.15s ease'
               }}
+              onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+              onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
             >
-              + Create My Own Group Document
+              + Create Document
             </button>
           </div>
         </div>
@@ -1590,7 +2171,9 @@ function EditorComponent() {
     );
   }
 
-  const wordCount = editor ? (editor.getText().trim().split(/\s+/).filter(Boolean).length) : 0;
+  const editorWordCount = editor ? (editor.getText().trim().split(/\s+/).filter(Boolean).length) : 0;
+  const liveDocWordCount = editorWordCount > 0 ? editorWordCount : (markupData?.totalWords || 0);
+  const wordCount = liveDocWordCount;
 
   return (
     <div className={`editor-container ${isGoogleDoc ? 'google-docs-mode' : isMSWord ? 'ms-word-mode' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1835,169 +2418,196 @@ function EditorComponent() {
         </>
       )}
 
-      {/* Default Header Banner for Built-in Mode */}
+      {/* Default Header Banner for Built-in Mode - Sleek Single-Line Compact Header */}
       {!isExternalDoc && (
         <div style={{
           background: '#FFFFFF',
-          padding: '0.85rem 1.75rem',
-          borderBottom: '1px solid #E2E8F0',
+          padding: '0.35rem 1.25rem',
+          borderBottom: '1px solid rgba(111, 175, 154, 0.22)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+          gap: '0.75rem',
+          minHeight: '42px',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+          boxSizing: 'border-box'
         }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <h3 
-                onClick={() => handleRenameDocument()}
-                title="Click to rename document"
-                style={{
-                  margin: 0,
-                  fontSize: '1.15rem',
-                  fontWeight: 700,
-                  color: '#1E3A8A',
-                  cursor: 'pointer',
-                  letterSpacing: '-0.01em'
-                }}
-              >
-                {docDetails?.title || selectedDocId}
-              </h3>
-              <button
-                onClick={() => handleRenameDocument()}
-                style={{
-                  background: '#F8FAFC',
-                  border: '1px solid #CBD5E1',
-                  color: '#475569',
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: '6px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}
-              >
-                Rename
-              </button>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
-              <span style={{
-                fontSize: '0.72rem',
-                background: docDetails?.assignmentType === 'individual' ? '#E0F2FE' : '#EEF2FF',
-                border: `1px solid ${docDetails?.assignmentType === 'individual' ? '#BAE6FD' : '#C7D2FE'}`,
-                color: docDetails?.assignmentType === 'individual' ? '#0369A1' : '#4338CA',
-                padding: '0.15rem 0.55rem',
-                borderRadius: '12px',
-                fontWeight: 800
-              }}>
-                {docDetails?.assignmentType === 'individual' ? '👤 Individual Assignment' : '👥 Group Collaborative Project'}
-              </span>
-              <span style={{
-                fontSize: '0.72rem',
-                background: '#F0FDFA',
-                border: '1px solid #CCFBF1',
-                color: '#0D9488',
-                padding: '0.15rem 0.55rem',
-                borderRadius: '12px',
-                fontWeight: 700
-              }}>
-                {docDetails?.assignmentType === 'individual'
-                  ? `Author: ${docDetails?.ownerName || docDetails?.owner || 'Student'}`
-                  : `Group Leader: ${docDetails?.ownerName || docDetails?.owner || 'Leader'}`}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                &bull; In-Built Collaborative Workspace
-              </span>
-            </div>
+          {/* Left Side: Document Title + Rename + Compact Metadata Badges in ONE unified line */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0, flex: 1 }}>
+            <h3 
+              onClick={() => handleRenameDocument()}
+              title="Click to rename document"
+              style={{
+                margin: 0,
+                fontSize: '0.96rem',
+                fontWeight: 700,
+                color: '#0D1110',
+                cursor: 'pointer',
+                letterSpacing: '-0.01em',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '340px'
+              }}
+            >
+              {docDetails?.title || selectedDocId}
+            </h3>
 
-            {/* Assignment Metadata Chips */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginTop: '0.45rem', flexWrap: 'wrap' }}>
-              <span style={{
-                fontSize: '0.74rem',
-                background: docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.14)' : 'rgba(245, 158, 11, 0.14)',
-                border: `1px solid ${docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-                color: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
-                padding: '0.15rem 0.65rem',
-                borderRadius: '9999px',
-                fontWeight: 800,
+            <button
+              onClick={() => handleRenameDocument()}
+              title="Rename Document"
+              style={{
+                background: '#EFF8F3',
+                border: '1px solid rgba(111, 175, 154, 0.4)',
+                color: '#225243',
+                padding: '0.15rem 0.45rem',
+                borderRadius: '5px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem'
+                gap: '0.25rem',
+                whiteSpace: 'nowrap',
+                height: '24px'
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              <span>Rename</span>
+            </button>
+
+            <span style={{ width: '1px', height: '14px', background: '#D1D5DB', margin: '0 0.15rem' }} />
+
+            {/* Assignment Type */}
+            <span style={{
+              fontSize: '0.7rem',
+              background: docDetails?.assignmentType === 'individual' ? '#E0F2FE' : '#EEF2FF',
+              border: `1px solid ${docDetails?.assignmentType === 'individual' ? '#BAE6FD' : '#C7D2FE'}`,
+              color: docDetails?.assignmentType === 'individual' ? '#0369A1' : '#4338CA',
+              padding: '0.12rem 0.5rem',
+              borderRadius: '10px',
+              fontWeight: 700,
+              whiteSpace: 'nowrap'
+            }}>
+              {docDetails?.assignmentType === 'individual' ? '👤 Individual' : '👥 Group'}
+            </span>
+
+            {/* Leader / Author */}
+            <span style={{
+              fontSize: '0.7rem',
+              background: '#EFF8F3',
+              border: '1px solid rgba(111, 175, 154, 0.35)',
+              color: '#225243',
+              padding: '0.12rem 0.5rem',
+              borderRadius: '10px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}>
+              {docDetails?.assignmentType === 'individual'
+                ? `Author: ${docDetails?.ownerName || docDetails?.owner || 'Student'}`
+                : `Leader: ${docDetails?.ownerName || docDetails?.owner || 'Leader'}`}
+            </span>
+
+            {/* Status */}
+            <span style={{
+              fontSize: '0.7rem',
+              background: docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+              border: `1px solid ${docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+              color: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
+              padding: '0.12rem 0.5rem',
+              borderRadius: '10px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              whiteSpace: 'nowrap'
+            }}>
+              <span style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
+              }} />
+              <span>{docDetails?.submissionStatus === 'submitted' ? 'Submitted' : 'Draft'}</span>
+            </span>
+
+            {/* Course */}
+            {docDetails?.course && (
+              <span style={{
+                fontSize: '0.7rem',
+                background: '#F1F5F9',
+                border: '1px solid #E2E8F0',
+                color: '#334155',
+                padding: '0.12rem 0.5rem',
+                borderRadius: '6px',
+                fontWeight: 600,
+                whiteSpace: 'nowrap'
               }}>
-                <span style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
-                }} />
-                <span>{docDetails?.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}</span>
+                {docDetails.course}
               </span>
+            )}
 
-              {docDetails?.course && (
-                <span style={{
-                  fontSize: '0.74rem',
-                  background: '#f1f5f9',
-                  color: '#0f172a',
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '6px',
-                  fontWeight: 700
-                }}>
-                  {docDetails.course}
-                </span>
-              )}
-
-              {docDetails?.grade && (
-                <span style={{
-                  fontSize: '0.74rem',
-                  background: 'rgba(34, 197, 94, 0.15)',
-                  color: '#16a34a',
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '6px',
-                  fontWeight: 800
-                }}>
-                  Grade Awarded: {docDetails.grade}
-                </span>
-              )}
-            </div>
+            {/* Grade (if awarded) */}
+            {docDetails?.grade && (
+              <span style={{
+                fontSize: '0.7rem',
+                background: 'rgba(34, 197, 94, 0.15)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                color: '#16a34a',
+                padding: '0.12rem 0.5rem',
+                borderRadius: '6px',
+                fontWeight: 800,
+                whiteSpace: 'nowrap'
+              }}>
+                Grade: {docDetails.grade}
+              </span>
+            )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          {/* Right Side: Sleek Compact Action Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
             <button
               onClick={handleManualRefresh}
               title="Click to refresh collaborator word counts and document data"
               style={{
-                background: '#F0FDFA',
-                color: '#0D9488',
-                border: '1px solid #99F6E4',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
+                background: '#EFF8F3',
+                color: '#225243',
+                border: '1px solid rgba(111, 175, 154, 0.35)',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
                 fontWeight: 700,
-                fontSize: '0.85rem',
+                fontSize: '0.76rem',
                 cursor: isRefreshing ? 'wait' : 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                boxShadow: '0 1px 2px rgba(13, 148, 136, 0.08)'
+                gap: '0.25rem',
+                height: '28px'
               }}
             >
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }}>
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
 
             <button
               onClick={() => setReportsModalOpen(true)}
               style={{
-                background: '#F1F5F9',
+                background: '#F8FAFC',
                 color: '#334155',
                 border: '1px solid #CBD5E1',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
+                padding: '0.2rem 0.6rem',
+                borderRadius: '6px',
                 fontWeight: 600,
-                fontSize: '0.85rem',
+                fontSize: '0.76rem',
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem'
+                gap: '0.25rem',
+                height: '28px'
               }}
             >
               All Reports
@@ -2006,16 +2616,22 @@ function EditorComponent() {
             <button
               onClick={() => setCreateModalOpen(true)}
               style={{
-                background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)',
-                color: '#FFFFFF',
+                background: '#6FAF9A',
+                color: '#0D1110',
                 border: 'none',
-                padding: '0.45rem 0.95rem',
-                borderRadius: '8px',
-                fontWeight: 600,
-                fontSize: '0.85rem',
+                padding: '0.2rem 0.7rem',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '0.76rem',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(13, 148, 136, 0.3)'
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                height: '28px',
+                boxShadow: '0 1px 4px rgba(111, 175, 154, 0.35)'
               }}
+              onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+              onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
             >
               + Create Group Doc
             </button>
@@ -2023,19 +2639,22 @@ function EditorComponent() {
             <button
               onClick={() => setShareModalOpen(true)}
               style={{
-                background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                background: '#0D1110',
                 color: '#FFFFFF',
                 border: 'none',
-                padding: '0.45rem 1rem',
-                borderRadius: '8px',
+                padding: '0.2rem 0.75rem',
+                borderRadius: '6px',
                 fontWeight: 600,
-                fontSize: '0.85rem',
+                fontSize: '0.76rem',
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.35rem',
-                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
+                gap: '0.25rem',
+                height: '28px',
+                boxShadow: '0 1px 4px rgba(13, 17, 16, 0.2)'
               }}
+              onMouseOver={e => e.currentTarget.style.background = '#222926'}
+              onMouseOut={e => e.currentTarget.style.background = '#0D1110'}
             >
               Share
             </button>
@@ -2046,11 +2665,12 @@ function EditorComponent() {
                 background: '#FEF2F2',
                 color: '#DC2626',
                 border: '1px solid #FECACA',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '8px',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
                 fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: 'pointer'
+                fontSize: '0.76rem',
+                cursor: 'pointer',
+                height: '28px'
               }}
             >
               Delete
@@ -2193,47 +2813,57 @@ function EditorComponent() {
           overflowY: 'auto'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-            <h3 style={{ margin: 0, color: '#1E3A8A', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', fontWeight: 700 }}>
+            <h3 style={{ margin: 0, color: '#0D1110', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800 }}>
               Collaborators
             </h3>
-            <button
-              onClick={handleManualRefresh}
-              title="Click to refresh collaborator word counts and contributions"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                background: '#F0FDFA',
-                border: '1px solid #99F6E4',
-                color: '#0D9488',
-                padding: '0.3rem 0.65rem',
-                borderRadius: '7px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: isRefreshing ? 'wait' : 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 2px rgba(13, 148, 136, 0.1)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#0D9488';
-                e.currentTarget.style.color = '#FFFFFF';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#F0FDFA';
-                e.currentTarget.style.color = '#0D9488';
-              }}
-            >
-              <span>{isRefreshing ? 'Updating...' : 'Refresh'}</span>
-            </button>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              background: '#EFF8F3',
+              border: '1px solid rgba(111, 175, 154, 0.35)',
+              color: '#225243',
+              padding: '0.15rem 0.55rem',
+              borderRadius: '12px',
+              fontSize: '0.72rem',
+              fontWeight: 700
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+              {displayAuthors.length} active
+            </span>
           </div>
-          <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-            Click an author to isolate and highlight their authentic contributions across the document revisions.
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#EFF8F3',
+            border: '1px solid rgba(111, 175, 154, 0.3)',
+            borderRadius: '8px',
+            padding: '0.45rem 0.75rem',
+            marginBottom: '0.85rem'
+          }}>
+            <span style={{ fontSize: '0.78rem', color: '#225243', fontWeight: 600 }}>
+              Live Document Words:
+            </span>
+            <strong style={{ fontSize: '0.85rem', color: '#0D1110', fontWeight: 800 }}>
+              {liveDocWordCount} words
+            </strong>
+          </div>
+
+          <p style={{ fontSize: '0.78rem', color: '#64748B', marginBottom: '1rem', lineHeight: 1.45 }}>
+            Click an author to isolate and highlight their authentic contributions across the document.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {displayAuthors && displayAuthors.length > 0 ? (
               displayAuthors.map((a: any) => {
                 const isActive = selectedAuthorFilter === a.author;
+                const authorLiveWords = typeof a.liveWords === 'number'
+                  ? a.liveWords
+                  : (liveDocWordCount > 0 && typeof a.percentage === 'number'
+                      ? Math.round((a.percentage / 100) * liveDocWordCount)
+                      : (a.totalWordsAdded || 0));
                 return (
                   <div
                     key={a.author}
@@ -2247,26 +2877,37 @@ function EditorComponent() {
                       }
                     }}
                     style={{
-                      background: isActive ? '#F0FDFA' : '#F8FAFC',
-                      border: `1.5px solid ${isActive ? '#0D9488' : '#E2E8F0'}`,
-                      padding: '1rem',
+                      background: isActive ? '#EFF8F3' : '#F8FAFC',
+                      border: `1.5px solid ${isActive ? '#6FAF9A' : '#E2E8F0'}`,
+                      padding: '0.85rem 1rem',
                       borderRadius: '10px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: isActive ? '0 4px 12px rgba(13, 148, 136, 0.15)' : 'none'
+                      boxShadow: isActive ? '0 4px 12px rgba(111, 175, 154, 0.2)' : 'none'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: a.color || '#4F46E5', boxShadow: `0 0 6px ${a.color || '#4F46E5'}` }}></span>
-                      <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>{a.author}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: a.color || '#4F46E5', boxShadow: `0 0 6px ${a.color || '#4F46E5'}`, flexShrink: 0 }}></span>
+                        <strong style={{ color: '#0F172A', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.author}</strong>
+                      </div>
+                      <strong style={{ color: a.color || '#0D9488', fontSize: '0.88rem', flexShrink: 0 }}>{a.percentage}%</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748B' }}>
-                      <span>{a.totalWordsAdded} words</span>
-                      <strong style={{ color: a.color || '#0D9488' }}>{a.percentage}%</strong>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#334155' }}>
+                      <span style={{ fontWeight: 600 }}>{authorLiveWords} words</span>
+                      <span style={{ color: '#64748B', fontSize: '0.75rem' }}>of document</span>
                     </div>
+
                     {/* Progress Bar */}
-                    <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '4px', marginTop: '0.55rem', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '4px', marginTop: '0.45rem', overflow: 'hidden' }}>
                       <div style={{ width: `${a.percentage}%`, height: '100%', background: a.color || '#0D9488', borderRadius: '4px', transition: 'width 0.4s ease' }}></div>
+                    </div>
+
+                    {/* Research Telemetry Details */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.45rem', paddingTop: '0.4rem', borderTop: '1px dashed #E2E8F0', fontSize: '0.72rem', color: '#64748B' }}>
+                      <span>{a.revisionCount || 0} revisions</span>
+                      <span title="Total cumulative words typed historically across revision sessions">+{a.grossWordsAdded || a.totalWordsAdded || 0} typing history</span>
                     </div>
                   </div>
                 )
@@ -2281,23 +2922,47 @@ function EditorComponent() {
         </div>
       </div>
 
-      {/* Word 365 Bottom Status Bar */}
-      {isMSWord && (
-        <div className="word-status-bar">
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <span>Page 1 of 1</span>
-            <span>{wordCount} words</span>
-            <span>English (United States)</span>
-            <span style={{ background: '#10b981', color: 'white', padding: '0.05rem 0.4rem', borderRadius: '10px', fontSize: '0.7rem' }}>
-              Live Sync Active
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <span>Focus Mode</span>
-            <span>100% ──────◯──────</span>
-          </div>
+      {/* Universal Bottom Status Bar for Built-in & External Documents */}
+      <div className="word-status-bar" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.35rem 1.25rem',
+        background: isMSWord ? '#0078d4' : '#FFFFFF',
+        color: isMSWord ? '#FFFFFF' : '#43574f',
+        borderTop: isMSWord ? 'none' : '1px solid rgba(111, 175, 154, 0.25)',
+        fontSize: '0.75rem',
+        fontWeight: 500,
+        boxShadow: '0 -1px 3px rgba(0, 0, 0, 0.03)'
+      }}>
+        <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+          <span>Page 1 of 1</span>
+          <span style={{ fontWeight: 700, color: isMSWord ? '#FFFFFF' : '#0D1110' }}>
+            {liveDocWordCount} words
+          </span>
+          <span>{editor ? editor.getText().length : 0} characters</span>
+          <span>English (United States)</span>
+          <span style={{
+            background: isMSWord ? 'rgba(255, 255, 255, 0.2)' : '#EFF8F3',
+            color: isMSWord ? '#FFFFFF' : '#225243',
+            border: isMSWord ? 'none' : '1px solid rgba(111, 175, 154, 0.35)',
+            padding: '0.08rem 0.5rem',
+            borderRadius: '10px',
+            fontSize: '0.7rem',
+            fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem'
+          }}>
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: syncStatus === 'synced' ? '#10b981' : '#f59e0b' }} />
+            {syncStatus === 'synced' ? 'Live Authenticity Synced' : 'Syncing...'}
+          </span>
         </div>
-      )}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <span>Collaborators: {displayAuthors.length} active</span>
+          <span>100% ──────◯──────</span>
+        </div>
+      </div>
 
       {/* Modals: Reports Manager, Share & Create Document */}
       {renderModals()}

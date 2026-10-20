@@ -187,7 +187,14 @@ function DashboardComponent() {
 
       const fetchJson = async (url: string) => {
         try {
-          const res = await fetch(url);
+          const sep = url.includes('?') ? '&' : '?';
+          const res = await fetch(`${url}${sep}_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!res.ok) return null;
           return await res.json();
         } catch (err) {
@@ -1008,7 +1015,7 @@ function DashboardComponent() {
             {/* Action Buttons - Compact Sleek Design (Only Open in Editor & Author Highlights) */}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
               <button
-                onClick={() => router.push(`/editor?docId=${selectedDocId}`)}
+                onClick={() => router.push(`/editor?docId=${selectedDocId || selectedDocObj?._id || ''}`)}
                 style={{
                   flex: 1,
                   background: '#6FAF9A',

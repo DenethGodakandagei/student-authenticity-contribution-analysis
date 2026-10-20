@@ -416,71 +416,71 @@ io.on('connection', (socket) => {
       }
     }
 
+    socket.data.user = { username, studentId, email, name, role, userObj };
+    socket.data.allowedDocs = socket.data.allowedDocs || new Set();
+    socket.data.allowedDocs.add(documentId);
+
     socket.join(documentId);
     socket.emit('load-document', doc.content);
   });
 
-  socket.on('send-changes', async ({ documentId, content, author, studentId }) => {
+  socket.on('send-changes', async (payload) => {
+    if (!payload || typeof payload !== 'object') return;
+    const { documentId, content, author, studentId, username, email, role } = payload;
     if (!documentId) return;
 
-    // Strict Security Guard 1: Verify socket is joined or verify permissions before joining
-    const rooms = Array.from(socket.rooms || []);
     const doc = await Document.findOne({ _id: documentId });
     if (!doc) return;
 
-    if (!rooms.includes(documentId)) {
-      let userObj = null;
-      try {
-        const queryConds = [];
-        if (studentId) {
-          queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
-          queryConds.push({ username: studentId.toLowerCase().trim() });
-        }
-        if (author) {
-          queryConds.push({ username: author.toLowerCase().trim() });
-          queryConds.push({ name: new RegExp('^' + author.trim() + '$', 'i') });
-        }
-        if (queryConds.length > 0) {
-          userObj = await User.findOne({ $or: queryConds }).lean();
-        }
-      } catch (e) {}
+    const rooms = Array.from(socket.rooms || []);
+    const alreadyAuthorized = rooms.includes(documentId) || (socket.data?.allowedDocs && socket.data.allowedDocs.has(documentId));
 
-      const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student', null, userObj);
-      if (isPermitted) {
-        socket.join(documentId);
-      } else {
-        socket.emit('access-denied', { error: 'Security Violation: Unauthorized socket attempting to modify document.' });
-        return;
-      }
-    }
-    if (doc) {
-      // Strict Security Guard 2: Verify author access permissions with identity alias resolution
-      if (author && author !== 'Anonymous') {
-        let userObj = null;
+    if (!alreadyAuthorized) {
+      let userObj = socket.data?.user?.userObj || null;
+      if (!userObj) {
         try {
           const queryConds = [];
-          if (studentId) {
-            queryConds.push({ studentId: studentId.trim() });
-            queryConds.push({ studentId: new RegExp('^' + studentId.trim() + '$', 'i') });
-            queryConds.push({ username: studentId.toLowerCase().trim() });
+          const sId = studentId || socket.data?.user?.studentId;
+          const uName = username || socket.data?.user?.username;
+          const uEmail = email || socket.data?.user?.email;
+          if (sId) {
+            queryConds.push({ studentId: new RegExp('^' + sId.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+            queryConds.push({ username: sId.toLowerCase().trim() });
           }
-          if (author) {
-            queryConds.push({ username: author.toLowerCase().trim() });
-            queryConds.push({ name: new RegExp('^' + author.trim() + '$', 'i') });
+          if (uName) {
+            queryConds.push({ username: new RegExp('^' + uName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+          }
+          if (uEmail) {
+            queryConds.push({ email: new RegExp('^' + uEmail.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+          }
+          if (author && typeof author === 'string') {
+            const m = author.match(/^(.+?)\s*\((.+?)\)$/);
+            if (m) {
+              queryConds.push({ name: new RegExp('^' + m[1].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+              queryConds.push({ studentId: new RegExp('^' + m[2].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+            }
           }
           if (queryConds.length > 0) {
             userObj = await User.findOne({ $or: queryConds }).lean();
           }
         } catch (e) {}
-
-        const isPermitted = hasDocumentAccess(doc, author, studentId || author, 'student', null, userObj);
-        if (!isPermitted) {
-          socket.emit('access-denied', { error: 'Security Violation: You do not have permission to modify this document.' });
-          return;
-        }
       }
 
-      // Broadcast changes to peers only after security verification
+      const isPermitted = hasDocumentAccess(doc, username || socket.data?.user?.username || author, studentId || socket.data?.user?.studentId, role || socket.data?.user?.role || 'student', email || socket.data?.user?.email, userObj);
+      if (isPermitted) {
+        socket.data.allowedDocs = socket.data.allowedDocs || new Set();
+        socket.data.allowedDocs.add(documentId);
+        socket.join(documentId);
+      } else {
+        console.warn(`[send-changes] Unauthorized change attempt dropped for doc: ${documentId}`);
+        return;
+      }
+    } else if (!rooms.includes(documentId)) {
+      socket.join(documentId);
+    }
+
+    if (doc) {
+      // Broadcast changes to peers only after verification
       socket.broadcast.to(documentId).emit('receive-changes', content);
 
       const oldText = stripHtml(doc.content);
@@ -1207,7 +1207,7 @@ app.get('/api/documents/:id', async (req, res) => {
 
     // Access control check for students
     if (!username && !studentId && !role && !email) {
-      return res.status(401).json({ error: "Authentication required to access documents.", isAccessDenied: true });
+      return res.status(401).json({ error: "Authentication required to access documents.", isAccessDenied: false });
     }
 
     let userObj = null;
@@ -1448,6 +1448,12 @@ app.get('/api/documents/:id/collaborators', async (req, res) => {
 
 // Multi-Author Color-Coded Highlighted Text Attribution API
 app.get('/api/documents/:id/author-markup', async (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Surrogate-Control': 'no-store'
+  });
   try {
     const doc = await Document.findOne({ _id: req.params.id }).lean();
     if (!doc) {
@@ -1526,29 +1532,41 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
 
     const authorList = Array.from(new Set(rawAuthors.map(a => canonicalMap[a] || a)));
     const authorColorMap = {};
-    const authorStats = {};
+    const authorRevStats = {};
 
     authorList.forEach((author, index) => {
       const palette = PALETTES[index % PALETTES.length];
       authorColorMap[author] = palette;
-      authorStats[author] = {
+      authorRevStats[author] = {
         author,
-        totalWordsAdded: 0,
-        totalWordsDeleted: 0,
+        grossWordsAdded: 0,
+        grossWordsDeleted: 0,
         revisionCount: 0,
         ...palette
       };
     });
 
+    // Aggregate revision process telemetry (gross typing activity)
     revisions.forEach(r => {
       if (!r.author || isForbidden(r.author)) return;
       const canonical = canonicalMap[r.author] || r.author;
-      if (authorStats[canonical]) {
-        authorStats[canonical].totalWordsAdded += (r.wordCountAdded || 0);
-        authorStats[canonical].totalWordsDeleted += (r.wordCountDeleted || 0);
-        authorStats[canonical].revisionCount += 1;
+      if (authorRevStats[canonical]) {
+        authorRevStats[canonical].grossWordsAdded += (r.wordCountAdded || 0);
+        authorRevStats[canonical].grossWordsDeleted += (r.wordCountDeleted || 0);
+        authorRevStats[canonical].revisionCount += 1;
       }
     });
+
+    // Build author text corpus from revisions for content token matching
+    const authorAddedCorpus = {};
+    for (const a of authorList) authorAddedCorpus[a] = '';
+    for (const r of revisions) {
+      if (!r.author || isForbidden(r.author)) continue;
+      const canonical = canonicalMap[r.author] || r.author;
+      if (authorAddedCorpus[canonical] !== undefined) {
+        authorAddedCorpus[canonical] += ' ' + (r.addedText || '');
+      }
+    }
 
     // Parse document content into text segments
     const rawContent = (doc.content || "").trim();
@@ -1569,26 +1587,48 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
         const plainText = stripHtml(fullHtmlBlock).trim();
         if (!plainText) continue;
 
-        let blockAuthor = authorList[0] || 'Student Author';
+        const wordsCount = plainText.split(/\s+/).filter(Boolean).length;
+        const segWords = plainText.toLowerCase().split(/[^a-z0-9]+/i).filter(w => w.length >= 3);
+
+        let blockAuthor = null;
+        let bestScore = 0;
         let blockTimestamp = doc.updatedAt || doc.createdAt;
-        
-        const matchingRev = revisions.find(r => !isForbidden(r.author) && r.addedText && plainText.toLowerCase().includes(r.addedText.toLowerCase().substring(0, 12)));
-        if (matchingRev) {
-          blockAuthor = canonicalMap[matchingRev.author] || matchingRev.author;
-          blockTimestamp = matchingRev.timestamp;
-        } else {
-          const validRevs = revisions.filter(r => !isForbidden(r.author));
-          if (validRevs.length > 0) {
-            const revForBlock = validRevs[currentSegmentIndex % validRevs.length];
-            blockAuthor = canonicalMap[revForBlock.author] || revForBlock.author;
-            blockTimestamp = revForBlock.timestamp;
+
+        // Score candidate authors by word token overlap in addedText revisions
+        for (const a of authorList) {
+          const corpus = (authorAddedCorpus[a] || '').toLowerCase();
+          let matchCount = 0;
+          for (const w of segWords) {
+            if (corpus.includes(w)) matchCount++;
+          }
+          if (matchCount > bestScore) {
+            bestScore = matchCount;
+            blockAuthor = a;
+          }
+        }
+
+        // Substring / Sub-phrase match fallback
+        if (!blockAuthor || bestScore === 0) {
+          const matchingRev = revisions.find(r => !isForbidden(r.author) && r.addedText && (
+            plainText.toLowerCase().includes(r.addedText.toLowerCase().substring(0, 12)) ||
+            (r.addedText.length > 5 && plainText.toLowerCase().includes(r.addedText.toLowerCase().trim()))
+          ));
+          if (matchingRev) {
+            blockAuthor = canonicalMap[matchingRev.author] || matchingRev.author;
+            blockTimestamp = matchingRev.timestamp;
           } else {
-            blockAuthor = canonicalMap[blockAuthor] || blockAuthor;
+            const validRevs = revisions.filter(r => !isForbidden(r.author));
+            if (validRevs.length > 0) {
+              const revForBlock = validRevs[currentSegmentIndex % validRevs.length];
+              blockAuthor = canonicalMap[revForBlock.author] || revForBlock.author;
+              blockTimestamp = revForBlock.timestamp;
+            } else {
+              blockAuthor = authorList[0] || 'Student Author';
+            }
           }
         }
 
         const palette = authorColorMap[blockAuthor] || PALETTES[0];
-        const wordsCount = plainText.split(/\s+/).filter(Boolean).length;
 
         segments.push({
           id: `seg_${currentSegmentIndex++}`,
@@ -1602,16 +1642,45 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
       }
     }
 
-    const totalDocWords = Object.values(authorStats).reduce((acc, s) => acc + s.totalWordsAdded, 0);
-    const authorSummary = Object.values(authorStats).map(s => ({
-      ...s,
-      percentage: totalDocWords > 0 ? Math.min(100, Math.round((s.totalWordsAdded / totalDocWords) * 100)) : 0
-    }));
+    // Accurate Live Document Word Count calculation
+    const actualDocWords = segments.reduce((sum, s) => sum + s.words, 0) || (plainDocText ? plainDocText.split(/\s+/).filter(Boolean).length : 0);
+
+    // Group live words by author from active document segments
+    const liveAuthorWords = {};
+    authorList.forEach(a => liveAuthorWords[a] = 0);
+    segments.forEach(s => {
+      liveAuthorWords[s.author] = (liveAuthorWords[s.author] || 0) + s.words;
+    });
+
+    // Build Transparent Author Summary (Live Document Contribution + Revision Telemetry)
+    const authorSummary = authorList.map((author, index) => {
+      const liveWords = liveAuthorWords[author] || 0;
+      const stats = authorRevStats[author] || {};
+      const grossWordsAdded = stats.grossWordsAdded || 0;
+      const grossWordsDeleted = stats.grossWordsDeleted || 0;
+      const revisionCount = stats.revisionCount || 0;
+      const percentage = actualDocWords > 0 ? Math.min(100, Math.round((liveWords / actualDocWords) * 100)) : 0;
+      const palette = authorColorMap[author] || PALETTES[index % PALETTES.length];
+
+      return {
+        author,
+        liveWords,
+        totalWordsAdded: liveWords, // Live document words (backward-compatible with any existing frontend consumers)
+        grossWordsAdded, // Historical gross additions for research telemetry
+        grossWordsDeleted,
+        revisionCount,
+        percentage,
+        ...palette
+      };
+    });
+
+    // Sort: authors with live words first (descending), followed by authors with historical revisions
+    authorSummary.sort((a, b) => (b.liveWords - a.liveWords) || (b.grossWordsAdded - a.grossWordsAdded));
 
     res.json({
       documentId: doc._id,
       title: doc.title,
-      totalWords: totalDocWords,
+      totalWords: actualDocWords, // 100% accurate document word count
       authors: authorSummary,
       segments
     });

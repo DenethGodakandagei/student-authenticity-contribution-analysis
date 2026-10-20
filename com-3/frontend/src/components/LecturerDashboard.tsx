@@ -311,7 +311,14 @@ export default function LecturerDashboard({ onSwitchToStudentView }: LecturerDas
     try {
       const fetchJson = async (url: string) => {
         try {
-          const res = await fetch(url);
+          const sep = url.includes('?') ? '&' : '?';
+          const res = await fetch(`${url}${sep}_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!res.ok) return null;
           return await res.json();
         } catch {
