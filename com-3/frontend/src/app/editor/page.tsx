@@ -29,6 +29,7 @@ import DocumentOpenModal from '../../components/DocumentOpenModal';
 import KeyboardShortcutsModal from '../../components/KeyboardShortcutsModal';
 import FindReplaceBar from '../../components/FindReplaceBar';
 import ImportDocumentModal from '../../components/ImportDocumentModal';
+import VersionHistoryView from '../../components/VersionHistoryView';
 
 // Custom Tiptap Font Size Extension (MS Word Style)
 const FontSize = Extension.create({
@@ -801,6 +802,7 @@ function EditorComponent() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [openDocModalOpen, setOpenDocModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
@@ -1043,7 +1045,7 @@ function EditorComponent() {
         const docs = Array.isArray(data) ? data : [];
         setAvailableDocs(docs);
         if (docs.length > 0) {
-          if (docIdParam && docs.some((d: any) => d._id === docIdParam)) {
+          if (docIdParam) {
             setSelectedDocId(docIdParam);
             setAccessDenied(false);
             setAccessDeniedInfo(null);
@@ -1055,6 +1057,8 @@ function EditorComponent() {
             setAccessDenied(false);
             setAccessDeniedInfo(null);
           }
+        } else if (docIdParam) {
+          setSelectedDocId(docIdParam);
         } else {
           setSelectedDocId('');
         }
@@ -1268,6 +1272,11 @@ function EditorComponent() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'g') {
         e.preventDefault();
         handleSyncExternal();
+      }
+      // Ctrl+Alt+Shift+H: Google Docs Version history
+      if ((e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey && e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        setVersionHistoryOpen(prev => !prev);
       }
       // Ctrl + + / Ctrl + = : Zoom In
       if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd' || e.code === 'Equal')) {
@@ -1710,6 +1719,39 @@ function EditorComponent() {
     });
   };
 
+  const handleRestoreVersion = async (revisionId: string, timestamp: string) => {
+    if (!selectedDocId || !user) return;
+    try {
+      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/restore-version`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          revisionId,
+          author: user.name || user.username,
+          username: user.username,
+          studentId: user.studentId,
+          role: user.role,
+          email: user.email
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to restore document version');
+
+      if (editor && !editor.isDestroyed && data.content !== undefined) {
+        editor.commands.setContent(data.content, { emitUpdate: false });
+        setLastText(editor.getText());
+      }
+      fetchMarkupData();
+      fetchDocDetails();
+      showToast(`Document successfully restored to version from ${timestamp}!`, 'success', 'Version Restored');
+    } catch (err: any) {
+      console.error("Restore version error:", err);
+      showToast(err.message || 'Failed to restore document version', 'error', 'Restore Failed');
+      throw err;
+    }
+  };
+
   const renderModals = () => (
     <>
       {/* All Reports & Document Repository Modal */}
@@ -2095,6 +2137,18 @@ function EditorComponent() {
         isOpen={shortcutsModalOpen}
         onClose={() => setShortcutsModalOpen(false)}
       />
+
+      {/* Google Docs Version History View (Ctrl+Alt+Shift+H) */}
+      <VersionHistoryView
+        documentId={selectedDocId}
+        documentTitle={docDetails?.title || selectedDocId}
+        isOpen={versionHistoryOpen}
+        onClose={() => setVersionHistoryOpen(false)}
+        onRestoreVersion={handleRestoreVersion}
+        authorMarkup={markupData}
+        currentUserId={user?.username}
+        zoomLevel={zoomLevel}
+      />
     </>
   );
 
@@ -2465,7 +2519,8 @@ function EditorComponent() {
           }
         }}
         isHighlightMode={isHighlightMode}
-        onToggleTimeline={() => setReportsModalOpen(true)}
+        onOpenVersionHistory={() => setVersionHistoryOpen(true)}
+        onToggleTimeline={() => setVersionHistoryOpen(true)}
         onToggleMLAnalytics={() => setReportsModalOpen(true)}
         onToggleGrowthChart={() => setReportsModalOpen(true)}
         onToggleHeatmap={() => setReportsModalOpen(true)}
@@ -2536,76 +2591,99 @@ function EditorComponent() {
       {/* Editor Page Area & Collaborators Panel */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Main Document Area (Word/Docs canvas) */}
-        <div style={{ flex: 3, padding: '1.25rem 1rem 3rem 1rem', overflowY: 'auto', background: currentSkin === 'word' ? '#edebe9' : '#f8f9fa', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {showRuler && (
-            <div style={{ width: '100%', maxWidth: '850px', marginBottom: '10px' }}>
-              <DocumentRuler mode={currentSkin} zoom={zoomLevel} />
-            </div>
-          )}
-          {isHighlightMode ? (
-            <div style={{
-              background: '#fff',
-              border: '1px solid #cbd5e1',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              padding: '4rem',
-              width: '100%',
-              maxWidth: '850px',
-              minHeight: '1056px', // 8.5x11 aspect ratio approx
-              fontFamily: 'Arial, sans-serif'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '1rem' }}>
-                <h2 style={{ margin: 0, color: '#334155' }}>{docDetails?.title || 'Document'}</h2>
-                <button
-                  onClick={() => { setIsHighlightMode(false); setSelectedAuthorFilter('ALL'); }}
-                  style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                >
-                  Close Highlight Mode
-                </button>
-              </div>
-
-              {markupData?.segments?.map((seg: any) => {
-                const isMatched = selectedAuthorFilter === 'ALL' ||
-                  seg.author === selectedAuthorFilter ||
-                  (selectedAuthorFilter.includes('(') && seg.author === selectedAuthorFilter.split('(')[0].trim());
-                const authorColor = seg.color || '#4285f4';
-                const authorBg = seg.bgColor || 'rgba(66, 133, 244, 0.2)';
-
-                return (
-                  <div
-                    key={seg.id}
-                    onMouseEnter={() => setHoveredSegment(seg.id)}
-                    onMouseLeave={() => setHoveredSegment(null)}
-                    style={{
-                      background: isMatched ? authorBg : 'transparent',
-                      opacity: isMatched ? 1 : 0.4,
-                      filter: isMatched ? 'none' : 'grayscale(100%)',
-                      padding: '0.5rem',
-                      borderRadius: '4px',
-                      marginBottom: '0.5rem',
-                      borderLeft: isMatched ? `4px solid ${authorColor}` : '4px solid transparent',
-                      transition: 'all 0.2s',
-                      position: 'relative'
-                    }}
-                  >
-                    {hoveredSegment === seg.id && isMatched && (
-                      <span style={{ position: 'absolute', top: '-20px', left: '0', background: '#1e293b', color: '#fff', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
-                        {seg.author} • {seg.words} words
-                      </span>
-                    )}
-                    <div dangerouslySetInnerHTML={{ __html: seg.html }} style={{ color: '#0f172a' }} />
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="editor-content-wrapper" style={{
+        <div
+          id="editor-canvas-container"
+          style={{
+            flex: 3,
+            padding: '1.25rem 1rem 3rem 1rem',
+            overflowY: 'auto',
+            background: currentSkin === 'word' ? '#edebe9' : '#f8f9fa',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}
+        >
+          {/* Zoom Scaled Container */}
+          <div
+            style={{
+              zoom: `${zoomLevel}%`,
               width: '100%',
               display: 'flex',
-              justifyContent: 'center',
-            }}>
-              <EditorContent editor={editor} />
-            </div>
-          )}
+              flexDirection: 'column',
+              alignItems: 'center',
+              transition: 'zoom 0.12s ease-out'
+            }}
+          >
+            {showRuler && (
+              <div style={{ width: '100%', maxWidth: '850px', marginBottom: '10px' }}>
+                <DocumentRuler mode={currentSkin} zoom={zoomLevel} />
+              </div>
+            )}
+            {isHighlightMode ? (
+              <div style={{
+                background: '#fff',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                padding: '4rem',
+                width: '100%',
+                maxWidth: '850px',
+                minHeight: '1056px', // 8.5x11 aspect ratio approx
+                fontFamily: 'Arial, sans-serif'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '1rem' }}>
+                  <h2 style={{ margin: 0, color: '#334155' }}>{docDetails?.title || 'Document'}</h2>
+                  <button
+                    onClick={() => { setIsHighlightMode(false); setSelectedAuthorFilter('ALL'); }}
+                    style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    Close Highlight Mode
+                  </button>
+                </div>
+
+                {markupData?.segments?.map((seg: any) => {
+                  const isMatched = selectedAuthorFilter === 'ALL' ||
+                    seg.author === selectedAuthorFilter ||
+                    (selectedAuthorFilter.includes('(') && seg.author === selectedAuthorFilter.split('(')[0].trim());
+                  const authorColor = seg.color || '#4285f4';
+                  const authorBg = seg.bgColor || 'rgba(66, 133, 244, 0.2)';
+
+                  return (
+                    <div
+                      key={seg.id}
+                      onMouseEnter={() => setHoveredSegment(seg.id)}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                      style={{
+                        background: isMatched ? authorBg : 'transparent',
+                        opacity: isMatched ? 1 : 0.4,
+                        filter: isMatched ? 'none' : 'grayscale(100%)',
+                        padding: '0.5rem',
+                        borderRadius: '4px',
+                        marginBottom: '0.5rem',
+                        borderLeft: isMatched ? `4px solid ${authorColor}` : '4px solid transparent',
+                        transition: 'all 0.2s',
+                        position: 'relative'
+                      }}
+                    >
+                      {hoveredSegment === seg.id && isMatched && (
+                        <span style={{ position: 'absolute', top: '-20px', left: '0', background: '#1e293b', color: '#fff', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                          {seg.author} • {seg.words} words
+                        </span>
+                      )}
+                      <div dangerouslySetInnerHTML={{ __html: seg.html }} style={{ color: '#0f172a' }} />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="editor-content-wrapper" style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+              }}>
+                <EditorContent editor={editor} />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Collaborators Panel */}
@@ -2765,7 +2843,168 @@ function EditorComponent() {
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <span>Collaborators: {displayAuthors.length} active</span>
-          <span>100% ──────◯──────</span>
+
+          {/* Interactive Zoom Control Widget */}
+          <div id="zoom-control-widget" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', userSelect: 'none' }}>
+            {/* Quick Zoom Preset Pill / Dropdown Button */}
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setShowZoomDropdown(prev => !prev)}
+                title="Click to select zoom preset (or use Ctrl + + / Ctrl + -)"
+                style={{
+                  background: isMSWord ? 'rgba(255,255,255,0.18)' : '#f1f5f9',
+                  color: isMSWord ? '#ffffff' : '#0f172a',
+                  border: `1px solid ${isMSWord ? 'rgba(255,255,255,0.3)' : '#cbd5e1'}`,
+                  borderRadius: '4px',
+                  padding: '0.12rem 0.45rem',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  minWidth: '54px',
+                  textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.25rem'
+                }}
+              >
+                <span>{zoomLevel}%</span>
+                <span style={{ fontSize: '0.55rem', opacity: 0.7 }}>▼</span>
+              </button>
+
+              {/* Dropdown presets popup */}
+              {showZoomDropdown && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '125%',
+                    right: 0,
+                    background: '#ffffff',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                    border: '1px solid #e2e8f0',
+                    padding: '0.35rem 0',
+                    minWidth: '140px',
+                    zIndex: 9999,
+                    color: '#0f172a'
+                  }}
+                >
+                  <div style={{ padding: '0.25rem 0.65rem', fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                    Zoom Level
+                  </div>
+                  {[50, 75, 90, 100, 125, 150, 175, 200].map((preset) => (
+                    <div
+                      key={preset}
+                      onClick={() => {
+                        setZoomLevel(preset);
+                        setShowZoomDropdown(false);
+                      }}
+                      style={{
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.76rem',
+                        fontWeight: zoomLevel === preset ? 800 : 500,
+                        color: zoomLevel === preset ? '#2563eb' : '#1e293b',
+                        background: zoomLevel === preset ? '#eff6ff' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                      onMouseEnter={(e) => { if (zoomLevel !== preset) e.currentTarget.style.background = '#f8fafc'; }}
+                      onMouseLeave={(e) => { if (zoomLevel !== preset) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <span>{preset}%</span>
+                      {zoomLevel === preset && <span>✓</span>}
+                    </div>
+                  ))}
+                  <div style={{ height: '1px', background: '#e2e8f0', margin: '0.25rem 0' }} />
+                  <div
+                    onClick={() => {
+                      setZoomLevel(100);
+                      setShowZoomDropdown(false);
+                    }}
+                    style={{
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.74rem',
+                      color: '#64748b',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    Reset (100%)
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Zoom Out Button (–) */}
+            <button
+              type="button"
+              onClick={() => setZoomLevel(prev => Math.max(50, prev - 10))}
+              title="Zoom Out (Ctrl + -)"
+              disabled={zoomLevel <= 50}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: isMSWord ? '#ffffff' : '#64748b',
+                cursor: zoomLevel <= 50 ? 'not-allowed' : 'pointer',
+                padding: '0.1rem 0.35rem',
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                lineHeight: 1,
+                borderRadius: '4px',
+                opacity: zoomLevel <= 50 ? 0.4 : 1
+              }}
+              onMouseEnter={(e) => { if (zoomLevel > 50) e.currentTarget.style.background = isMSWord ? 'rgba(255,255,255,0.2)' : '#e2e8f0'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              −
+            </button>
+
+            {/* Real Interactive Slider */}
+            <input
+              type="range"
+              min={50}
+              max={200}
+              step={5}
+              value={zoomLevel}
+              onChange={(e) => setZoomLevel(parseInt(e.target.value, 10))}
+              title={`Zoom: ${zoomLevel}% (Drag to adjust or use Ctrl + Mouse Wheel)`}
+              style={{
+                width: '90px',
+                height: '4px',
+                cursor: 'pointer',
+                accentColor: isMSWord ? '#ffffff' : '#6FAF9A',
+                margin: '0 0.15rem'
+              }}
+            />
+
+            {/* Zoom In Button (+) */}
+            <button
+              type="button"
+              onClick={() => setZoomLevel(prev => Math.min(200, prev + 10))}
+              title="Zoom In (Ctrl + +)"
+              disabled={zoomLevel >= 200}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: isMSWord ? '#ffffff' : '#64748b',
+                cursor: zoomLevel >= 200 ? 'not-allowed' : 'pointer',
+                padding: '0.1rem 0.35rem',
+                fontSize: '0.95rem',
+                fontWeight: 800,
+                lineHeight: 1,
+                borderRadius: '4px',
+                opacity: zoomLevel >= 200 ? 0.4 : 1
+              }}
+              onMouseEnter={(e) => { if (zoomLevel < 200) e.currentTarget.style.background = isMSWord ? 'rgba(255,255,255,0.2)' : '#e2e8f0'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
 

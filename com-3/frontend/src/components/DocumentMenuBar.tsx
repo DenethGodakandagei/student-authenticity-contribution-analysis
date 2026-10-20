@@ -34,6 +34,7 @@ interface DocumentMenuBarProps {
   syncStatus: string;
   onSyncExternal?: () => void;
   isSyncingExternal?: boolean;
+  onOpenVersionHistory?: () => void;
 }
 
 export default function DocumentMenuBar({
@@ -67,7 +68,8 @@ export default function DocumentMenuBar({
   onToggleHeatmap,
   syncStatus,
   onSyncExternal,
-  isSyncingExternal = false
+  isSyncingExternal = false,
+  onOpenVersionHistory
 }: DocumentMenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [wordActiveTab, setWordActiveTab] = useState<'Home' | 'Insert' | 'Layout' | 'Review' | 'View'>('Home');
@@ -133,6 +135,7 @@ export default function DocumentMenuBar({
       { divider: true, label: "" },
       { label: "✏️ Rename Document", action: onRename },
       { label: "💾 Save Changes", action: onSave, shortcut: "Ctrl+S" },
+      { label: "⏱️ Version History", action: onOpenVersionHistory, shortcut: "Ctrl+Alt+Shift+H" },
       ...(isGoogleDocLinked && onSyncExternal ? [
         { label: isSyncingExternal ? "⏳ Syncing Google Docs..." : "🔄 Pull Edits from Google Docs", action: onSyncExternal, shortcut: "Ctrl+Shift+G" }
       ] : []),
@@ -178,6 +181,7 @@ export default function DocumentMenuBar({
       { label: "Clear Formatting", action: () => editor?.chain().focus().unsetAllMarks().clearNodes().run() }
     ],
     Tools: [
+      { label: "⏱️ See Version History & Diffs", action: onOpenVersionHistory, shortcut: "Ctrl+Alt+Shift+H" },
       { label: "📊 Word Count & Reading Time", action: onOpenDetailsModal, shortcut: "Ctrl+Shift+C" },
       { label: isHighlightMode ? "✓ Hide Author Highlights" : "👥 Show Author Highlights", action: onToggleAuthorHighlights },
       { label: "⏱️ Document Timeline & Revisions", action: onToggleTimeline },
@@ -312,6 +316,34 @@ export default function DocumentMenuBar({
                     syncStatus
                   )}
                 </span>
+              )}
+
+              {onOpenVersionHistory && (
+                <button
+                  type="button"
+                  onClick={onOpenVersionHistory}
+                  title="Open full Google Docs revision history (Ctrl+Alt+Shift+H)"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    color: isWord ? '#ffffff' : '#5f6368',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.1rem 0.35rem',
+                    borderRadius: '4px',
+                    fontWeight: 500
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = isWord ? '#e0f2fe' : '#1a73e8'}
+                  onMouseLeave={e => e.currentTarget.style.color = isWord ? '#ffffff' : '#5f6368'}
+                >
+                  <span>⏱️</span>
+                  <span>Version history</span>
+                </button>
               )}
             </div>
 

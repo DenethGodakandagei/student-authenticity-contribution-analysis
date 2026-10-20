@@ -24,6 +24,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
       { key: "Ctrl + Mouse Wheel", desc: "Interactive smooth zoom" },
     ]},
     { section: "Editing & History", items: [
+      { key: "Ctrl + Alt + Shift + H", desc: "Open Google Docs version history & diffs" },
       { key: "Ctrl + Z", desc: "Undo last edit" },
       { key: "Ctrl + Y / Ctrl + Shift + Z", desc: "Redo last edit" },
       { key: "Ctrl + A", desc: "Select entire document text" },

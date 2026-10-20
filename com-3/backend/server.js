@@ -2673,6 +2673,82 @@ app.post('/api/documents/:id/sync-external', async (req, res) => {
   }
 });
 
+// Restore Document to a Previous Version / Revision
+app.post('/api/documents/:id/restore-version', async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const { revisionId, author, username, studentId, role, email } = req.body;
+
+    const doc = await Document.findById(documentId);
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    const isPermitted = hasDocumentAccess(doc, username || author, studentId, role || 'student', email);
+    if (!isPermitted) {
+      return res.status(403).json({ error: "Unauthorized to restore versions for this document." });
+    }
+
+    const targetRev = await Revision.findOne({ _id: revisionId, documentId });
+    if (!targetRev) {
+      return res.status(404).json({ error: "Revision not found." });
+    }
+
+    const restoredText = targetRev.afterText || targetRev.addedText || '';
+    let restoredHtml = restoredText;
+    if (!restoredHtml.startsWith('<') && !restoredHtml.includes('<p>')) {
+      restoredHtml = restoredHtml.split('\n').filter(Boolean).map(p => `<p>${p}</p>`).join('\n');
+    }
+
+    const oldText = stripHtml(doc.content || '').trim();
+    const newText = stripHtml(restoredHtml).trim();
+    const wordsCount = newText.split(/\s+/).filter(Boolean).length;
+
+    const restorer = author || username || doc.ownerName || 'Student';
+    const now = new Date();
+
+    // Create a new revision recording the restore event
+    const restoreRev = await Revision.create({
+      documentId: doc._id,
+      author: restorer,
+      anonymizedAuthorId: generateAnonymizedAuthorId(restorer),
+      timestamp: now,
+      section: "Version History Restoration",
+      beforeText: oldText,
+      afterText: newText,
+      addedText: `[Restored to version from ${new Date(targetRev.timestamp).toLocaleString()} by ${targetRev.author}]`,
+      deletedText: oldText,
+      wordCountAdded: wordsCount,
+      wordCountDeleted: oldText.split(/\s+/).filter(Boolean).length,
+      sourcePlatform: doc.source || 'in_built',
+      syncStatus: 'synced',
+      predictedIntent: 'Structural Reorganization',
+      predictedSignificance: 'Major',
+      semanticDistance: 0.8,
+      confidence: 0.98,
+      modelVersion: 'v1.0-rules-ml-ensemble',
+      explanation: `Restored document back to revision from ${new Date(targetRev.timestamp).toLocaleString()} (originally authored by ${targetRev.author}).`
+    });
+
+    doc.content = restoredHtml;
+    doc.updatedAt = now;
+    await doc.save();
+
+    io.to(doc._id).emit('receive-changes', doc.content);
+    io.to(doc._id).emit('markup-updated', { docId: doc._id });
+
+    return res.json({
+      success: true,
+      content: doc.content,
+      revision: restoreRev,
+      message: `Successfully restored document to version from ${new Date(targetRev.timestamp).toLocaleString()}.`
+    });
+  } catch (err) {
+    console.error("Error in restore-version:", err);
+    return res.status(500).json({ error: err.message || "Failed to restore version" });
+  }
+});
+
 // Offline Sync API
 app.post('/api/documents/:id/sync-offline', async (req, res) => {
   try {
