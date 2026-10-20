@@ -838,15 +838,55 @@ function activate(context) {
                 editedFiles.add(rel);
                 const fileItem = getOrCreateFileActivity(rel, uri);
                 fileItem.action = 'edited';
-                storeEvent('BACKGROUND_MUTATION', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                // Read updated content from disk
+                let content = '';
+                try {
+                    content = await fs.promises.readFile(fsPath, 'utf8');
+                }
+                catch { }
+                const lines = content ? content.split(/\r?\n/) : [];
+                const newDocLen = content.length;
+                const loggedChars = fileItem.manualChars + fileItem.pasteChars + fileItem.aiChars;
+                const deltaChars = Math.max(0, newDocLen - loggedChars);
+                fileItem.aiChars += deltaChars;
+                fileItem.aiEvents += 1;
+                fileItem.typingProvenance = 'ai_assisted';
+                fileItem.linesAdded = Math.max(fileItem.linesAdded, lines.length);
+                aiCharsCount += deltaChars;
+                aiEventsCount += 1;
+                const mtimeIso = new Date(stats.mtimeMs).toISOString();
+                if (!fileItem.lineRecords)
+                    fileItem.lineRecords = [];
+                lines.forEach((lineText, idx) => {
+                    const lNum = idx + 1;
+                    const exist = fileItem.lineRecords.find(r => r.lineNumber === lNum);
+                    if (!exist) {
+                        fileItem.lineRecords.push({
+                            lineNumber: lNum,
+                            lineText: lineText.slice(0, 120),
+                            provenance: 'ai_assisted',
+                            isOffline: false,
+                            timestamp: mtimeIso
+                        });
+                    }
+                    else if (exist.lineText !== lineText.slice(0, 120)) {
+                        exist.lineText = lineText.slice(0, 120);
+                        exist.provenance = 'ai_assisted';
+                        exist.timestamp = mtimeIso;
+                    }
+                });
+                storeEvent('KEYSTROKE', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                    provenance: 'ai_assisted',
                     action: 'external_agent_file_mod',
                     isExternalDiskWrite: true,
-                    isOpenInEditor: vscode.workspace.textDocuments.some(doc => doc.uri.fsPath === fsPath),
+                    isOpenInEditor: false,
+                    charCount: deltaChars,
                     sizeBytes: stats.size,
                     mtimeMs: stats.mtimeMs,
                     description: 'Background edit on disk made to closed file by external AI agent / tool'
                 });
                 broadcastStateToWebviews();
+                triggerDebouncedAutoSync(context, 1000);
             }
             catch { }
         }
@@ -863,13 +903,40 @@ function activate(context) {
                 createdFiles.add(rel);
                 const fileItem = getOrCreateFileActivity(rel, uri);
                 fileItem.action = 'created';
+                // Read created content from disk
+                let content = '';
+                try {
+                    content = await fs.promises.readFile(fsPath, 'utf8');
+                }
+                catch { }
+                const lines = content ? content.split(/\r?\n/) : [];
+                const docLen = content.length;
+                fileItem.aiChars = docLen;
+                fileItem.aiEvents = 1;
+                fileItem.typingProvenance = 'ai_assisted';
+                fileItem.linesAdded = lines.length;
+                aiCharsCount += docLen;
+                aiEventsCount += 1;
+                linesAddedCount += lines.length;
+                const mtimeIso = new Date(stats.mtimeMs).toISOString();
+                fileItem.lineRecords = lines.map((lineText, idx) => ({
+                    lineNumber: idx + 1,
+                    lineText: lineText.slice(0, 120),
+                    provenance: 'ai_assisted',
+                    isOffline: false,
+                    timestamp: mtimeIso
+                }));
                 storeEvent('FILE_CREATE', (0, noise_filter_1.categorizeFile)(uri), rel, {
+                    provenance: 'ai_assisted',
                     action: 'external_agent_file_create',
                     isExternalDiskWrite: true,
+                    charCount: docLen,
                     sizeBytes: stats.size,
+                    mtimeMs: stats.mtimeMs,
                     description: 'New file created on disk by external AI agent / tool'
                 });
                 broadcastStateToWebviews();
+                triggerDebouncedAutoSync(context, 1000);
             }
             catch { }
         }

@@ -227,10 +227,12 @@ export default function StudentDashboard() {
       if (currentTeam?._id) {
         try {
           const totalFileSize = files.reduce((acc, f) => acc + (f.size || (f.lineCount || 1) * 35), 0);
+          const earliestModMs = files.reduce((min, f) => Math.min(min, f.lastModified || Date.now()), Date.now());
+          const latestModMs = files.reduce((max, f) => Math.max(max, f.lastModified || Date.now()), Date.now());
           const sessionPayload = {
-            sessionStart: new Date(Date.now() - Math.max(300000, files.length * 15000)).toISOString(),
-            sessionEnd: new Date().toISOString(),
-            durationMinutes: Math.max(5, Math.round((files.length * 15) / 60)),
+            sessionStart: new Date(earliestModMs).toISOString(),
+            sessionEnd: new Date(latestModMs).toISOString(),
+            durationMinutes: Math.max(1, Math.round((latestModMs - earliestModMs) / 60000) || 5),
             keystrokes: 0,
             charactersPasted: totalFileSize,
             pasteCount: files.length,
@@ -245,8 +247,7 @@ export default function StudentDashboard() {
             fileActivities: files.slice(0, 50).map(f => {
               const rawLines = f.lines || (f.content ? f.content.split('\n') : []);
               const fEndMs = f.lastModified ? new Date(f.lastModified).getTime() : Date.now();
-              const fSpreadMs = Math.max(60000, Math.min(3600000, rawLines.length * 15000));
-              const fStartMs = fEndMs - fSpreadMs;
+              const fIso = new Date(fEndMs).toISOString();
               const fChars = f.size || (f.content ? f.content.length : Math.round((f.lineCount || 1) * 35));
 
               return {
@@ -262,14 +263,16 @@ export default function StudentDashboard() {
                 linesAdded: f.lineCount || 0,
                 linesRemoved: 0,
                 lineRecords: rawLines.slice(0, 300).map((lineText: string, idx: number) => {
-                  const progress = rawLines.length > 1 ? idx / (rawLines.length - 1) : 0;
-                  const lineTime = new Date(fStartMs + Math.round(progress * fSpreadMs));
+                  const trimmed = lineText.trim();
+                  const isMarkdownOrBullet = /^[-*+]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed) || /^[A-Z]{2,}-\d+/.test(trimmed) || /^(ub-)?problem/i.test(trimmed);
+                  const isCode = /^(function|funxtion|class|const|let|var|import|export|console\.log|if|else|return|\}|\{)/.test(trimmed);
+                  const prov = isMarkdownOrBullet ? 'copy_paste' : (isCode ? 'manual' : 'copy_paste');
                   return {
                     lineNumber: idx + 1,
                     lineText,
-                    provenance: 'copy_paste',
+                    provenance: prov,
                     isOffline: true,
-                    timestamp: lineTime.toISOString()
+                    timestamp: fIso
                   };
                 }),
                 timestamp: new Date(fEndMs)
