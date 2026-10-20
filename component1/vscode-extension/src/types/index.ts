@@ -132,6 +132,9 @@ export interface SessionPayload {
   isOffline: boolean;
   pasteCount: number;
   charactersPasted: number;
+  manualChars?: number;
+  aiChars?: number;
+  aiEvents?: number;
   // ── Plan 2 additions ──
   saveCount?: number;
   fileOpenCount?: number;

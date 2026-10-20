@@ -101,6 +101,11 @@ export function openInteractiveDashboard(
         }
         break;
 
+      case 'toggleProvenanceHighlighting':
+        vscode.commands.executeCommand('extension.toggleProvenanceHighlighting');
+        panel.webview.postMessage({ type: 'updateState', state: callbacks.getTelemetrySnapshot() });
+        break;
+
       case 'testConnection':
         const testConfig: ExtConfig = {
           serverUrl: msg.serverUrl || cfg.get<string>('serverUrl') || 'http://localhost:5000',

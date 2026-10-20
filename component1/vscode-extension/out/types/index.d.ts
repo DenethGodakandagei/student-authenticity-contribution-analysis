@@ -94,6 +94,9 @@ export interface SessionPayload {
     isOffline: boolean;
     pasteCount: number;
     charactersPasted: number;
+    manualChars?: number;
+    aiChars?: number;
+    aiEvents?: number;
     saveCount?: number;
     fileOpenCount?: number;
     netInsertedChars?: number;

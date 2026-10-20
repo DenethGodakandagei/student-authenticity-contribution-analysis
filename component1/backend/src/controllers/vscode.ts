@@ -132,7 +132,7 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
 
     // Helper to compute / normalize coding provenance & file activities
     const resolveProvenance = (s: any) => {
-      const manualChars = s.keystrokes || 0;
+      const manualChars = s.manualChars || s.keystrokes || 0;
       const pasteChars = s.charactersPasted || 0;
       const aiChars = s.aiChars || 0;
       const total = manualChars + pasteChars + aiChars;
@@ -238,6 +238,9 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
           isOffline: s.isOffline || false,
           pasteCount: s.pasteCount || 0,
           charactersPasted: s.charactersPasted || 0,
+          manualChars: s.manualChars || 0,
+          aiChars: s.aiChars || 0,
+          aiEvents: s.aiEvents || 0,
           createdAt: new Date()
         };
         mockDb.mockVscodeSessions.push(newSession);
@@ -309,7 +312,10 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
           linesRemoved: s.linesRemoved || 0,
           isOffline: s.isOffline || false,
           pasteCount: s.pasteCount || 0,
-          charactersPasted: s.charactersPasted || 0
+          charactersPasted: s.charactersPasted || 0,
+          manualChars: s.manualChars || 0,
+          aiChars: s.aiChars || 0,
+          aiEvents: s.aiEvents || 0
         });
         await newSession.save();
         savedSessions.push(newSession);

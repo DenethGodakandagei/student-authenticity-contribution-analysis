@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deactivate = exports.activate = void 0;
+exports.deactivate = exports.activate = exports.hasAiSignatures = exports.isMatchingClipboard = exports.refreshClipboardText = exports.addToClipboardHistory = void 0;
 const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -49,6 +49,8 @@ const health_check_1 = require("./sync/health-check");
 const batch_sync_1 = require("./sync/batch-sync");
 // ─── ML Features & Sliding Window (Plan 5) ───────────────────────────────────
 const sliding_window_1 = require("./features/sliding-window");
+// ─── Line Provenance & Visual Highlighting ──────────────────────────────────
+const line_provenance_tracker_1 = require("./features/line-provenance-tracker");
 // ─── UI Polish, Audit Viewer, Performance & Privacy (Plan 6) ─────────────────
 const audit_viewer_1 = require("./ui/audit-viewer");
 const performance_1 = require("./utils/performance");
@@ -69,6 +71,7 @@ let pasteCount = 0;
 let charactersPasted = 0;
 let aiCharsCount = 0;
 let aiEventsCount = 0;
+let manualCharsCount = 0;
 let netInsertedChars = 0;
 let netDeletedChars = 0;
 const editedFiles = new Set();
@@ -94,11 +97,108 @@ const diagnosticSensor = new diagnostic_sensor_1.DiagnosticSensor();
 const focusSensor = new focus_sensor_1.FocusSensor();
 const idleSensor = new idle_sensor_1.IdleSensor();
 const documentSensor = new document_sensor_1.DocumentSensor();
+// ─── Clipboard History & Pre-caching ─────────────────────────────────────────
+let lastReadClipboardText = '';
+let lastClipboardReadTime = 0;
+const recentClipboardHistory = [];
+const MAX_CLIPBOARD_HISTORY = 15;
+function addToClipboardHistory(text) {
+    if (!text || text.trim().length === 0)
+        return;
+    const norm = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    if (norm.length === 0)
+        return;
+    if (recentClipboardHistory[0] === norm)
+        return;
+    const idx = recentClipboardHistory.indexOf(norm);
+    if (idx >= 0) {
+        recentClipboardHistory.splice(idx, 1);
+    }
+    recentClipboardHistory.unshift(norm);
+    if (recentClipboardHistory.length > MAX_CLIPBOARD_HISTORY) {
+        recentClipboardHistory.pop();
+    }
+}
+exports.addToClipboardHistory = addToClipboardHistory;
+async function refreshClipboardText() {
+    const now = Date.now();
+    if (now - lastClipboardReadTime < 300) {
+        return lastReadClipboardText;
+    }
+    try {
+        const text = await vscode.env.clipboard.readText();
+        lastReadClipboardText = text || '';
+        lastClipboardReadTime = now;
+        if (lastReadClipboardText) {
+            addToClipboardHistory(lastReadClipboardText);
+        }
+    }
+    catch {
+        // Win32 clipboard locked - retain cached value
+    }
+    return lastReadClipboardText;
+}
+exports.refreshClipboardText = refreshClipboardText;
+function isMatchingClipboard(insertedText, currentClip) {
+    if (!insertedText || insertedText.length === 0)
+        return false;
+    const normEndings = (s) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const stripWs = (s) => s.replace(/\s+/g, '');
+    const textNorm = normEndings(insertedText);
+    const textTrimmed = textNorm.trim();
+    if (textTrimmed.length === 0)
+        return false;
+    const textWs = stripWs(textNorm);
+    const candidates = [currentClip, ...recentClipboardHistory].filter(Boolean);
+    for (const candidate of candidates) {
+        const clipNorm = normEndings(candidate);
+        const clipTrimmed = clipNorm.trim();
+        if (clipTrimmed.length === 0)
+            continue;
+        // Direct matches
+        if (textNorm === clipNorm || textTrimmed === clipTrimmed)
+            return true;
+        if (clipNorm.startsWith(textNorm) || clipTrimmed.startsWith(textTrimmed))
+            return true;
+        if (clipTrimmed.endsWith(textTrimmed))
+            return true;
+        // Substring matches for partial pastes or selection pastes
+        if (textTrimmed.length >= 4 && clipTrimmed.includes(textTrimmed))
+            return true;
+        if (clipTrimmed.length >= 4 && textTrimmed.includes(clipTrimmed))
+            return true;
+        // Whitespace-agnostic match (auto-indentation by VS Code on paste)
+        const clipWs = stripWs(clipNorm);
+        if (clipWs.length >= 4 && textWs.length >= 4) {
+            if (clipWs === textWs || clipWs.includes(textWs) || textWs.includes(clipWs)) {
+                return true;
+            }
+        }
+        // Line-by-line overlap comparison for multiline pastes
+        const clipLines = clipNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 3);
+        const textLines = textNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 3);
+        if (clipLines.length > 0 && textLines.length > 0) {
+            const matchCount = textLines.filter(tl => clipLines.some(cl => cl === tl || cl.includes(tl) || tl.includes(cl))).length;
+            if (matchCount >= 2 || (textLines.length === 1 && matchCount === 1 && textTrimmed.length >= 6)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+exports.isMatchingClipboard = isMatchingClipboard;
+function hasAiSignatures(text) {
+    return (/\/\/\s*(here('?s| is)|generated (by|with)|auto-?generated|ai[- ]assistant|copilot|chatgpt|claude|gemini|openai|step \d+:|helper function to|implementation of|prompt:|solution:)/i.test(text) ||
+        /\/\*\s*(auto-?generated|generated by ai|ai assistant|solution provided by|copilot)/i.test(text) ||
+        /```(?:js|javascript|ts|typescript|python|py|html|css|json)?/i.test(text) ||
+        /^(?:Certainly!|Sure!|Here is|Below is the code|This function|I have created|Hope this helps)/im.test(text));
+}
+exports.hasAiSignatures = hasAiSignatures;
 // ─────────────────────────────────────────────────────────────────────────────
 //  PROVENANCE & TELEMETRY SNAPSHOT
 // ─────────────────────────────────────────────────────────────────────────────
 function computeLiveProvenance() {
-    const manual = keystrokeCount;
+    const manual = manualCharsCount > 0 ? manualCharsCount : keystrokeCount;
     const paste = charactersPasted;
     const ai = aiCharsCount;
     const total = manual + paste + ai;
@@ -141,6 +241,7 @@ function getTelemetrySnapshot() {
         linesRemoved: linesRemovedCount,
         pasteCount,
         charactersPasted,
+        manualCharsCount,
         aiCharsCount,
         aiEventsCount,
         netInsertedChars,
@@ -175,7 +276,10 @@ function getTelemetrySnapshot() {
         // ── Plan 5 & 6 Sliding Window & Performance ──
         latestWindow: sliding_window_1.defaultSlidingWindowManager.getLatestWindow(),
         recentWindows: sliding_window_1.defaultSlidingWindowManager.getRecentWindows(),
-        performance: (0, performance_1.getPerformanceStats)()
+        performance: (0, performance_1.getPerformanceStats)(),
+        // ── Line Provenance & Visual Highlighting ──
+        activeDocumentProvenance: line_provenance_tracker_1.defaultLineProvenanceTracker.getActiveSummary(),
+        isProvenanceHighlightingEnabled: line_provenance_tracker_1.defaultLineProvenanceTracker.isHighlightingEnabled
     };
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,6 +329,7 @@ function startSession(workspaceRoot) {
     linesRemovedCount = 0;
     pasteCount = 0;
     charactersPasted = 0;
+    manualCharsCount = 0;
     aiCharsCount = 0;
     aiEventsCount = 0;
     netInsertedChars = 0;
@@ -299,6 +404,9 @@ async function saveAndSyncSession(context) {
         isOffline: false,
         pasteCount,
         charactersPasted,
+        manualChars: manualCharsCount,
+        aiChars: aiCharsCount,
+        aiEvents: aiEventsCount,
         // ── Plan 2 additions ──
         saveCount: documentSensor.saveCount,
         fileOpenCount: documentSensor.fileOpenCount,
@@ -535,6 +643,12 @@ function activate(context) {
     context.subscriptions.push(sliding_window_1.defaultSlidingWindowManager.onWindowComputed(() => {
         broadcastStateToWebviews();
     }));
+    // ── Line-Level Provenance & Visual Highlighting ─────────────────────────
+    line_provenance_tracker_1.defaultLineProvenanceTracker.register(context);
+    context.subscriptions.push(line_provenance_tracker_1.defaultLineProvenanceTracker);
+    context.subscriptions.push(line_provenance_tracker_1.defaultLineProvenanceTracker.onProvenanceChanged(() => {
+        broadcastStateToWebviews();
+    }));
     // ── Dashboard Helper (Plan 6: ML tab & sliding window compute) ─────────
     function openDashboard(tab) {
         (0, dashboard_panel_1.openInteractiveDashboard)(context, {
@@ -597,6 +711,20 @@ function activate(context) {
     // ══════════════════════════════════════════════════════════════════════
     //  EVENT HANDLERS (enhanced with noise filtering & sensors)
     // ══════════════════════════════════════════════════════════════════════
+    // ── Window Focus Clipboard Pre-caching ──────────────────────────────────
+    context.subscriptions.push(vscode.window.onDidChangeWindowState(async (state) => {
+        if (state.focused) {
+            try {
+                const text = await vscode.env.clipboard.readText();
+                if (text) {
+                    lastReadClipboardText = text;
+                    lastClipboardReadTime = Date.now();
+                    addToClipboardHistory(text);
+                }
+            }
+            catch { }
+        }
+    }));
     // ── Text Document Change Handler (Keystroke / Paste / AI Detection) ────
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(async (event) => {
         if (event.document.uri.scheme !== 'file')
@@ -605,7 +733,6 @@ function activate(context) {
         if (!(0, noise_filter_1.shouldTrackEdit)(event.document.uri))
             return;
         const now = Date.now();
-        const timeDelta = lastActivityTime > 0 ? (now - lastActivityTime) : 150;
         lastActivityTime = now;
         idleSensor.reportActivity();
         if (!sessionStart && workspaceRoot)
@@ -613,149 +740,128 @@ function activate(context) {
         const relativePath = vscode.workspace.asRelativePath(event.document.uri, false).replace(/\\/g, '/');
         editedFiles.add(relativePath);
         const fileItem = getOrCreateFileActivity(relativePath, event.document.uri);
-        // Read OS clipboard as the gold standard paste signal
-        let clipboardText = '';
-        try {
-            clipboardText = await vscode.env.clipboard.readText();
-        }
-        catch {
-            clipboardText = '';
-        }
+        const records = fileItem.lineRecords || [];
+        fileItem.lineRecords = records;
+        const timeIso = new Date().toISOString();
+        const isCurrentlyOffline = (0, status_bar_1.getStatusState)() === 'error';
         for (const change of event.contentChanges) {
             const text = change.text;
             const textLen = text.length;
-            // Track net deleted chars (rangeLength = chars replaced/deleted)
+            const startLine0 = change.range.start.line;
+            const endLine0 = change.range.end.line;
+            const deletedLines = endLine0 - startLine0;
+            const insertedLines = text.split(/\r?\n/);
+            const addedLines = insertedLines.length - 1;
+            // 1. Handle Line Deletions & Line Number Shifting
+            if (deletedLines > 0) {
+                linesRemovedCount += deletedLines;
+                fileItem.linesRemoved += deletedLines;
+                // Remove records for lines deleted within the range (exclusive of startLine, up to endLine)
+                const kept = records.filter(r => !(r.lineNumber > startLine0 + 1 && r.lineNumber <= endLine0 + 1));
+                records.length = 0;
+                records.push(...kept);
+                // Shift all lines that were after the deleted range downwards
+                for (const r of records) {
+                    if (r.lineNumber > endLine0 + 1) {
+                        r.lineNumber -= deletedLines;
+                    }
+                }
+            }
+            // Track net deleted characters
             if (change.rangeLength > 0) {
                 netDeletedChars += change.rangeLength;
                 fileItem.netDeletedChars += change.rangeLength;
             }
-            if (textLen === 0)
-                continue; // pure deletion, no insertion
-            // Track net inserted chars
-            netInsertedChars += textLen;
-            fileItem.netInsertedChars += textLen;
-            const added = text.split('\n').length - 1;
-            if (added > 0) {
-                linesAddedCount += added;
-                fileItem.linesAdded += added;
+            // Pure deletion with no text inserted
+            if (textLen === 0) {
+                continue;
             }
-            if (change.rangeLength > 0) {
-                const removed = change.range.end.line - change.range.start.line;
-                if (removed > 0) {
-                    linesRemovedCount += removed;
-                    fileItem.linesRemoved += removed;
+            // 2. Handle Line Insertions & Line Number Shifting
+            if (addedLines > 0) {
+                linesAddedCount += addedLines;
+                fileItem.linesAdded += addedLines;
+                // Shift existing records after the insertion point upwards
+                for (const r of records) {
+                    if (r.lineNumber > startLine0 + 1) {
+                        r.lineNumber += addedLines;
+                    }
                 }
             }
-            // PRIMARY TIER 1: Exact Clipboard Match (Ctrl+V / User Clipboard Paste)
-            const normEndings = (s) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            const clipNorm = normEndings(clipboardText);
-            const textNorm = normEndings(text);
-            const clipTrimmed = clipNorm.trim();
-            const textTrimmed = textNorm.trim();
-            // Whitespace-agnostic comparison for indented or reformatted code pastes
-            const stripWs = (s) => s.replace(/\s+/g, '');
-            const clipWs = stripWs(clipNorm);
-            const textWs = stripWs(textNorm);
-            const isWsMatch = clipWs.length > 0 && textWs.length > 0 && (clipWs === textWs ||
-                clipWs.includes(textWs) ||
-                textWs.includes(clipWs));
-            // Line-by-line overlap comparison for multi-line pastes
-            const clipLines = clipNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
-            const textLines = textNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
-            const hasSharedLines = textLines.length > 0 && textLines.some(tl => clipLines.some(cl => cl === tl || cl.includes(tl) || tl.includes(cl)));
-            const isClipboardMatch = (clipTrimmed.length > 0 && textTrimmed.length > 0 && (textNorm === clipNorm ||
-                textTrimmed === clipTrimmed ||
-                clipNorm.startsWith(textNorm) ||
-                clipTrimmed.startsWith(textTrimmed) ||
-                (textTrimmed.length >= 2 && clipTrimmed.includes(textTrimmed)) ||
-                (clipTrimmed.length >= 2 && textTrimmed.includes(clipTrimmed)))) || isWsMatch || (textLines.length > 1 && hasSharedLines);
-            // AI AGENT vs USER PASTE vs MANUAL TYPING SIGNALS:
-            const lines = text.split(/\r?\n/);
-            const nonEmptyLines = lines.filter(l => l.trim().length > 0);
+            // Track net inserted characters
+            netInsertedChars += textLen;
+            fileItem.netInsertedChars += textLen;
+            // 3. Typing Pattern & Provenance Classification
+            const nonEmptyLines = insertedLines.filter(l => l.trim().length > 0);
             const isMultiLine = nonEmptyLines.length > 1;
-            // Realistic human typing patterns:
-            // A single keystroke produces 1 char, Enter (\n or \r\n), tab/indent (1-4 spaces), or auto-close pair
             const isSingleKey = textLen === 1;
             const isEnterKey = text === '\n' || text === '\r\n';
-            const isTabOrIndent = /^\s{1,4}$/.test(text);
+            const isTabOrIndent = /^\s{1,8}$/.test(text);
             const isAutoClosePair = /^(\(\)|\[\]|\{\}|""|''|``|<>)$/.test(text);
-            const isPlausibleKeystroke = (isSingleKey || isEnterKey || isTabOrIndent || isAutoClosePair) && !isClipboardMatch;
-            // AI assistant code generation:
-            // Multi-line code or multi-token block inserted without matching OS clipboard
-            const isAiGenerated = !isClipboardMatch && (isMultiLine || textLen >= 25);
-            let lineProvenance = 'manual';
-            // 1. User Clipboard Paste
-            if (isClipboardMatch) {
-                pasteCount++;
-                charactersPasted += textLen;
-                fileItem.pasteEvents++;
-                fileItem.pasteChars += textLen;
-                lineProvenance = 'copy_paste';
-                // Record paste burst detail with text preview
-                pasteBursts.push({
-                    charCount: textLen,
-                    lineCountDelta: added,
-                    textPreview: text.slice(0, 100),
-                    timestamp: new Date().toISOString()
-                });
-                // Store PASTE_BURST event to SQLite
-                storeEvent('PASTE_BURST', fileItem.category, relativePath, {
-                    charCount: textLen,
-                    lineCountDelta: added,
-                    textPreview: text.slice(0, 100)
-                });
-                idleSensor.reportActivity();
+            let clipboardMatched = false;
+            if (!isSingleKey && !isEnterKey && !isTabOrIndent && !isAutoClosePair) {
+                const currentClip = await refreshClipboardText();
+                clipboardMatched = isMatchingClipboard(text, currentClip);
             }
-            // 2. AI Assistant / Automated Code Generation (Copilot, Cursor, Roo, ChatGPT, inline chat)
-            else if (isAiGenerated) {
+            const hasAiMarker = hasAiSignatures(text);
+            let lineProvenance = 'manual';
+            // ── Provenance Decision Logic ──
+            // A. Explicit AI Assistant signatures (e.g. pasted ChatGPT code with prompts/comments or markdown blocks)
+            if (hasAiMarker) {
+                lineProvenance = 'ai_assisted';
                 aiEventsCount++;
                 aiCharsCount += textLen;
                 fileItem.aiEvents++;
                 fileItem.aiChars += textLen;
-                lineProvenance = 'ai_assisted';
-                // Store AI event to SQLite
                 storeEvent('KEYSTROKE', fileItem.category, relativePath, {
                     provenance: 'ai_assisted',
                     action: 'ai_assistant_code_generation',
                     charCount: textLen,
-                    lineCount: added
+                    lineCount: addedLines
                 });
                 idleSensor.reportActivity();
             }
-            // 3. Genuine Manual Keystroke
-            else if (isPlausibleKeystroke) {
-                keystrokeCount++;
-                fileItem.manualKeystrokes++;
-                fileItem.manualChars += textLen;
-                lineProvenance = 'manual';
-                idleSensor.reportKeystroke();
-                // Store KEYSTROKE event to SQLite
-                storeEvent('KEYSTROKE', fileItem.category, relativePath, {
-                    provenance: 'manual', charCount: textLen
-                });
-            }
-            // 4. Fallback snippet paste
-            else {
+            // B. User Clipboard Paste or Multi-Line / Large insertion burst
+            // (Ctrl+V from browser/external window, workspace copy, or multi-line paste)
+            else if (clipboardMatched || isMultiLine || textLen >= 25) {
+                lineProvenance = 'copy_paste';
                 pasteCount++;
                 charactersPasted += textLen;
                 fileItem.pasteEvents++;
                 fileItem.pasteChars += textLen;
-                lineProvenance = 'copy_paste';
+                pasteBursts.push({
+                    charCount: textLen,
+                    lineCountDelta: addedLines,
+                    textPreview: text.slice(0, 100),
+                    timestamp: timeIso
+                });
+                storeEvent('PASTE_BURST', fileItem.category, relativePath, {
+                    charCount: textLen,
+                    lineCountDelta: addedLines,
+                    textPreview: text.slice(0, 100)
+                });
                 idleSensor.reportActivity();
             }
-            // Record exact line-by-line provenance
-            if (!fileItem.lineRecords)
-                fileItem.lineRecords = [];
-            const startLineNum = change.range.start.line + 1;
-            const insertedLines = text.split('\n');
-            const timeIso = new Date().toISOString();
-            const isCurrentlyOffline = (0, status_bar_1.getStatusState)() === 'error';
-            const records = fileItem.lineRecords;
-            insertedLines.forEach((lText, lIdx) => {
-                const lNum = startLineNum + lIdx;
+            // C. Authentic Human Manual Keystroke
+            else {
+                lineProvenance = 'manual';
+                const strokeInc = (isSingleKey || isEnterKey) ? 1 : Math.max(1, Math.round(textLen * 0.7));
+                keystrokeCount += strokeInc;
+                manualCharsCount += textLen;
+                fileItem.manualKeystrokes += strokeInc;
+                fileItem.manualChars += textLen;
+                storeEvent('KEYSTROKE', fileItem.category, relativePath, {
+                    provenance: 'manual',
+                    charCount: textLen
+                });
+                idleSensor.reportKeystroke();
+            }
+            // 4. Record Exact Line-by-Line Provenance
+            insertedLines.forEach((lText, idx) => {
+                const lNum = startLine0 + 1 + idx;
+                const cleanLText = lText.replace(/\r$/, '');
                 const lineRec = {
                     lineNumber: lNum,
-                    lineText: lText.slice(0, 120),
+                    lineText: cleanLText.slice(0, 120),
                     provenance: lineProvenance,
                     isOffline: isCurrentlyOffline,
                     timestamp: timeIso
@@ -768,6 +874,9 @@ function activate(context) {
                     records.push(lineRec);
                 }
             });
+            // Keep lineRecords cleanly sorted by line number
+            records.sort((a, b) => a.lineNumber - b.lineNumber);
+            fileItem.lineRecords = records;
             // Re-evaluate file-level typingProvenance
             const fTotal = fileItem.manualChars + fileItem.pasteChars + fileItem.aiChars;
             if (fTotal > 0) {
@@ -840,8 +949,9 @@ function activate(context) {
         if (uri.scheme !== 'file' || !(0, noise_filter_1.shouldTrackFile)(uri))
             return;
         const fsPath = uri.fsPath;
-        const isActivelyOpen = vscode.window.activeTextEditor?.document.uri.fsPath === fsPath;
-        if (!isActivelyOpen) {
+        const normUri = (0, noise_filter_1.normalizeFsPath)(fsPath);
+        const isOpenInAnyEditor = vscode.workspace.textDocuments.some(doc => (0, noise_filter_1.normalizeFsPath)(doc.uri.fsPath) === normUri);
+        if (!isOpenInAnyEditor) {
             try {
                 const stats = await fs.promises.stat(fsPath);
                 const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
@@ -858,42 +968,60 @@ function activate(context) {
                 const newDocLen = content.length;
                 const loggedChars = fileItem.manualChars + fileItem.pasteChars + fileItem.aiChars;
                 const deltaChars = Math.max(0, newDocLen - loggedChars);
-                fileItem.aiChars += deltaChars;
-                fileItem.aiEvents += 1;
-                fileItem.typingProvenance = 'ai_assisted';
-                fileItem.linesAdded = Math.max(fileItem.linesAdded, lines.length);
-                aiCharsCount += deltaChars;
-                aiEventsCount += 1;
                 const mtimeIso = new Date(stats.mtimeMs).toISOString();
                 if (!fileItem.lineRecords)
                     fileItem.lineRecords = [];
+                let hasExplicitAi = false;
                 lines.forEach((lineText, idx) => {
                     const lNum = idx + 1;
+                    const cleanText = lineText.replace(/\r$/, '');
                     const exist = fileItem.lineRecords.find(r => r.lineNumber === lNum);
+                    const trimmed = cleanText.trim();
+                    const isAiLine = /^\/\/\s*(here('?s| is)|generated (by|with)|auto-?generated|ai[- ]assistant|copilot|chatgpt|claude|gemini|openai|step \d+:|helper function to)/i.test(trimmed) ||
+                        /^\/\*\s*(auto-?generated|generated by ai)/i.test(trimmed);
+                    if (isAiLine)
+                        hasExplicitAi = true;
+                    const defaultProv = isAiLine ? 'ai_assisted' : 'copy_paste';
                     if (!exist) {
                         fileItem.lineRecords.push({
                             lineNumber: lNum,
-                            lineText: lineText.slice(0, 120),
-                            provenance: 'ai_assisted',
+                            lineText: cleanText.slice(0, 120),
+                            provenance: defaultProv,
                             isOffline: false,
                             timestamp: mtimeIso
                         });
                     }
-                    else if (exist.lineText !== lineText.slice(0, 120)) {
-                        exist.lineText = lineText.slice(0, 120);
-                        exist.provenance = 'ai_assisted';
+                    else if (exist.lineText !== cleanText.slice(0, 120)) {
+                        exist.lineText = cleanText.slice(0, 120);
+                        if (isAiLine)
+                            exist.provenance = 'ai_assisted';
                         exist.timestamp = mtimeIso;
                     }
                 });
+                if (hasExplicitAi) {
+                    fileItem.aiChars += deltaChars;
+                    fileItem.aiEvents += 1;
+                    fileItem.typingProvenance = 'ai_assisted';
+                    aiCharsCount += deltaChars;
+                    aiEventsCount += 1;
+                }
+                else {
+                    fileItem.pasteChars += deltaChars;
+                    fileItem.pasteEvents += 1;
+                    fileItem.typingProvenance = fileItem.manualChars > 0 ? 'mixed' : 'copy_paste';
+                    charactersPasted += deltaChars;
+                    pasteCount += 1;
+                }
+                fileItem.linesAdded = Math.max(fileItem.linesAdded, lines.length);
                 storeEvent('KEYSTROKE', (0, noise_filter_1.categorizeFile)(uri), rel, {
-                    provenance: 'ai_assisted',
-                    action: 'external_agent_file_mod',
+                    provenance: hasExplicitAi ? 'ai_assisted' : 'copy_paste',
+                    action: hasExplicitAi ? 'external_agent_file_mod' : 'disk_file_mod',
                     isExternalDiskWrite: true,
                     isOpenInEditor: false,
                     charCount: deltaChars,
                     sizeBytes: stats.size,
                     mtimeMs: stats.mtimeMs,
-                    description: 'Background edit on disk made to closed file by external AI agent / tool'
+                    description: hasExplicitAi ? 'Background edit by AI tool' : 'File saved/updated on disk'
                 });
                 broadcastStateToWebviews();
                 triggerDebouncedAutoSync(context, 1000);
@@ -919,32 +1047,52 @@ function activate(context) {
             catch { }
             const lines = content ? content.split(/\r?\n/) : [];
             const docLen = content.length;
-            // If a file was created with code content and zero manual keystrokes were typed for it:
-            // It was built/generated by an AI assistant or external generator
+            // Classify lines accurately based on content characteristics
             if (docLen > 0 && fileItem.manualKeystrokes === 0) {
-                fileItem.aiChars = docLen;
-                fileItem.aiEvents = Math.max(1, fileItem.aiEvents);
-                fileItem.typingProvenance = 'ai_assisted';
-                fileItem.linesAdded = lines.length;
-                aiCharsCount += docLen;
-                aiEventsCount += 1;
-                linesAddedCount += lines.length;
                 const mtimeIso = new Date(stats.mtimeMs).toISOString();
-                fileItem.lineRecords = lines.map((lineText, idx) => ({
-                    lineNumber: idx + 1,
-                    lineText: lineText.slice(0, 120),
-                    provenance: 'ai_assisted',
-                    isOffline: false,
-                    timestamp: mtimeIso
-                }));
+                let aiLineCount = 0;
+                fileItem.lineRecords = lines.map((lineText, idx) => {
+                    const cleanText = lineText.replace(/\r$/, '');
+                    const trimmed = cleanText.trim();
+                    const isAi = /^\/\/\s*(here('?s| is)|generated (by|with)|auto-?generated|ai[- ]assistant|copilot|chatgpt|claude|gemini|openai|step \d+:|helper function to)/i.test(trimmed) ||
+                        /^\/\*\s*(auto-?generated|generated by ai)/i.test(trimmed);
+                    const p = isAi ? 'ai_assisted' : 'copy_paste';
+                    if (p === 'ai_assisted')
+                        aiLineCount++;
+                    return {
+                        lineNumber: idx + 1,
+                        lineText: cleanText.slice(0, 120),
+                        provenance: p,
+                        isOffline: false,
+                        timestamp: mtimeIso
+                    };
+                });
+                fileItem.linesAdded = lines.length;
+                linesAddedCount += lines.length;
+                if (aiLineCount > 0) {
+                    fileItem.aiChars = docLen;
+                    fileItem.aiEvents = Math.max(1, fileItem.aiEvents);
+                    fileItem.typingProvenance = 'ai_assisted';
+                    aiCharsCount += docLen;
+                    aiEventsCount += 1;
+                }
+                else {
+                    fileItem.pasteChars = docLen;
+                    fileItem.pasteEvents = Math.max(1, fileItem.pasteEvents);
+                    fileItem.typingProvenance = 'copy_paste';
+                    charactersPasted += docLen;
+                    pasteCount += 1;
+                }
+                fileItem.manualChars = 0;
+                fileItem.manualKeystrokes = 0;
                 storeEvent('FILE_CREATE', (0, noise_filter_1.categorizeFile)(uri), rel, {
-                    provenance: 'ai_assisted',
-                    action: 'ai_assistant_file_create',
+                    provenance: fileItem.typingProvenance,
+                    action: fileItem.typingProvenance === 'ai_assisted' ? 'ai_assistant_file_create' : 'file_create',
                     isExternalDiskWrite: true,
                     charCount: docLen,
                     sizeBytes: stats.size,
                     mtimeMs: stats.mtimeMs,
-                    description: 'New file created and populated by AI assistant'
+                    description: fileItem.typingProvenance === 'ai_assisted' ? 'New file created by AI assistant' : 'New file created on disk'
                 });
                 broadcastStateToWebviews();
                 triggerDebouncedAutoSync(context, 1000);
@@ -1096,6 +1244,15 @@ function activate(context) {
     }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.setupParticipant', () => (0, onboarding_1.reconfigureParticipant)(context)));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.switchTask', () => (0, onboarding_1.switchTaskCondition)(context)));
+    context.subscriptions.push(vscode.commands.registerCommand('extension.toggleProvenanceHighlighting', () => {
+        const enabled = line_provenance_tracker_1.defaultLineProvenanceTracker.toggleHighlighting();
+        broadcastStateToWebviews();
+        return enabled;
+    }), vscode.commands.registerCommand('collabintel.toggleProvenanceHighlighting', () => {
+        const enabled = line_provenance_tracker_1.defaultLineProvenanceTracker.toggleHighlighting();
+        broadcastStateToWebviews();
+        return enabled;
+    }));
     // 1-Click offline failsafe exporter
     (0, export_bundle_1.registerExportCommand)(context, globalStoragePath);
     // ── Flush Offline Cache on Startup ─────────────────────────────────────

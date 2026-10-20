@@ -159,6 +159,9 @@ export interface IVSCodeSession extends Document {
   isOffline: boolean;
   pasteCount: number;
   charactersPasted: number;
+  manualChars?: number;
+  aiChars?: number;
+  aiEvents?: number;
   createdAt: Date;
 }
 
@@ -212,6 +215,9 @@ const VSCodeSessionSchema: Schema = new Schema({
   isOffline: { type: Boolean, default: false },
   pasteCount: { type: Number, default: 0 },
   charactersPasted: { type: Number, default: 0 },
+  manualChars: { type: Number, default: 0 },
+  aiChars: { type: Number, default: 0 },
+  aiEvents: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
