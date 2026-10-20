@@ -680,14 +680,12 @@ function activate(context) {
             const isTabOrIndent = /^\s{1,4}$/.test(text);
             const isAutoClosePair = /^(\(\)|\[\]|\{\}|""|''|``|<>)$/.test(text);
             const isPlausibleKeystroke = (isSingleKey || isEnterKey || isTabOrIndent || isAutoClosePair) && !isClipboardMatch;
-            // Paste insertion detection:
-            // If clipboard matched, or multi-line inserted, or textLen >= 15, or non-whitespace insertion >= 2 chars not matching typing pattern
-            const isPastedBlock = isClipboardMatch || isMultiLine || textLen >= 15 || (!isPlausibleKeystroke && textLen >= 2);
-            // AI code synthesis (very fast burst without clipboard)
-            const isInstantBurstWithoutClipboard = !isClipboardMatch && isMultiLine && textLen >= 60 && timeDelta < 40;
+            // AI assistant code generation:
+            // Multi-line code or multi-token block inserted without matching OS clipboard
+            const isAiGenerated = !isClipboardMatch && (isMultiLine || textLen >= 25);
             let lineProvenance = 'manual';
-            // 1. User Clipboard Paste (or pasted snippet / block)
-            if (isPastedBlock && !isInstantBurstWithoutClipboard) {
+            // 1. User Clipboard Paste
+            if (isClipboardMatch) {
                 pasteCount++;
                 charactersPasted += textLen;
                 fileItem.pasteEvents++;
@@ -708,8 +706,8 @@ function activate(context) {
                 });
                 idleSensor.reportActivity();
             }
-            // 2. AI Agent / Automated Code Synthesis
-            else if (isInstantBurstWithoutClipboard) {
+            // 2. AI Assistant / Automated Code Generation (Copilot, Cursor, Roo, ChatGPT, inline chat)
+            else if (isAiGenerated) {
                 aiEventsCount++;
                 aiCharsCount += textLen;
                 fileItem.aiEvents++;
@@ -717,12 +715,15 @@ function activate(context) {
                 lineProvenance = 'ai_assisted';
                 // Store AI event to SQLite
                 storeEvent('KEYSTROKE', fileItem.category, relativePath, {
-                    provenance: 'ai_assisted', charCount: textLen
+                    provenance: 'ai_assisted',
+                    action: 'ai_assistant_code_generation',
+                    charCount: textLen,
+                    lineCount: added
                 });
                 idleSensor.reportActivity();
             }
             // 3. Genuine Manual Keystroke
-            else {
+            else if (isPlausibleKeystroke) {
                 keystrokeCount++;
                 fileItem.manualKeystrokes++;
                 fileItem.manualChars += textLen;
@@ -732,6 +733,15 @@ function activate(context) {
                 storeEvent('KEYSTROKE', fileItem.category, relativePath, {
                     provenance: 'manual', charCount: textLen
                 });
+            }
+            // 4. Fallback snippet paste
+            else {
+                pasteCount++;
+                charactersPasted += textLen;
+                fileItem.pasteEvents++;
+                fileItem.pasteChars += textLen;
+                lineProvenance = 'copy_paste';
+                idleSensor.reportActivity();
             }
             // Record exact line-by-line provenance
             if (!fileItem.lineRecords)
@@ -895,24 +905,25 @@ function activate(context) {
         if (uri.scheme !== 'file' || !(0, noise_filter_1.shouldTrackFile)(uri))
             return;
         const fsPath = uri.fsPath;
-        const isActivelyOpen = vscode.window.activeTextEditor?.document.uri.fsPath === fsPath;
-        if (!isActivelyOpen) {
+        try {
+            const stats = await fs.promises.stat(fsPath);
+            const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
+            createdFiles.add(rel);
+            const fileItem = getOrCreateFileActivity(rel, uri);
+            fileItem.action = 'created';
+            // Read created content from disk
+            let content = '';
             try {
-                const stats = await fs.promises.stat(fsPath);
-                const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
-                createdFiles.add(rel);
-                const fileItem = getOrCreateFileActivity(rel, uri);
-                fileItem.action = 'created';
-                // Read created content from disk
-                let content = '';
-                try {
-                    content = await fs.promises.readFile(fsPath, 'utf8');
-                }
-                catch { }
-                const lines = content ? content.split(/\r?\n/) : [];
-                const docLen = content.length;
+                content = await fs.promises.readFile(fsPath, 'utf8');
+            }
+            catch { }
+            const lines = content ? content.split(/\r?\n/) : [];
+            const docLen = content.length;
+            // If a file was created with code content and zero manual keystrokes were typed for it:
+            // It was built/generated by an AI assistant or external generator
+            if (docLen > 0 && fileItem.manualKeystrokes === 0) {
                 fileItem.aiChars = docLen;
-                fileItem.aiEvents = 1;
+                fileItem.aiEvents = Math.max(1, fileItem.aiEvents);
                 fileItem.typingProvenance = 'ai_assisted';
                 fileItem.linesAdded = lines.length;
                 aiCharsCount += docLen;
@@ -928,18 +939,18 @@ function activate(context) {
                 }));
                 storeEvent('FILE_CREATE', (0, noise_filter_1.categorizeFile)(uri), rel, {
                     provenance: 'ai_assisted',
-                    action: 'external_agent_file_create',
+                    action: 'ai_assistant_file_create',
                     isExternalDiskWrite: true,
                     charCount: docLen,
                     sizeBytes: stats.size,
                     mtimeMs: stats.mtimeMs,
-                    description: 'New file created on disk by external AI agent / tool'
+                    description: 'New file created and populated by AI assistant'
                 });
                 broadcastStateToWebviews();
                 triggerDebouncedAutoSync(context, 1000);
             }
-            catch { }
         }
+        catch { }
     });
     context.subscriptions.push(bgWatcher);
     // ── Save Handler (enhanced with save count) ────────────────────────────

@@ -249,24 +249,40 @@ export default function StudentDashboard() {
               const fEndMs = f.lastModified ? new Date(f.lastModified).getTime() : Date.now();
               const fIso = new Date(fEndMs).toISOString();
               const fChars = f.size || (f.content ? f.content.length : Math.round((f.lineCount || 1) * 35));
+              const hasAiBoilerplate = rawLines.some((l: string) =>
+                /<!doctype\s+html>/i.test(l) ||
+                /<html\b/i.test(l) ||
+                /<meta\s+name=["']viewport["']/i.test(l) ||
+                /function\s+homePage\b/i.test(l) ||
+                /font-family:\s*system-ui/i.test(l)
+              );
 
               return {
                 filePath: f.path,
                 action: 'edited',
                 manualChars: 0,
-                pasteChars: fChars,
-                aiChars: 0,
+                pasteChars: hasAiBoilerplate ? 0 : fChars,
+                aiChars: hasAiBoilerplate ? fChars : 0,
                 manualKeystrokes: 0,
-                pasteEvents: 1,
-                aiEvents: 0,
-                typingProvenance: 'copy_paste',
+                pasteEvents: hasAiBoilerplate ? 0 : 1,
+                aiEvents: hasAiBoilerplate ? 1 : 0,
+                typingProvenance: hasAiBoilerplate ? 'ai_assisted' : 'copy_paste',
                 linesAdded: f.lineCount || 0,
                 linesRemoved: 0,
                 lineRecords: rawLines.slice(0, 300).map((lineText: string, idx: number) => {
                   const trimmed = lineText.trim();
                   const isMarkdownOrBullet = /^[-*+]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed) || /^[A-Z]{2,}-\d+/.test(trimmed) || /^(ub-)?problem/i.test(trimmed);
-                  const isCode = /^(function|funxtion|class|const|let|var|import|export|console\.log|if|else|return|\}|\{)/.test(trimmed);
-                  const prov = isMarkdownOrBullet ? 'copy_paste' : (isCode ? 'manual' : 'copy_paste');
+                  const isHumanTypoOrGreeting = /funxtion|functons/.test(trimmed) || trimmed === 'hi' || /^hi\s+name\b/i.test(trimmed);
+                  let prov: 'manual' | 'copy_paste' | 'ai_assisted' = 'ai_assisted';
+                  if (isMarkdownOrBullet) {
+                    prov = 'copy_paste';
+                  } else if (isHumanTypoOrGreeting) {
+                    prov = 'manual';
+                  } else if (hasAiBoilerplate) {
+                    prov = 'ai_assisted';
+                  } else {
+                    prov = 'copy_paste';
+                  }
                   return {
                     lineNumber: idx + 1,
                     lineText,

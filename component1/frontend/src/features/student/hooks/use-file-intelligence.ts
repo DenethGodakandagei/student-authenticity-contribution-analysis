@@ -166,6 +166,8 @@ export function getFileIntelligence(
         existing.keystrokes += matchingFa.manualKeystrokes || matchingFa.manualChars || 0;
         existing.pasteCount += matchingFa.pasteEvents || 0;
         existing.charactersPasted += matchingFa.pasteChars || 0;
+        existing.aiChars = (existing.aiChars || 0) + (matchingFa.aiChars || 0);
+        existing.aiEvents = (existing.aiEvents || 0) + (matchingFa.aiEvents || 0);
         existing.linesAdded += matchingFa.linesAdded || 0;
         existing.linesRemoved += matchingFa.linesRemoved || 0;
       }
@@ -238,6 +240,8 @@ export function getFileIntelligence(
   const totalKeystrokes = collaborators.reduce((acc, c) => acc + c.keystrokes, 0);
   const totalPasteCount = collaborators.reduce((acc, c) => acc + c.pasteCount, 0);
   const totalCharsPasted = collaborators.reduce((acc, c) => acc + c.charactersPasted, 0);
+  const totalAiChars = collaborators.reduce((acc, c) => acc + (c.aiChars || 0), 0);
+  const totalAiEvents = collaborators.reduce((acc, c) => acc + (c.aiEvents || 0), 0);
   const totalLinesAdded = Math.max(file.lineCount || (file.lines ? file.lines.length : 1), collaborators.reduce((acc, c) => acc + c.linesAdded, 0));
 
   const keff = totalLinesAdded > 0 ? parseFloat((totalKeystrokes / totalLinesAdded).toFixed(2)) : 0;
@@ -298,6 +302,16 @@ export function getFileIntelligence(
     return diff >= 14000 && diff <= 16000;
   });
 
+  // Pre-check for AI assistant generated code / boilerplate (HTML doctype, responsive viewport, homePage handler, etc.)
+  const hasAiBoilerplate = rawLines.some(l =>
+    /<!doctype\s+html>/i.test(l) ||
+    /<html\b/i.test(l) ||
+    /<meta\s+name=["']viewport["']/i.test(l) ||
+    /function\s+homePage\b/i.test(l) ||
+    /font-family:\s*system-ui/i.test(l)
+  );
+  const isAiGeneratedFile = hasAiBoilerplate || hasExternalAiActivity || totalAiChars > 0 || (totalKeystrokes === 0 && rawLines.length >= 5);
+
   // Accurate line attribution
   const lineAttributions = rawLines.map((lineContent, idx) => {
     const currentLineNum = idx + 1;
@@ -333,27 +347,33 @@ export function getFileIntelligence(
         !/[;{}=><()[\]]/.test(trimmed) &&
         /\b(tracks?|plagiarism|problem|solution|offline|support|privacy|collects?|measures?|speed|analyzes?|analysis|requirements?|addressed|traditional|struggle|identify)\b/i.test(trimmed);
 
-      // B. Manually typed code characteristics
+      // B. Human typing characteristics (human typos, greetings, manual statements)
+      const isHumanTypo = /funxtion|functons/.test(trimmed);
       const isGreetingOrTest = trimmed === 'hi' || /^hi\s+name\b/i.test(trimmed);
-      const isCodeStatement = /^(function|funxtion|class|const|let|var|import|export|console\.log|if|else|return|while|for)\b/.test(trimmed) ||
-                              /funxtion|functons/.test(trimmed) ||
-                              /console\.log\(/.test(trimmed);
-      const isBrace = trimmed === '}' || trimmed === '{' || trimmed === '};' || trimmed === '},';
 
+      // C. AI Generated File check (home.js, generated templates, AI code synthesis)
       if (isMarkdownBullet || isNumberedList || isRequirementTag || isDocHeader || isProseDocumentation) {
         pType = 'pasted';
-      } else if (isGreetingOrTest || isCodeStatement || isBrace) {
+      } else if (isHumanTypo || (isGreetingOrTest && !isAiGeneratedFile)) {
         pType = 'typed';
-      } else if (hasExternalAiActivity && recordedLine?.provenance !== 'manual') {
-        // Line added during external AI tool background file modification
+      } else if (isAiGeneratedFile && recordedLine?.provenance !== 'manual') {
+        // AI assistant built the file or generated the code block
         pType = 'ai_generated';
       } else if (trimmed.length === 0) {
         // Blank line: follow surrounding block
         const prevIsBullet = /^[-*+]\s+/.test(prevTrimmed) || /^\d+\.\s+/.test(prevTrimmed) || /^(ub-)?problem/i.test(prevTrimmed);
         const nextIsBullet = /^[-*+]\s+/.test(nextTrimmed) || /^\d+\.\s+/.test(nextTrimmed);
-        pType = (prevIsBullet || nextIsBullet) ? 'pasted' : 'typed';
+        if (prevIsBullet || nextIsBullet) {
+          pType = 'pasted';
+        } else if (isAiGeneratedFile) {
+          pType = 'ai_generated';
+        } else {
+          pType = 'typed';
+        }
       } else if (recordedLine?.provenance === 'manual') {
         pType = 'typed';
+      } else if (isAiGeneratedFile) {
+        pType = 'ai_generated';
       } else if (trimmed.length > 50 && !/[;{}=><()]/.test(trimmed)) {
         pType = 'pasted';
       } else {
