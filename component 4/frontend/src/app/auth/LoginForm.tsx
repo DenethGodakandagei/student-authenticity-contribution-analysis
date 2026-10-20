@@ -164,7 +164,7 @@ export default function LoginForm() {
             delayMs={0}
           />
           <p className="auth-note" style={{ marginTop: '0.55rem' }}>
-            Sets your landing page after sign-in — permissions are always granted by
+            Sets your landing page after signin -permissions are always granted by
             the NOVA server.
           </p>
         </div>
@@ -245,7 +245,7 @@ export default function LoginForm() {
                 />
               </svg>
             </span>
-            Signed in — taking you to your workspace…
+            Signedin -taking you to your workspace…
           </p>
         )}
 

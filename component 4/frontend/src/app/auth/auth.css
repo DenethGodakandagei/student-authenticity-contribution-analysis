@@ -21,7 +21,7 @@
   color: inherit;
 }
 
-.auth-page button {
+.auth-page button:not(.auth-btn) {
   background: none;
   border: 0;
   padding: 0;
@@ -33,22 +33,25 @@
 
 /* ── 2. Tokens ──────────────────────────────────────────────────────────── */
 :root {
-  --nova-ink: #edf0fa;
-  --nova-muted: #99a2c0;
-  --nova-faint: #6f7796;
-  --nova-violet: #7c5cff;
-  --nova-violet-soft: #a08cff;
-  --nova-indigo: #4f46e5;
-  --nova-cyan: #5ee7f5;
-  --nova-rose: #fb7185;
-  --nova-amber: #fbbf24;
-  --nova-green: #34d399;
-  --nova-line: rgba(255, 255, 255, 0.09);
-  --nova-line-strong: rgba(255, 255, 255, 0.18);
-  --nova-glass: rgba(255, 255, 255, 0.055);
-  --nova-glass-2: rgba(255, 255, 255, 0.03);
-  --nova-field: rgba(8, 11, 22, 0.62);
-  --nova-shadow: 0 30px 70px -42px rgba(0, 0, 0, 0.95);
+  --nova-ink: #0d1110;
+  --nova-muted: #52615b; /* elegant cool grey-green */
+  --nova-faint: #8a9a93; /* soft grey */
+  --nova-violet: #6faf9a; /* primary Sage accent */
+  --nova-violet-soft: #a3d4c4; /* light mint / light green */
+  --nova-green-light: #c2ebdd; /* bright light green tint */
+  --nova-indigo: #1e4d3e; /* deep dark forest green */
+  --nova-cyan: #3e8b75; /* rich medium-dark green */
+  --nova-rose: #b4443c; /* error red */
+  --nova-amber: #b7791f; /* warning amber */
+  --nova-green: #2b7a63; /* vibrant green success */
+  --nova-line: rgba(111, 175, 154, 0.28);
+  --nova-line-strong: rgba(111, 175, 154, 0.55);
+  --nova-glass: #ffffff;
+  --nova-glass-2: #eff8f3;
+  --nova-field: #ffffff;
+  --nova-shadow:
+    0 24px 60px -28px rgba(13, 17, 16, 0.16),
+    0 8px 24px -12px rgba(111, 175, 154, 0.22);
   --nova-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --radius-card: 26px;
   --radius-field: 13px;
@@ -66,16 +69,21 @@
     "Inter", var(--font-geist-sans, system-ui), system-ui, sans-serif;
   background:
     radial-gradient(
-      1100px 720px at 8% 4%,
-      rgba(79, 70, 229, 0.2),
-      transparent 62%
+      950px 650px at 8% 4%,
+      rgba(111, 175, 154, 0.22),
+      transparent 64%
     ),
     radial-gradient(
-      900px 640px at 96% 96%,
-      rgba(94, 231, 245, 0.09),
+      900px 600px at 96% 96%,
+      rgba(239, 248, 243, 0.95),
       transparent 60%
     ),
-    linear-gradient(158deg, #060812 0%, #0a0d1d 46%, #060812 100%);
+    radial-gradient(
+      650px 480px at 70% 30%,
+      rgba(194, 235, 221, 0.35),
+      transparent 55%
+    ),
+    #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -208,7 +216,7 @@
 }
 
 /* ── 4. Layers ──────────────────────────────────────────────────────────── */
-/* Full-screen animated backdrop behind every column (fixed → never scrolls) */
+/* Full-screen backdrop behind every column */
 .auth-fx {
   position: fixed;
   inset: 0;
@@ -219,15 +227,15 @@
   background:
     radial-gradient(
       900px 620px at 16% 16%,
-      rgba(124, 92, 255, 0.18),
+      rgba(111, 175, 154, 0.12),
       transparent 65%
     ),
     radial-gradient(
       760px 560px at 84% 82%,
-      rgba(56, 189, 248, 0.12),
+      rgba(239, 248, 243, 0.8),
       transparent 62%
     ),
-    linear-gradient(165deg, rgba(10, 13, 28, 0.9), rgba(6, 8, 18, 0.94));
+    #ffffff;
 }
 
 .auth-fx::after {
@@ -236,8 +244,8 @@
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(111, 175, 154, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 175, 154, 0.12) 1px, transparent 1px);
   background-size: 46px 46px;
   mask-image: radial-gradient(circle at 50% 45%, #000 0%, transparent 78%);
   -webkit-mask-image: radial-gradient(
@@ -245,7 +253,7 @@
     #000 0%,
     transparent 78%
   );
-  opacity: 0.6;
+  opacity: 0.45;
 }
 
 /* Brand column (left copy + scene) — sits above the fx layer */
@@ -274,8 +282,8 @@
   right: -80px;
   background: radial-gradient(
     circle at 35% 35%,
-    rgba(124, 92, 255, 0.5),
-    rgba(124, 92, 255, 0) 68%
+    rgba(111, 175, 154, 0.28),
+    rgba(111, 175, 154, 0) 68%
   );
 }
 
@@ -286,8 +294,8 @@
   left: -120px;
   background: radial-gradient(
     circle at 60% 40%,
-    rgba(79, 70, 229, 0.42),
-    rgba(79, 70, 229, 0) 66%
+    rgba(143, 196, 178, 0.26),
+    rgba(143, 196, 178, 0) 66%
   );
 }
 
@@ -298,8 +306,8 @@
   left: 52%;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(94, 231, 245, 0.24),
-    rgba(94, 231, 245, 0) 68%
+    rgba(239, 248, 243, 0.6),
+    rgba(239, 248, 243, 0) 68%
   );
   --dur: 20s;
 }
@@ -316,8 +324,8 @@
   width: var(--size, 3px);
   height: var(--size, 3px);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 8px rgba(160, 140, 255, 0.8);
+  background: rgba(111, 175, 154, 0.6);
+  box-shadow: 0 0 8px rgba(111, 175, 154, 0.35);
   animation: novaTwinkle var(--dur, 7s) ease-in-out infinite;
   animation-delay: var(--d, 0ms);
 }
@@ -340,7 +348,7 @@
   animation: novaNodePulse 4.5s ease-in-out infinite;
 }
 
-/* Top navigation bar (logo on the left, links on the right — fixed, never scrolls) */
+/* Top navigation bar */
 .auth-nav {
   position: fixed;
   top: 0;
@@ -354,9 +362,7 @@
   height: var(--nova-nav-h);
   padding-inline: clamp(1.75rem, 4vw, 3.5rem);
   border-bottom: 1px solid var(--nova-line);
-  background: rgba(6, 8, 18, 0.55);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #ffffff;
 }
 
 .auth-nav__left {
@@ -381,7 +387,7 @@
 }
 
 .auth-nav__brand:focus-visible {
-  outline: 2px solid rgba(160, 140, 255, 0.9);
+  outline: 2px solid #6faf9a;
   outline-offset: 4px;
 }
 
@@ -406,16 +412,16 @@
 
 .auth-nav__link:hover {
   color: var(--nova-ink);
-  background: rgba(255, 255, 255, 0.06);
+  background: #eff8f3;
 }
 
 .auth-nav__link[aria-current="page"] {
-  color: var(--nova-violet-soft);
-  background: rgba(124, 92, 255, 0.14);
+  color: var(--nova-ink);
+  background: #eff8f3;
 }
 
 .auth-nav__link:focus-visible {
-  outline: 2px solid rgba(160, 140, 255, 0.9);
+  outline: 2px solid #6faf9a;
   outline-offset: 2px;
 }
 
@@ -428,7 +434,7 @@
 .nova-logo__mark {
   flex: none;
   display: block;
-  filter: drop-shadow(0 8px 18px rgba(79, 70, 229, 0.55));
+  filter: drop-shadow(0 8px 18px rgba(111, 175, 154, 0.3));
 }
 
 .nova-logo__text {
@@ -465,7 +471,6 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--nova-muted);
-  backdrop-filter: blur(10px);
 }
 
 .brand-badge__dot {
@@ -473,7 +478,7 @@
   height: 7px;
   border-radius: 50%;
   background: var(--nova-cyan);
-  box-shadow: 0 0 10px rgba(94, 231, 245, 0.9);
+  box-shadow: 0 0 10px rgba(111, 175, 154, 0.6);
   animation: novaTwinkle 2.6s ease-in-out infinite;
 }
 
@@ -490,17 +495,18 @@
   align-items: center;
   gap: 0.55rem;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--nova-violet-soft);
+  color: #1e4d3e;
 }
 
 .brand-eyebrow::before {
   content: "";
   width: 26px;
-  height: 1px;
-  background: linear-gradient(90deg, var(--nova-violet), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, #1e4d3e, #6faf9a);
+  border-radius: 999px;
 }
 
 .brand-head {
@@ -508,16 +514,13 @@
   line-height: 1.1;
   letter-spacing: -0.025em;
   font-weight: 700;
+  color: #0d1110;
   text-wrap: balance;
 }
 
 .brand-head em {
   font-style: normal;
-  background: linear-gradient(
-    100deg,
-    var(--nova-violet-soft) 5%,
-    var(--nova-cyan) 95%
-  );
+  background: linear-gradient(110deg, #1e4d3e 0%, #2b7a63 45%, #6faf9a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -531,7 +534,7 @@
   text-wrap: pretty;
 }
 
-/* Scene stage + floating cards (below the copy — revealed on scroll) */
+/* Scene stage + floating cards */
 .brand-stage {
   position: relative;
   width: min(100%, 460px);
@@ -551,10 +554,9 @@
   max-width: 15rem;
   padding: 0.62rem 0.8rem;
   border-radius: 14px;
-  border: 1px solid var(--nova-line);
-  background: rgba(11, 14, 28, 0.78);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 22px 40px -28px rgba(0, 0, 0, 1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: #ffffff;
+  box-shadow: 0 16px 36px -20px rgba(79, 70, 229, 0.25);
   font-size: 0.74rem;
   line-height: 1.35;
   color: var(--nova-muted);
@@ -592,31 +594,32 @@
   height: 8px;
   border-radius: 50%;
   background: var(--nova-rose);
-  box-shadow: 0 0 12px rgba(251, 113, 133, 0.9);
+  box-shadow: 0 0 12px rgba(180, 68, 60, 0.7);
 }
 
 .float__bar {
-  height: 5px;
+  height: 6px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.09);
+  background: #eff8f3;
 }
 
 .float__bar i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--nova-violet), var(--nova-cyan));
+  background: linear-gradient(90deg, #1e4d3e, #6faf9a);
+  box-shadow: 0 0 10px rgba(111, 175, 154, 0.6);
 }
 
-/* Brand statement (under the centred card) */
+/* Brand statement */
 .pane-foot {
   margin-top: 1.15rem;
   text-align: center;
   font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: rgba(237, 240, 250, 0.72);
+  color: var(--nova-muted);
 }
 
 /* ── 5. Animated learning scene ─────────────────────────────────────────── */
@@ -625,15 +628,10 @@
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid var(--nova-line);
-  background: linear-gradient(
-    165deg,
-    rgba(255, 255, 255, 0.075),
-    rgba(255, 255, 255, 0.028)
-  );
-  backdrop-filter: blur(16px);
+  background: #ffffff;
   box-shadow:
     var(--nova-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 rgba(111, 175, 154, 0.2);
 }
 
 .scene__head {
@@ -642,7 +640,7 @@
   gap: 0.7rem;
   padding: 0.72rem 0.95rem;
   border-bottom: 1px solid var(--nova-line);
-  background: rgba(255, 255, 255, 0.028);
+  background: #eff8f3;
 }
 
 .scene__dots {
@@ -654,7 +652,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(13, 17, 16, 0.22);
 }
 
 .scene__title {
@@ -681,7 +679,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--nova-green);
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.9);
+  box-shadow: 0 0 8px rgba(63, 143, 118, 0.6);
 }
 
 .scene__body {
@@ -692,6 +690,7 @@
   min-height: 252px;
   padding: 1rem 0.95rem;
   overflow: hidden;
+  background: #ffffff;
 }
 
 .msg {
@@ -705,23 +704,19 @@
 
 .msg--me {
   align-self: flex-end;
-  background: linear-gradient(
-    135deg,
-    rgba(124, 92, 255, 0.9),
-    rgba(79, 70, 229, 0.85)
-  );
-  border: 1px solid rgba(160, 140, 255, 0.5);
+  background: #0d1110;
+  border: 1px solid #0d1110;
   border-bottom-right-radius: 6px;
-  color: #fff;
-  box-shadow: 0 16px 30px -22px rgba(124, 92, 255, 1);
+  color: #ffffff;
+  box-shadow: 0 10px 24px -14px rgba(13, 17, 16, 0.35);
 }
 
 .msg--nova {
   align-self: flex-start;
-  background: rgba(9, 12, 24, 0.72);
+  background: #eff8f3;
   border: 1px solid var(--nova-line);
   border-bottom-left-radius: 6px;
-  color: rgba(237, 240, 250, 0.92);
+  color: var(--nova-ink);
 }
 
 .msg__who {
@@ -749,15 +744,15 @@
 }
 
 .chip--alert {
-  background: rgba(251, 113, 133, 0.14);
-  border: 1px solid rgba(251, 113, 133, 0.42);
-  color: #fecdd3;
+  background: rgba(180, 68, 60, 0.12);
+  border: 1px solid rgba(180, 68, 60, 0.35);
+  color: #b4443c;
 }
 
 .chip--ok {
-  background: rgba(52, 211, 153, 0.14);
-  border: 1px solid rgba(52, 211, 153, 0.42);
-  color: #a7f3d0;
+  background: rgba(63, 143, 118, 0.14);
+  border: 1px solid rgba(63, 143, 118, 0.42);
+  color: #3f8f76;
 }
 
 .scene__foot {
@@ -766,7 +761,7 @@
   gap: 0.9rem;
   padding: 0.8rem 0.95rem 0.95rem;
   border-top: 1px solid var(--nova-line);
-  background: rgba(4, 6, 14, 0.35);
+  background: #eff8f3;
 }
 
 .nodes {
@@ -783,7 +778,7 @@
   padding: 0.3rem 0.55rem;
   border-radius: 999px;
   border: 1px solid var(--nova-line);
-  background: rgba(255, 255, 255, 0.04);
+  background: #ffffff;
   font-size: 0.66rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -806,23 +801,23 @@
 }
 
 .node--on {
-  color: var(--nova-violet-soft);
-  border-color: rgba(124, 92, 255, 0.5);
-  background: rgba(124, 92, 255, 0.14);
-  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.12);
+  color: #0d1110;
+  border-color: #6faf9a;
+  background: rgba(111, 175, 154, 0.22);
+  box-shadow: 0 0 0 3px rgba(111, 175, 154, 0.2);
 }
 
 .node--warn {
-  color: #fda4af;
-  border-color: rgba(251, 113, 133, 0.45);
-  background: rgba(251, 113, 133, 0.12);
+  color: #b4443c;
+  border-color: rgba(180, 68, 60, 0.4);
+  background: rgba(180, 68, 60, 0.1);
 }
 
 .node--done {
-  color: #6ee7b7;
-  border-color: rgba(52, 211, 153, 0.45);
-  background: rgba(52, 211, 153, 0.12);
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.1);
+  color: #3f8f76;
+  border-color: rgba(63, 143, 118, 0.4);
+  background: rgba(63, 143, 118, 0.12);
+  box-shadow: 0 0 0 3px rgba(63, 143, 118, 0.15);
 }
 
 .scene__meter {
@@ -850,15 +845,15 @@
   height: 6px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(111, 175, 154, 0.2);
 }
 
 .meter i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--nova-violet), var(--nova-cyan));
-  box-shadow: 0 0 14px rgba(124, 92, 255, 0.65);
+  background: linear-gradient(90deg, #8fc4b2, #6faf9a);
+  box-shadow: 0 0 10px rgba(111, 175, 154, 0.5);
   transition: width 0.9s var(--nova-ease);
 }
 
@@ -893,18 +888,14 @@
 .auth-card {
   position: relative;
   overflow: hidden;
-  padding: clamp(1.05rem, 1.6vw, 1.35rem);
+  padding: clamp(1.25rem, 2vw, 1.65rem);
   border-radius: var(--radius-card);
-  border: 1px solid var(--nova-line);
-  background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.075),
-    rgba(255, 255, 255, 0.032)
-  );
-  backdrop-filter: blur(18px);
+  border: 1px solid rgba(111, 175, 154, 0.35);
+  background: #ffffff;
   box-shadow:
-    var(--nova-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 24px 60px -28px rgba(13, 17, 16, 0.16),
+    0 8px 24px -12px rgba(111, 175, 154, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
   animation: novaFadeUp 0.75s var(--nova-ease) both;
 }
 
@@ -912,21 +903,14 @@
   content: "";
   position: absolute;
   top: 0;
-  left: 8%;
-  right: 8%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(160, 140, 255, 0.75),
-    rgba(94, 231, 245, 0.5),
-    transparent
-  );
-  opacity: 0.8;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1e4d3e 0%, #6faf9a 48%, #a3d4c4 100%);
 }
 
 .auth-head {
-  margin-bottom: 0.9rem;
+  margin-bottom: 1.1rem;
 }
 
 .auth-kicker {
@@ -934,22 +918,23 @@
   align-items: center;
   gap: 0.45rem;
   margin-bottom: 0.7rem;
-  padding: 0.3rem 0.65rem;
+  padding: 0.32rem 0.72rem;
   border-radius: 999px;
-  border: 1px solid rgba(124, 92, 255, 0.32);
-  background: rgba(124, 92, 255, 0.12);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  border: 1px solid rgba(111, 175, 154, 0.35);
+  background: linear-gradient(135deg, #eff8f3, #c2ebdd);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--nova-violet-soft);
+  color: #1e4d3e;
 }
 
 .auth-title {
-  font-size: clamp(1.5rem, 2.4vw, 1.8rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.5rem, 2.4vw, 1.85rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
   line-height: 1.2;
+  color: #0d1110;
 }
 
 .auth-sub {
@@ -965,7 +950,7 @@
   gap: 0.65rem;
 }
 
-/* Two-up field rows keep longer forms inside the viewport */
+/* Two-up field rows */
 .auth-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -978,9 +963,9 @@
   gap: 0.6rem;
   padding: 0.72rem 0.85rem;
   border-radius: var(--radius-field);
-  border: 1px solid rgba(251, 113, 133, 0.36);
-  background: rgba(251, 113, 133, 0.1);
-  color: #fecdd3;
+  border: 1px solid rgba(180, 68, 60, 0.36);
+  background: rgba(180, 68, 60, 0.1);
+  color: #b4443c;
   font-size: 0.83rem;
   line-height: 1.5;
   animation: novaFadeUp 0.35s var(--nova-ease) both;
@@ -998,9 +983,9 @@
   gap: 0.65rem;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius-field);
-  border: 1px solid rgba(52, 211, 153, 0.34);
-  background: rgba(52, 211, 153, 0.1);
-  color: #a7f3d0;
+  border: 1px solid rgba(63, 143, 118, 0.34);
+  background: rgba(63, 143, 118, 0.1);
+  color: #3f8f76;
   font-size: 0.86rem;
   font-weight: 500;
   animation: novaFadeUp 0.4s var(--nova-ease) both;
@@ -1012,8 +997,8 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(52, 211, 153, 0.18);
-  border: 1px solid rgba(52, 211, 153, 0.55);
+  background: rgba(63, 143, 118, 0.18);
+  border: 1px solid rgba(63, 143, 118, 0.55);
 }
 
 .auth-note {
@@ -1025,8 +1010,8 @@
 .auth-note--box {
   padding: 0.62rem 0.75rem;
   border-radius: var(--radius-field);
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px dashed var(--nova-line);
+  background: #eff8f3;
 }
 
 /* ── 7. Fields ──────────────────────────────────────────────────────────── */
@@ -1050,7 +1035,7 @@
 }
 
 .field:focus-within .field__label {
-  color: var(--nova-violet-soft);
+  color: #4f9580;
 }
 
 .field__optional {
@@ -1067,11 +1052,11 @@
 
 .field__control {
   width: 100%;
-  padding: 0.62rem 0.9rem;
+  padding: 0.68rem 0.95rem;
   border-radius: var(--radius-field);
-  border: 1px solid var(--nova-line);
-  background: var(--nova-field);
-  color: var(--nova-ink);
+  border: 1px solid rgba(138, 154, 147, 0.4);
+  background: #ffffff;
+  color: #0d1110;
   font-size: 0.94rem;
   letter-spacing: 0.01em;
   transition:
@@ -1081,20 +1066,20 @@
 }
 
 .field__control::placeholder {
-  color: #5d6484;
+  color: #8a9a93;
 }
 
 .field__control:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.17);
+  border-color: #6faf9a;
 }
 
 .field__control:focus {
   outline: none;
-  border-color: rgba(124, 92, 255, 0.85);
-  background: rgba(11, 14, 29, 0.86);
+  border-color: #6faf9a;
+  background: #ffffff;
   box-shadow:
-    0 0 0 4px rgba(124, 92, 255, 0.17),
-    0 12px 26px -22px rgba(124, 92, 255, 1);
+    0 0 0 3.5px rgba(111, 175, 154, 0.25),
+    0 4px 12px -2px rgba(163, 212, 196, 0.35);
 }
 
 .field__control:disabled {
@@ -1103,12 +1088,12 @@
 }
 
 .field.has-error .field__control {
-  border-color: rgba(251, 113, 133, 0.7);
-  box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.14);
+  border-color: var(--nova-rose);
+  box-shadow: 0 0 0 3px rgba(180, 68, 60, 0.2);
 }
 
 .field.has-error .field__label {
-  color: #fda4af;
+  color: var(--nova-rose);
 }
 
 .field__wrap .field__control {
@@ -1133,7 +1118,7 @@
 
 .field__toggle:hover {
   color: var(--nova-ink);
-  background: rgba(255, 255, 255, 0.07);
+  background: #eff8f3;
 }
 
 .field__toggle:active {
@@ -1141,7 +1126,7 @@
 }
 
 .field__toggle:focus-visible {
-  outline: 2px solid rgba(124, 92, 255, 0.85);
+  outline: 2px solid #6faf9a;
   outline-offset: 2px;
 }
 
@@ -1177,7 +1162,7 @@
 }
 
 .field__ok {
-  color: #6ee7b7;
+  color: var(--nova-green);
 }
 
 /* ── 8. Password strength ───────────────────────────────────────────────── */
@@ -1194,7 +1179,7 @@
 .strength__bars i {
   height: 5px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #eff8f3;
   transition:
     background 0.35s ease,
     box-shadow 0.35s ease;
@@ -1233,8 +1218,8 @@
   gap: 0;
   padding: 4px;
   border-radius: 15px;
-  border: 1px solid var(--nova-line);
-  background: rgba(8, 11, 22, 0.6);
+  border: 1px solid rgba(111, 175, 154, 0.35);
+  background: #eff8f3;
 }
 
 .seg__pill {
@@ -1244,12 +1229,8 @@
   left: 4px;
   width: calc(50% - 4px);
   border-radius: 11px;
-  background: linear-gradient(
-    135deg,
-    rgba(124, 92, 255, 0.95),
-    rgba(79, 70, 229, 0.92)
-  );
-  box-shadow: 0 12px 26px -16px rgba(124, 92, 255, 1);
+  background: linear-gradient(135deg, #1e4d3e 0%, #3e8b75 100%);
+  box-shadow: 0 8px 20px -8px rgba(30, 77, 62, 0.45);
   transition: transform 0.4s var(--nova-ease);
   pointer-events: none;
 }
@@ -1287,11 +1268,11 @@
 }
 
 .seg__opt:has(input:checked) {
-  color: #fff;
+  color: #ffffff;
 }
 
 .seg__opt:has(input:focus-visible) {
-  outline: 2px solid rgba(160, 140, 255, 0.9);
+  outline: 2px solid #6faf9a;
   outline-offset: 2px;
 }
 
@@ -1308,8 +1289,8 @@
   gap: 0.5rem;
   padding: 0.85rem 0.8rem 0.92rem;
   border-radius: 15px;
-  border: 1px solid var(--nova-line);
-  background: var(--nova-glass-2);
+  border: 1px solid rgba(111, 175, 154, 0.3);
+  background: #ffffff;
   cursor: pointer;
   text-align: left;
   transition:
@@ -1321,25 +1302,25 @@
 
 .role-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(124, 92, 255, 0.42);
-  background: rgba(124, 92, 255, 0.07);
+  border-color: #6faf9a;
+  background: #eff8f3;
 }
 
 .role-card:focus-within {
-  outline: 2px solid rgba(160, 140, 255, 0.9);
+  outline: 2px solid #6faf9a;
   outline-offset: 2px;
 }
 
 .role-card.is-selected {
-  border-color: rgba(124, 92, 255, 0.85);
+  border-color: #2b7a63;
   background: linear-gradient(
-    150deg,
-    rgba(124, 92, 255, 0.2),
-    rgba(94, 231, 245, 0.06)
+    135deg,
+    rgba(239, 248, 243, 0.9),
+    rgba(194, 235, 221, 0.4)
   );
   box-shadow:
-    0 0 0 1px rgba(124, 92, 255, 0.45),
-    0 24px 44px -30px rgba(124, 92, 255, 1);
+    0 0 0 1px #2b7a63,
+    0 16px 32px -18px rgba(30, 77, 62, 0.22);
   transform: translateY(-3px);
 }
 
@@ -1357,9 +1338,9 @@
   width: 42px;
   height: 42px;
   border-radius: 13px;
-  border: 1px solid var(--nova-line);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--nova-violet-soft);
+  border: 1px solid rgba(111, 175, 154, 0.3);
+  background: #eff8f3;
+  color: #1e4d3e;
   transition:
     background 0.3s ease,
     color 0.3s ease,
@@ -1367,19 +1348,16 @@
 }
 
 .role-card.is-selected .role-card__icon {
-  background: linear-gradient(
-    135deg,
-    rgba(124, 92, 255, 0.45),
-    rgba(79, 70, 229, 0.3)
-  );
-  border-color: rgba(160, 140, 255, 0.55);
-  color: #fff;
+  background: linear-gradient(135deg, #1e4d3e, #3e8b75);
+  border-color: transparent;
+  color: #ffffff;
 }
 
 .role-card__title {
   font-size: 0.94rem;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -0.01em;
+  color: var(--nova-ink);
 }
 
 .role-card__desc {
@@ -1397,9 +1375,9 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1px solid var(--nova-line-strong);
-  background: rgba(8, 11, 22, 0.7);
-  color: #fff;
+  border: 1px solid rgba(111, 175, 154, 0.4);
+  background: #ffffff;
+  color: #1e4d3e;
   transform: scale(0.55);
   opacity: 0;
   transition:
@@ -1411,8 +1389,9 @@
 .role-card.is-selected .role-card__check {
   transform: scale(1);
   opacity: 1;
-  background: linear-gradient(135deg, var(--nova-violet), var(--nova-indigo));
+  background: linear-gradient(135deg, #1e4d3e, #3e8b75);
   border-color: transparent;
+  color: #ffffff;
 }
 
 /* ── 10. Rows, checkboxes, links ────────────────────────────────────────── */
@@ -1455,9 +1434,9 @@
   height: 18px;
   margin-top: 1px;
   border-radius: 6px;
-  border: 1px solid var(--nova-line-strong);
-  background: rgba(8, 11, 22, 0.66);
-  color: #fff;
+  border: 1px solid rgba(111, 175, 154, 0.5);
+  background: #ffffff;
+  color: #ffffff;
   transition:
     background 0.25s ease,
     border-color 0.25s ease,
@@ -1473,9 +1452,10 @@
 }
 
 .check input:checked + .check__box {
-  background: linear-gradient(135deg, var(--nova-violet), var(--nova-indigo));
+  background: linear-gradient(135deg, #1e4d3e, #3e8b75);
   border-color: transparent;
-  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
+  box-shadow: 0 0 0 3px rgba(111, 175, 154, 0.25);
+  color: #ffffff;
 }
 
 .check input:checked + .check__box svg {
@@ -1484,7 +1464,7 @@
 }
 
 .check input:focus-visible + .check__box {
-  outline: 2px solid rgba(160, 140, 255, 0.9);
+  outline: 2px solid #6faf9a;
   outline-offset: 2px;
 }
 
@@ -1494,36 +1474,20 @@
   align-items: center;
   gap: 0.3rem;
   font-size: 0.83rem;
-  font-weight: 500;
-  color: var(--nova-violet-soft);
+  font-weight: 600;
+  color: #1e4d3e;
+  text-decoration: none;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
-.link::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -2px;
-  height: 1px;
-  width: 100%;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 0.32s var(--nova-ease);
-}
-
 .link:hover {
-  color: var(--nova-cyan);
-}
-
-.link:hover::after {
-  transform: scaleX(1);
-  transform-origin: left;
+  color: #3e8b75;
+  text-decoration: none;
 }
 
 .link:focus-visible {
-  outline: 2px solid rgba(160, 140, 255, 0.9);
+  outline: 2px solid #6faf9a;
   outline-offset: 3px;
   border-radius: 4px;
 }
@@ -1559,100 +1523,81 @@
   padding: 0.7rem 0.8rem;
   border-radius: var(--radius-field);
   border: 1px solid var(--nova-line);
-  background: rgba(255, 255, 255, 0.035);
+  background: #eff8f3;
   font-size: 0.76rem;
   line-height: 1.6;
   color: var(--nova-muted);
 }
 
 /* ── 11. Button ─────────────────────────────────────────────────────────── */
-.auth-btn {
-  position: relative;
+.auth-page .auth-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  overflow: hidden;
-  padding: 0.8rem 1rem;
-  border-radius: 13px;
-  background: linear-gradient(135deg, #6d5cff 0%, #4f46e5 55%, #4338ca 100%);
-  color: #fff;
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-field, 13px);
+  border: 1px solid #000000 !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-size: 0.85rem;
+  font-weight: 500;
   text-align: center;
   text-decoration: none;
-  box-shadow: 0 20px 36px -22px #4f46e5;
   cursor: pointer;
+  box-shadow: none;
+  box-sizing: border-box;
   transition:
-    transform 0.22s var(--nova-ease),
-    box-shadow 0.3s ease,
-    filter 0.25s ease,
-    opacity 0.2s ease;
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
 }
 
-.auth-btn::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 45%;
-  background: linear-gradient(
-    100deg,
-    transparent,
-    rgba(255, 255, 255, 0.28),
-    transparent
-  );
-  transform: translateX(-120%);
-  pointer-events: none;
+.auth-page .auth-btn:hover:not(:disabled) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
 }
 
-.auth-btn:hover:not(:disabled)::after {
-  animation: novaSheen 0.9s var(--nova-ease);
-}
-
-.auth-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.07);
-  box-shadow: 0 26px 44px -22px rgba(79, 70, 229, 1);
-}
-
-.auth-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.99);
-  filter: brightness(0.98);
+.auth-page .auth-btn:active:not(:disabled) {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
 }
 
 .auth-btn:focus-visible {
-  outline: 2px solid rgba(160, 140, 255, 0.95);
-  outline-offset: 3px;
+  outline: 2px solid #6faf9a;
+  outline-offset: 2px;
 }
 
 .auth-btn:disabled {
-  cursor: progress;
-  opacity: 0.78;
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .auth-btn__spinner {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border: 2px solid rgba(13, 17, 16, 0.25);
+  border-top-color: currentColor;
   animation: novaSpin 0.7s linear infinite;
 }
 
 .auth-btn--ghost {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--nova-line);
-  color: var(--nova-ink);
-  box-shadow: none;
+  background: transparent;
+  border-color: var(--nova-line);
+  color: var(--nova-muted);
 }
 
 .auth-btn--ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09);
-  box-shadow: none;
-  filter: none;
+  background: #eff8f3;
+  color: #0d1110;
+  border-color: rgba(111, 175, 154, 0.45);
 }
 
 /* ── 12. Footer ─────────────────────────────────────────────────────────── */
@@ -1689,32 +1634,25 @@
 .auth-legal button {
   font-size: 0.74rem;
   font-weight: 600;
-  color: var(--nova-violet-soft);
+  color: #4f9580;
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(160, 140, 255, 0.45);
+  text-decoration-color: rgba(111, 175, 154, 0.45);
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
 .auth-legal button:hover {
-  color: var(--nova-cyan);
+  color: #6faf9a;
 }
 
 .auth-legal button:focus-visible {
-  outline: 2px solid rgba(160, 140, 255, 0.9);
+  outline: 2px solid #6faf9a;
   outline-offset: 3px;
   border-radius: 4px;
 }
 
 /* ── 13. Responsive ─────────────────────────────────────────────────────── */
-/*
- * Desktop split view: the page itself must never scroll. Otherwise the tall
- * brand column produces a page scrollbar while the auth card produces its own
- * one inside .auth-pane, so users see two scrollbars. Keep a single scroll
- * container (.auth-pane) and let the decorative brand column scroll silently
- * when the viewport is short.
- */
 @media (min-width: 1024px) {
   .auth-page {
     height: 100dvh;
@@ -1795,10 +1733,6 @@
 
   .auth-row {
     grid-template-columns: 1fr;
-  }
-
-  .auth-btn {
-    padding-block: 0.9rem;
   }
 
   .field__control {

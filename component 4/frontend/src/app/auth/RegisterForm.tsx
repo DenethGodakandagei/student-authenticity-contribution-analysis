@@ -57,7 +57,7 @@ function validate(values: {
 }
 
 const CONSENT_TEXT =
-  'I agree to my anonymised teaching-session data being used for this research project.';
+  'I agree to the teaching-session data being used for this NOVA App.';
 
 function AlertIcon() {
   return (

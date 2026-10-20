@@ -8,10 +8,10 @@ export interface StrengthResult {
 }
 
 const COLORS = {
-  weak: '#fb7185',
-  fair: '#fbbf24',
-  good: '#38bdf8',
-  strong: '#34d399',
+  weak: '#B4443C',
+  fair: '#B7791F',
+  good: '#6FAF9A',
+  strong: '#1E4D3E',
 } as const;
 
 /** Heuristic 0–4 strength score — never leaves the browser, never stored. */

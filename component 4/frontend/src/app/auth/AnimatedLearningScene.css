@@ -1,16 +1,16 @@
 /* Animated learning scene — self-contained so it can be embedded anywhere. */
 
 .brand-scene {
-  --nova-ink: #edf0fa;
-  --nova-muted: #99a2c0;
-  --nova-faint: #6f7796;
-  --nova-violet: #7c5cff;
-  --nova-violet-soft: #a08cff;
-  --nova-cyan: #5ee7f5;
-  --nova-rose: #fb7185;
-  --nova-green: #34d399;
-  --nova-line: rgba(255, 255, 255, 0.09);
-  --nova-shadow: 0 30px 70px -42px rgba(0, 0, 0, 0.95);
+  --nova-ink: #0D1110;
+  --nova-muted: #52615B;
+  --nova-faint: #8A9A93;
+  --nova-violet: #6FAF9A;
+  --nova-violet-soft: #A3D4C4;
+  --nova-cyan: #3E8B75;
+  --nova-rose: #B4443C;
+  --nova-green: #2B7A63;
+  --nova-line: rgba(111, 175, 154, 0.28);
+  --nova-shadow: 0 24px 60px -28px rgba(13, 17, 16, 0.16);
   --nova-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   margin: 0;
@@ -43,12 +43,11 @@
   position: relative;
   overflow: hidden;
   border-radius: 20px;
-  border: 1px solid var(--nova-line);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.028));
-  backdrop-filter: blur(16px);
+  border: 1px solid rgba(111, 175, 154, 0.35);
+  background: #FFFFFF;
   box-shadow:
     var(--nova-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 8px 24px -10px rgba(111, 175, 154, 0.2);
 }
 
 .brand-scene .scene__head {
@@ -56,8 +55,8 @@
   align-items: center;
   gap: 0.7rem;
   padding: 0.72rem 0.95rem;
-  border-bottom: 1px solid var(--nova-line);
-  background: rgba(255, 255, 255, 0.028);
+  border-bottom: 1px solid rgba(111, 175, 154, 0.2);
+  background: linear-gradient(90deg, #EFF8F3, #C2EBDD);
 }
 
 .brand-scene .scene__dots {
@@ -69,15 +68,15 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(30, 77, 62, 0.35);
 }
 
 .brand-scene .scene__title {
   font-size: 0.74rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--nova-muted);
+  color: #1E4D3E;
 }
 
 .brand-scene .scene__live {
@@ -95,8 +94,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--nova-green);
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.9);
+  background: #2B7A63;
+  box-shadow: 0 0 10px rgba(43, 122, 99, 0.7);
 }
 
 .brand-scene .scene__body {
@@ -107,6 +106,7 @@
   min-height: 252px;
   padding: 1rem 0.95rem;
   overflow: hidden;
+  background: #FFFFFF;
 }
 
 .brand-scene .msg {
@@ -120,19 +120,19 @@
 
 .brand-scene .msg--me {
   align-self: flex-end;
-  background: linear-gradient(135deg, rgba(124, 92, 255, 0.9), rgba(79, 70, 229, 0.85));
-  border: 1px solid rgba(160, 140, 255, 0.5);
+  background: linear-gradient(135deg, #1E4D3E 0%, #2B7A63 60%, #6FAF9A 100%);
+  border: 1px solid transparent;
   border-bottom-right-radius: 6px;
-  color: #fff;
-  box-shadow: 0 16px 30px -22px rgba(124, 92, 255, 1);
+  color: #FFFFFF;
+  box-shadow: 0 10px 24px -10px rgba(30, 77, 62, 0.4);
 }
 
 .brand-scene .msg--nova {
   align-self: flex-start;
-  background: rgba(9, 12, 24, 0.72);
-  border: 1px solid var(--nova-line);
+  background: #EFF8F3;
+  border: 1px solid rgba(111, 175, 154, 0.3);
   border-bottom-left-radius: 6px;
-  color: rgba(237, 240, 250, 0.92);
+  color: #0D1110;
 }
 
 .brand-scene .msg__who {
@@ -160,15 +160,15 @@
 }
 
 .brand-scene .chip--alert {
-  background: rgba(251, 113, 133, 0.14);
-  border: 1px solid rgba(251, 113, 133, 0.42);
-  color: #fecdd3;
+  background: rgba(180, 68, 60, 0.12);
+  border: 1px solid rgba(180, 68, 60, 0.35);
+  color: #B4443C;
 }
 
 .brand-scene .chip--ok {
-  background: rgba(52, 211, 153, 0.14);
-  border: 1px solid rgba(52, 211, 153, 0.42);
-  color: #a7f3d0;
+  background: rgba(43, 122, 99, 0.14);
+  border: 1px solid rgba(43, 122, 99, 0.42);
+  color: #2B7A63;
 }
 
 .brand-scene .scene__foot {
@@ -176,8 +176,8 @@
   align-items: center;
   gap: 0.9rem;
   padding: 0.8rem 0.95rem 0.95rem;
-  border-top: 1px solid var(--nova-line);
-  background: rgba(4, 6, 14, 0.35);
+  border-top: 1px solid rgba(111, 175, 154, 0.2);
+  background: linear-gradient(90deg, #EFF8F3, #C2EBDD);
 }
 
 .brand-scene .nodes {
@@ -193,8 +193,8 @@
   gap: 0.4rem;
   padding: 0.3rem 0.55rem;
   border-radius: 999px;
-  border: 1px solid var(--nova-line);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(111, 175, 154, 0.3);
+  background: #FFFFFF;
   font-size: 0.66rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -215,23 +215,23 @@
 }
 
 .brand-scene .node--on {
-  color: var(--nova-violet-soft);
-  border-color: rgba(124, 92, 255, 0.5);
-  background: rgba(124, 92, 255, 0.14);
-  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.12);
+  color: #1E4D3E;
+  border-color: #2B7A63;
+  background: rgba(111, 175, 154, 0.2);
+  box-shadow: 0 0 0 3px rgba(111, 175, 154, 0.25);
 }
 
 .brand-scene .node--warn {
-  color: #fda4af;
-  border-color: rgba(251, 113, 133, 0.45);
-  background: rgba(251, 113, 133, 0.12);
+  color: #B4443C;
+  border-color: rgba(180, 68, 60, 0.4);
+  background: rgba(180, 68, 60, 0.1);
 }
 
 .brand-scene .node--done {
-  color: #6ee7b7;
-  border-color: rgba(52, 211, 153, 0.45);
-  background: rgba(52, 211, 153, 0.12);
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.1);
+  color: #2B7A63;
+  border-color: rgba(43, 122, 99, 0.4);
+  background: rgba(43, 122, 99, 0.12);
+  box-shadow: 0 0 0 3px rgba(43, 122, 99, 0.15);
 }
 
 .brand-scene .scene__meter {
@@ -259,15 +259,15 @@
   height: 6px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(111, 175, 154, 0.25);
 }
 
 .brand-scene .meter i {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--nova-violet), var(--nova-cyan));
-  box-shadow: 0 0 14px rgba(124, 92, 255, 0.65);
+  background: linear-gradient(90deg, #1E4D3E, #6FAF9A);
+  box-shadow: 0 0 10px rgba(111, 175, 154, 0.7);
   transition: width 0.9s var(--nova-ease);
 }
 

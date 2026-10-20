@@ -63,24 +63,24 @@ function AuthFx() {
       >
         <defs>
           <linearGradient id="novaLinkGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#7c5cff" stopOpacity="0.65" />
-            <stop offset="100%" stopColor="#5ee7f5" stopOpacity="0.25" />
+            <stop offset="0%" stopColor="#1E4D3E" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#6FAF9A" stopOpacity="0.75" />
           </linearGradient>
         </defs>
         <path
           className="brand-links__line"
           d="M40 500 L200 400 L340 470 L500 340 L660 400 L770 300"
           stroke="url(#novaLinkGrad)"
-          strokeWidth="1.3"
+          strokeWidth="1.5"
           strokeDasharray="7 12"
         />
-        <circle className="brand-links__node" cx="200" cy="400" r="4.5" fill="#a08cff" />
+        <circle className="brand-links__node" cx="200" cy="400" r="4.5" fill="#1E4D3E" />
         <circle
           className="brand-links__node"
           cx="500"
           cy="340"
           r="4.5"
-          fill="#5ee7f5"
+          fill="#6FAF9A"
           style={{ animationDelay: '1.4s' }}
         />
         <circle
@@ -88,7 +88,7 @@ function AuthFx() {
           cx="770"
           cy="300"
           r="4.5"
-          fill="#a08cff"
+          fill="#A3D4C4"
           style={{ animationDelay: '2.6s' }}
         />
       </svg>
@@ -106,9 +106,9 @@ export default function AuthLayout({ mode, children }: AuthLayoutProps) {
       <section className="auth-pane" aria-label={PANE_LABEL[mode]}>
         <div className="auth-pane__inner">
           <div className="auth-card">{children}</div>
-          <p className="pane-foot a-up" style={delay(260)}>
+          {/* <p className="pane-foot a-up" style={delay(260)}>
             Learn deeper by teaching smarter.
-          </p>
+          </p> */}
         </div>
       </section>
     </main>

@@ -20,9 +20,9 @@ export function NovaMark({ size = 38 }: { size?: number }) {
     >
       <defs>
         <linearGradient id="novaMarkGrad" x1="0" y1="0" x2="32" y2="32">
-          <stop offset="0%" stopColor="#7c5cff" />
-          <stop offset="55%" stopColor="#4f46e5" />
-          <stop offset="100%" stopColor="#312e9e" />
+          <stop offset="0%" stopColor="#A3D4C4" />
+          <stop offset="45%" stopColor="#6FAF9A" />
+          <stop offset="100%" stopColor="#1E4D3E" />
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="32" height="32" rx="9.5" fill="url(#novaMarkGrad)" />
@@ -32,7 +32,7 @@ export function NovaMark({ size = 38 }: { size?: number }) {
         width="30.8"
         height="30.8"
         rx="9"
-        stroke="rgba(255,255,255,0.28)"
+        stroke="rgba(255,255,255,0.4)"
         strokeWidth="1.2"
       />
       <path
@@ -49,7 +49,7 @@ export function NovaMark({ size = 38 }: { size?: number }) {
         strokeLinecap="round"
         opacity="0.95"
       />
-      <circle cx="22.5" cy="9.4" r="3.4" fill="#5ee7f5" />
+      <circle cx="22.5" cy="9.4" r="3.4" fill="#C2EBDD" />
       <circle cx="9.5" cy="22.7" r="2.1" fill="#ffffff" opacity="0.9" />
     </svg>
   );
