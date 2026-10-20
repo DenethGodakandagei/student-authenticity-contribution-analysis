@@ -63,11 +63,12 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
       const uRole = user.role || '';
       const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&email=${encodeURIComponent(uEmail)}&role=${encodeURIComponent(uRole)}`;
       const res = await fetch(`${getBackendUrl()}/api/documents?${query}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load documents');
-      setDocuments(data || []);
+      setDocuments(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setError(err.message);
+      console.warn("Could not load documents in ReportsManagerModal:", err?.message || err);
+      setError(err?.message || 'Failed to load documents');
     } finally {
       setLoading(false);
     }

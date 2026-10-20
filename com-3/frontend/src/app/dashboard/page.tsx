@@ -92,6 +92,7 @@ function DashboardComponent() {
   const loadStudents = async () => {
     try {
       const res = await fetch(`${getBackendUrl()}/api/auth/users`);
+      if (!res.ok) return;
       const data = await res.json();
       const studentsOnly = (data || []).filter((u: any) => {
         const r = (u.role || '').toLowerCase();
@@ -99,8 +100,8 @@ function DashboardComponent() {
         return r !== 'admin' && r !== 'lecturer' && r !== 'teacher' && r !== 'evaluator' && un !== 'admin' && un !== 'sansala';
       });
       setRegisteredStudents(studentsOnly);
-    } catch (err) {
-      console.error("Failed to fetch registered students", err);
+    } catch (err: any) {
+      console.warn("Could not fetch registered students:", err?.message || err);
     }
   };
 
@@ -124,6 +125,7 @@ function DashboardComponent() {
       url += `?${params.toString()}`;
 
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const docs = await res.json();
       const list = Array.isArray(docs) ? docs : [];
       setAvailableDocs(list);
@@ -146,8 +148,8 @@ function DashboardComponent() {
       if (list.length > 0 && (!teamTargetDocId || !list.some((d: any) => d._id === teamTargetDocId))) {
         setTeamTargetDocId(list[0]._id);
       }
-    } catch (err) {
-      console.error("Failed to fetch documents", err);
+    } catch (err: any) {
+      console.warn("Could not fetch documents:", err?.message || err);
     } finally {
       setDocsLoading(false);
     }

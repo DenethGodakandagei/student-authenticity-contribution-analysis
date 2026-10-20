@@ -380,8 +380,8 @@ io.on('connection', (socket) => {
     }
 
     // Security permission guard with full alias resolution
+    let userObj = null;
     if (username || studentId || role || email) {
-      let userObj = null;
       try {
         const queryConds = [];
         if (username) {
@@ -1969,8 +1969,8 @@ app.get('/api/documents/:id/export', async (req, res) => {
   }
 });
 
-// Helper to extract real text/HTML from Google Docs
-async function fetchRealGoogleDoc(docUrl) {
+// Helper to extract real text/HTML and revision history from Google Docs
+async function fetchRealGoogleDoc(docUrl, accessToken = null) {
   let googleId = null;
   let isPublished = false;
 
@@ -2000,10 +2000,58 @@ async function fetchRealGoogleDoc(docUrl) {
 
   let html = '';
   let title = '';
+  let revisions = [];
 
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
   };
+
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  // Case 0: If accessToken is provided, query Google Drive Revisions API for authentic history
+  if (accessToken && googleId) {
+    try {
+      const revUrl = `https://www.googleapis.com/drive/v3/files/${googleId}/revisions?fields=revisions(id,modifiedTime,lastModifyingUser)`;
+      const revRes = await fetch(revUrl, { headers });
+      if (revRes.ok) {
+        const revData = await revRes.json();
+        revisions = revData.revisions || [];
+      }
+    } catch (e) {
+      console.warn("Failed to fetch Google Drive revisions with accessToken:", e.message);
+    }
+
+    // Also attempt Google Docs API v1 directly for guaranteed content
+    try {
+      const docsApiUrl = `https://docs.googleapis.com/v1/documents/${googleId}`;
+      const docRes = await fetch(docsApiUrl, { headers });
+      if (docRes.ok) {
+        const docJson = await docRes.json();
+        if (docJson.title && !title) title = docJson.title;
+        if (docJson.body && Array.isArray(docJson.body.content)) {
+          const docParagraphs = [];
+          docJson.body.content.forEach(elem => {
+            if (elem.paragraph && Array.isArray(elem.paragraph.elements)) {
+              const pText = elem.paragraph.elements
+                .map(el => el.textRun?.content || '')
+                .join('')
+                .replace(/\n$/, '');
+              if (pText.trim()) {
+                docParagraphs.push(`<p>${pText.trim()}</p>`);
+              }
+            }
+          });
+          if (docParagraphs.length > 0) {
+            html = docParagraphs.join('\n');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Google Docs v1 API direct fetch fallback:", e.message);
+    }
+  }
 
   // Case 1: Published Google Doc
   if (isPublished) {
@@ -2109,7 +2157,7 @@ async function fetchRealGoogleDoc(docUrl) {
     }
   }
 
-  return { html, title };
+  return { html, title, revisions };
 }
 
 async function fetchRealUrlContent(docUrl) {
@@ -2135,7 +2183,8 @@ async function fetchRealUrlContent(docUrl) {
       if (contentType.includes('wordprocessingml') || contentType.includes('application/zip') || targetUrl.includes('.docx')) {
         const arrayBuf = await res.arrayBuffer();
         const buffer = Buffer.from(arrayBuf);
-        const extracted = extractDocxText(buffer);
+        const parsed = extractDocxText(buffer);
+        const extracted = typeof parsed === 'object' ? parsed.content : parsed;
         if (extracted) {
           return { html: extracted, title: '' };
         }
@@ -2163,8 +2212,18 @@ async function fetchRealUrlContent(docUrl) {
   return { html: '', title: '' };
 }
 
-// Native ZIP parser to extract authentic text paragraphs from .docx files without dependencies
+// Native ZIP parser to extract authentic text paragraphs AND metadata from .docx files without dependencies
 function extractDocxText(buffer) {
+  let content = '';
+  let metadata = {
+    creator: '',
+    lastModifiedBy: '',
+    revision: 1,
+    created: null,
+    modified: null,
+    title: ''
+  };
+
   let offset = 0;
   while (offset < buffer.length - 30) {
     if (buffer.readUInt32LE(offset) === 0x04034b50) {
@@ -2195,48 +2254,80 @@ function extractDocxText(buffer) {
             paragraphs.push(`<p>${text}</p>`);
           }
         }
-        return paragraphs.join('\n');
+        content = paragraphs.join('\n');
+      } else if (fileName === 'docProps/core.xml') {
+        try {
+          const compressedData = buffer.slice(dataStart, dataStart + compressedSize);
+          let xml = '';
+          if (compression === 8) {
+            xml = zlib.inflateRawSync(compressedData).toString('utf8');
+          } else if (compression === 0) {
+            xml = compressedData.toString('utf8');
+          }
+          const titleMatch = xml.match(/<dc:title>([\s\S]*?)<\/dc:title>/i);
+          const creatorMatch = xml.match(/<dc:creator>([\s\S]*?)<\/dc:creator>/i);
+          const lastModMatch = xml.match(/<cp:lastModifiedBy>([\s\S]*?)<\/cp:lastModifiedBy>/i);
+          const revMatch = xml.match(/<cp:revision>([\s\S]*?)<\/cp:revision>/i);
+          const createdMatch = xml.match(/<dcterms:created[^>]*>([\s\S]*?)<\/dcterms:created>/i);
+          const modifiedMatch = xml.match(/<dcterms:modified[^>]*>([\s\S]*?)<\/dcterms:modified>/i);
+
+          if (titleMatch && titleMatch[1]) metadata.title = titleMatch[1].trim();
+          if (creatorMatch && creatorMatch[1]) metadata.creator = creatorMatch[1].trim();
+          if (lastModMatch && lastModMatch[1]) metadata.lastModifiedBy = lastModMatch[1].trim();
+          if (revMatch && revMatch[1]) metadata.revision = parseInt(revMatch[1].trim(), 10) || 1;
+          if (createdMatch && createdMatch[1]) metadata.created = new Date(createdMatch[1].trim());
+          if (modifiedMatch && modifiedMatch[1]) metadata.modified = new Date(modifiedMatch[1].trim());
+        } catch (e) {
+          console.warn("Failed to parse docProps/core.xml:", e.message);
+        }
       }
       offset = dataStart + compressedSize;
     } else {
       offset++;
     }
   }
-  return '';
+  return { content, metadata };
 }
 
 // Import External Document (Google Docs / MS 365) API
 app.post('/api/documents/import-external', async (req, res) => {
   try {
-    const { source, docUrl, title, rawContent, docxBase64, owner, ownerName, studentId, collaborators: reqCollaborators } = req.body;
+    const { source, docUrl, title, rawContent, docxBase64, accessToken, owner, ownerName, studentId, collaborators: reqCollaborators } = req.body;
     if (!source) {
       return res.status(400).json({ error: "Document source is required." });
     }
 
     let realContent = (rawContent || '').trim();
     let realTitle = (title || '').trim();
+    let docxMetadata = null;
+    let googleRevisions = [];
 
-    // 1. If docxBase64 provided, extract authentic paragraphs from Word document
+    // 1. If docxBase64 provided, extract authentic paragraphs & core metadata from Word document
     if (!realContent && docxBase64) {
       try {
         const cleanBase64 = docxBase64.replace(/^data:.*?;base64,/, '');
         const buffer = Buffer.from(cleanBase64, 'base64');
-        const extracted = extractDocxText(buffer);
-        if (extracted) {
-          realContent = extracted;
+        const parsed = extractDocxText(buffer);
+        if (typeof parsed === 'object' && parsed.content) {
+          realContent = parsed.content;
+          docxMetadata = parsed.metadata;
+          if (!realTitle && docxMetadata?.title) realTitle = docxMetadata.title;
+        } else if (typeof parsed === 'string') {
+          realContent = parsed;
         }
       } catch (err) {
         console.warn("Failed to extract DOCX XML:", err.message);
       }
     }
 
-    // 2. If direct content not provided, attempt to fetch real content from link
+    // 2. If direct content not provided, attempt to fetch real content from link (with OAuth accessToken if present)
     if (!realContent && docUrl) {
       if (source === 'google_docs') {
-        const fetched = await fetchRealGoogleDoc(docUrl);
+        const fetched = await fetchRealGoogleDoc(docUrl, accessToken);
         if (fetched.html) {
           realContent = fetched.html;
           if (!realTitle && fetched.title) realTitle = fetched.title;
+          googleRevisions = fetched.revisions || [];
         }
       } else {
         const fetched = await fetchRealUrlContent(docUrl);
@@ -2247,12 +2338,12 @@ app.post('/api/documents/import-external', async (req, res) => {
       }
     }
 
-    // 2. If content is empty or could not be retrieved from link, initialize as a clean blank page
+    // Fallback if empty
     if (!realContent || !realContent.trim()) {
       realContent = '<p></p>';
     }
 
-    // 3. Authenticate real owner & collaborators (NO System Admin / Alice Cooper / mock data)
+    // 3. Authenticate real owner & collaborators
     const cleanOwner = (owner || 'student').toLowerCase().trim();
     const cleanStudentId = studentId ? studentId.toLowerCase().trim() : '';
     let formattedOwnerName = ownerName || owner || 'Student';
@@ -2262,6 +2353,26 @@ app.post('/api/documents/import-external', async (req, res) => {
 
     const realCollabs = [formattedOwnerName];
     const initialAllowed = [cleanOwner, cleanStudentId].filter(Boolean);
+
+    // Add Word metadata authors
+    if (docxMetadata) {
+      if (docxMetadata.creator && !realCollabs.includes(docxMetadata.creator)) {
+        realCollabs.push(docxMetadata.creator);
+      }
+      if (docxMetadata.lastModifiedBy && !realCollabs.includes(docxMetadata.lastModifiedBy)) {
+        realCollabs.push(docxMetadata.lastModifiedBy);
+      }
+    }
+
+    // Add Google Drive revisions authors
+    if (googleRevisions && googleRevisions.length > 0) {
+      googleRevisions.forEach(r => {
+        const name = r.lastModifyingUser?.displayName || r.lastModifyingUser?.emailAddress;
+        if (name && typeof name === 'string' && !realCollabs.includes(name)) {
+          realCollabs.push(name);
+        }
+      });
+    }
 
     if (Array.isArray(reqCollaborators) && reqCollaborators.length > 0) {
       reqCollaborators.forEach(c => {
@@ -2292,11 +2403,11 @@ app.post('/api/documents/import-external', async (req, res) => {
       source,
       externalId: docUrl || 'imported_content',
       syncStatus: 'synced',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: docxMetadata?.created || new Date(),
+      updatedAt: docxMetadata?.modified || new Date()
     });
 
-    // 5. Parse real paragraphs and create authentic initial revisions only if real text exists
+    // 5. Parse real paragraphs and create authentic initial revisions
     const paragraphs = realContent
       .replace(/<[^>]+>/g, '\n')
       .split('\n')
@@ -2311,15 +2422,31 @@ app.post('/api/documents/import-external', async (req, res) => {
       const slice = paragraphs.slice(i * chunkSize, (i + 1) * chunkSize);
       const pText = slice.join(' ') || finalTitle;
       const wordCount = pText.split(/\s+/).filter(Boolean).length;
-      const author = realCollabs[i % realCollabs.length];
-      const sectionName = i === 0 ? 'Document Title' : i < 3 ? 'Introduction' : 'Body Section';
+      
+      let author = realCollabs[i % realCollabs.length];
+      let revTime = new Date(now.getTime() - (totalSegments - i) * 60000);
 
+      // Use real Google revision if available
+      if (googleRevisions && googleRevisions.length > 0 && i < googleRevisions.length) {
+        const gr = googleRevisions[i];
+        if (gr.lastModifyingUser?.displayName) author = gr.lastModifyingUser.displayName;
+        if (gr.modifiedTime) revTime = new Date(gr.modifiedTime);
+      } else if (docxMetadata && i === 0 && docxMetadata.creator) {
+        author = docxMetadata.creator;
+        if (docxMetadata.created) revTime = docxMetadata.created;
+      } else if (docxMetadata && i === totalSegments - 1 && docxMetadata.lastModifiedBy) {
+        author = docxMetadata.lastModifiedBy;
+        if (docxMetadata.modified) revTime = docxMetadata.modified;
+      }
+
+      const sectionName = i === 0 ? 'Document Title' : i < 3 ? 'Introduction' : 'Body Section';
       const mlRes = await classifyRevisionWithML('', pText, sectionName);
+
       await Revision.create({
         documentId: docId,
         author,
         anonymizedAuthorId: generateAnonymizedAuthorId(author),
-        timestamp: new Date(now.getTime() - (totalSegments - i) * 60000),
+        timestamp: revTime,
         beforeText: '',
         afterText: pText,
         addedText: pText,

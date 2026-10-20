@@ -22,6 +22,13 @@ import ShareModal from '../../components/ShareModal';
 import ReportsManagerModal from '../../components/ReportsManagerModal';
 import { ToastContainer, CustomPromptDialog, CustomConfirmDialog, ToastItem } from '../../components/CustomDialog';
 import { getBackendUrl } from '../../utils/apiConfig';
+import DocumentMenuBar from '../../components/DocumentMenuBar';
+import DocumentRuler from '../../components/DocumentRuler';
+import DocumentDetailsModal from '../../components/DocumentDetailsModal';
+import DocumentOpenModal from '../../components/DocumentOpenModal';
+import KeyboardShortcutsModal from '../../components/KeyboardShortcutsModal';
+import FindReplaceBar from '../../components/FindReplaceBar';
+import ImportDocumentModal from '../../components/ImportDocumentModal';
 
 // Custom Tiptap Font Size Extension (MS Word Style)
 const FontSize = Extension.create({
@@ -133,7 +140,7 @@ const clearPendingEdit = async (docId: string) => {
 
 const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink, onSubmitAssignment, submissionStatus }: any) => {
   if (!editor) return null;
-  
+
   const addImage = () => {
     if (onPromptImage) {
       onPromptImage();
@@ -167,7 +174,7 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         flexWrap: 'nowrap',
         flexShrink: 1
       }}>
-        
+
         {/* 1. History Controls (Undo / Redo like Word) */}
         <button
           type="button"
@@ -283,9 +290,9 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         <div style={{ width: '1px', height: '20px', background: 'rgba(111, 175, 154, 0.3)', margin: '0 4px' }} />
 
         {/* 4. Font Family Selector */}
-        <select 
-          onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()} 
-          className="toolbar-btn" 
+        <select
+          onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
+          className="toolbar-btn"
           style={{ height: '28px', padding: '0 0.35rem', fontSize: '0.78rem', border: '1px solid rgba(111, 175, 154, 0.35)', borderRadius: '5px', maxWidth: '120px' }}
           value={editor.getAttributes('textStyle').fontFamily || ''}
           title="Font Family"
@@ -702,16 +709,16 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
           {isOffline ? 'Sync Online' : 'Offline'}
         </button>
 
-        <button 
-          onClick={onSave} 
-          className="toolbar-btn" 
+        <button
+          onClick={onSave}
+          className="toolbar-btn"
           title="Save Document (Ctrl+S)"
-          style={{ 
+          style={{
             height: '28px',
             padding: '0 0.65rem',
-            background: '#6FAF9A', 
+            background: '#6FAF9A',
             border: 'none',
-            color: '#0D1110', 
+            color: '#0D1110',
             fontWeight: 800,
             fontSize: '0.76rem',
             boxShadow: '0 1px 4px rgba(111, 175, 154, 0.35)',
@@ -731,16 +738,16 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         </button>
 
         {onSubmitAssignment && (
-          <button 
-            onClick={onSubmitAssignment} 
-            className="toolbar-btn" 
+          <button
+            onClick={onSubmitAssignment}
+            className="toolbar-btn"
             title="Save and submit completed assignment to lecturer"
-            style={{ 
+            style={{
               height: '28px',
               padding: '0 0.75rem',
-              background: submissionStatus === 'submitted' ? 'rgba(111, 175, 154, 0.2)' : '#0D1110', 
+              background: submissionStatus === 'submitted' ? 'rgba(111, 175, 154, 0.2)' : '#0D1110',
               border: submissionStatus === 'submitted' ? '1px solid #6FAF9A' : 'none',
-              color: submissionStatus === 'submitted' ? '#225243' : '#FFFFFF', 
+              color: submissionStatus === 'submitted' ? '#225243' : '#FFFFFF',
               fontWeight: 800,
               fontSize: '0.76rem',
               boxShadow: '0 1px 4px rgba(13, 17, 16, 0.2)',
@@ -786,13 +793,21 @@ function EditorComponent() {
   const [availableDocs, setAvailableDocs] = useState<any[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string>(docIdParam || '');
   const [docDetails, setDocDetails] = useState<any>(null);
-  
+
   // Security & Modals State
   const [accessDenied, setAccessDenied] = useState(false);
   const [accessDeniedInfo, setAccessDeniedInfo] = useState<any>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [openDocModalOpen, setOpenDocModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [showRuler, setShowRuler] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [userSkinPreference, setUserSkinPreference] = useState<'google' | 'word' | 'default' | null>(null);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocAssignmentType, setNewDocAssignmentType] = useState<'group' | 'individual'>('group');
   const [registeredUsersForCreate, setRegisteredUsersForCreate] = useState<any[]>([]);
@@ -812,7 +827,7 @@ function EditorComponent() {
     isOpen: false,
     title: '',
     defaultValue: '',
-    onConfirm: () => {}
+    onConfirm: () => { }
   });
 
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -827,7 +842,7 @@ function EditorComponent() {
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {}
+    onConfirm: () => { }
   });
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', title?: string) => {
@@ -846,7 +861,10 @@ function EditorComponent() {
   useEffect(() => {
     if (createModalOpen) {
       fetch(`${getSocketUrl()}/api/auth/users`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) return [];
+          return res.json();
+        })
         .then(data => {
           // Filter out current logged in user, admins, and lecturers
           const others = (data || []).filter((u: any) => {
@@ -859,7 +877,7 @@ function EditorComponent() {
           });
           setRegisteredUsersForCreate(others);
         })
-        .catch(err => console.error("Failed to fetch users for creation modal", err));
+        .catch(err => console.warn("Could not fetch users for creation modal:", err?.message || err));
     }
   }, [createModalOpen, user]);
 
@@ -905,12 +923,13 @@ function EditorComponent() {
           'Pragma': 'no-cache'
         }
       });
+      if (!res.ok) return;
       const data = await res.json();
       if (data && data.authors) {
         setMarkupData(data);
       }
-    } catch (err) {
-      console.error("Failed to fetch markup data", err);
+    } catch (err: any) {
+      console.warn("Could not fetch markup data:", err?.message || err);
     }
   };
 
@@ -944,8 +963,8 @@ function EditorComponent() {
     return () => clearInterval(interval);
   }, [selectedDocId, isOffline]);
 
-  const effectiveAuthor = user 
-    ? `${user.name} (${user.studentId})` 
+  const effectiveAuthor = user
+    ? `${user.name} (${user.studentId})`
     : 'Anonymous Student';
 
   // Handle URL param docId change
@@ -967,7 +986,10 @@ function EditorComponent() {
     if (!user) return;
     const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
     fetch(`${getSocketUrl()}/api/documents?${query}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         const docs = Array.isArray(data) ? data : [];
         setAvailableDocs(docs);
@@ -988,7 +1010,7 @@ function EditorComponent() {
           setSelectedDocId('');
         }
       })
-      .catch(err => console.error("Failed to fetch documents", err));
+      .catch(err => console.warn("Could not fetch documents:", err?.message || err));
   };
 
   useEffect(() => {
@@ -1016,6 +1038,14 @@ function EditorComponent() {
       }
     })
       .then(async res => {
+        if (!res.ok) {
+          if (res.status === 403) {
+            if (!isKnownPermitted) {
+              setAccessDenied(true);
+            }
+          }
+          return null;
+        }
         const data = await res.json();
         if (res.status === 403 || (data.isAccessDenied && res.status !== 401)) {
           if (!isKnownPermitted) {
@@ -1043,7 +1073,7 @@ function EditorComponent() {
           }
         }
       })
-      .catch(err => console.error("Failed to fetch doc details", err));
+      .catch(err => console.warn("Failed to fetch doc details:", err?.message || err));
   };
 
   useEffect(() => {
@@ -1053,6 +1083,7 @@ function EditorComponent() {
   const isGoogleDoc = selectedDocId.startsWith('google_docs_') || docDetails?.source === 'google_docs';
   const isMSWord = selectedDocId.startsWith('microsoft_365_') || docDetails?.source === 'microsoft_365';
   const isExternalDoc = isGoogleDoc || isMSWord;
+  const currentSkin: 'google' | 'word' | 'default' = userSkinPreference || (isGoogleDoc ? 'google' : isMSWord ? 'word' : 'default');
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -1091,7 +1122,7 @@ function EditorComponent() {
       if (isOffline) {
         const oldWords = lastText.split(/\s+/).filter(Boolean).length;
         const newWords = plainText.split(/\s+/).filter(Boolean).length;
-        
+
         let added = 0;
         let deleted = 0;
         if (newWords > oldWords) {
@@ -1110,7 +1141,7 @@ function EditorComponent() {
             wordCountDeleted: deleted,
             section: "Offline Session"
           };
-          
+
           setOfflineRevisions((prev: any[]) => {
             const updated = [...prev, newRev];
             savePendingEdit(selectedDocId, html, effectiveAuthor, updated);
@@ -1156,10 +1187,43 @@ function EditorComponent() {
     }
   }, [editor, docDetails?.content]);
 
+  // Global Keyboard Shortcuts (Ctrl+S, Ctrl+O, Ctrl+F, Ctrl+Shift+C, Ctrl+/)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S: Save
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+      // Ctrl+O: Open Document Picker
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        setOpenDocModalOpen(true);
+      }
+      // Ctrl+F: Find & Replace
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFindReplaceOpen(prev => !prev);
+      }
+      // Ctrl+Shift+C: Word count & details
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setDetailsModalOpen(true);
+      }
+      // Ctrl+/: Keyboard shortcuts
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setShortcutsModalOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editor, selectedDocId, docDetails]);
+
   // Setup Socket Connection with Security Guard
   useEffect(() => {
     if (!isAuthenticated || !user || isOffline || accessDenied || !selectedDocId) return;
-    
+
     const s = io(getSocketUrl());
     setSocket(s);
 
@@ -1267,7 +1331,7 @@ function EditorComponent() {
       setSyncStatus('syncing');
       try {
         const pending = await getPendingEdit(selectedDocId);
-        
+
         if (pending && pending.revisions && pending.revisions.length > 0) {
           const response = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/sync-offline`, {
             method: 'POST',
@@ -1306,8 +1370,8 @@ function EditorComponent() {
         body: JSON.stringify({
           title: newDocTitle.trim(),
           owner: user.username || user.studentId || 'student',
-          ownerName: user.name 
-            ? (user.studentId ? `${user.name} (${user.studentId})` : user.name) 
+          ownerName: user.name
+            ? (user.studentId ? `${user.name} (${user.studentId})` : user.name)
             : (user.username || (newDocAssignmentType === 'individual' ? 'Student Author' : 'Student Leader')),
           studentId: user.studentId || '',
           assignmentType: newDocAssignmentType,
@@ -1415,8 +1479,8 @@ function EditorComponent() {
 
     // Only prompt for title on first save if document has a generic ID or default title
     const isFirstTimeOrUntitled = !hasSavedOnce[selectedDocId] && (
-      !currentTitle || 
-      currentTitle.startsWith('doc_') || 
+      !currentTitle ||
+      currentTitle.startsWith('doc_') ||
       currentTitle.toLowerCase().includes('untitled')
     );
 
@@ -1445,7 +1509,7 @@ function EditorComponent() {
 
   const handleSubmitAssignment = () => {
     if (!selectedDocId || !user) return;
-    
+
     // First save content
     saveContentAndNotify();
 
@@ -1782,7 +1846,7 @@ function EditorComponent() {
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               style={{ cursor: 'pointer', accentColor: '#6FAF9A' }}
                             />
                             <div style={{ flex: 1, color: isSelected ? '#0D1110' : '#334155' }}>
@@ -1883,6 +1947,48 @@ function EditorComponent() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Import Document Modal (Google Docs / MS Word .docx) */}
+      <ImportDocumentModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImportSuccess={(newDocId, title) => {
+          fetchDocs();
+          setSelectedDocId(newDocId);
+          router.push(`/editor?docId=${newDocId}`);
+          showToast(`Successfully imported "${title}"!`, 'success', 'Import Complete');
+        }}
+        currentUser={user}
+      />
+
+      {/* Document Open / Switcher Modal (Ctrl+O) */}
+      <DocumentOpenModal
+        isOpen={openDocModalOpen}
+        onClose={() => setOpenDocModalOpen(false)}
+        documents={availableDocs}
+        activeDocId={selectedDocId}
+        onSelectDoc={(nextDocId) => {
+          setSelectedDocId(nextDocId);
+          router.push(`/editor?docId=${nextDocId}`);
+        }}
+        onOpenImportModal={() => setImportModalOpen(true)}
+      />
+
+      {/* Document Details & Statistics Modal (Ctrl+Shift+C) */}
+      <DocumentDetailsModal
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        docDetails={docDetails}
+        editor={editor}
+        revisionsCount={markupData?.totalRevisions || 0}
+        collaborators={docDetails?.collaborators || []}
+      />
+
+      {/* Keyboard Shortcuts Modal (Ctrl+/) */}
+      <KeyboardShortcutsModal
+        isOpen={shortcutsModalOpen}
+        onClose={() => setShortcutsModalOpen(false)}
+      />
     </>
   );
 
@@ -1930,17 +2036,17 @@ function EditorComponent() {
           <p style={{ color: '#43574f', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.6' }}>
             To accurately recognize who is working on the document and enforce group security permissions, please log in or create a student account.
           </p>
-          
-          <button 
+
+          <button
             onClick={openAuthModal}
-            style={{ 
-              background: '#6FAF9A', 
-              color: '#0D1110', 
-              width: '100%', 
-              padding: '0.85rem', 
-              borderRadius: '8px', 
-              border: 'none', 
-              fontWeight: 800, 
+            style={{
+              background: '#6FAF9A',
+              color: '#0D1110',
+              width: '100%',
+              padding: '0.85rem',
+              borderRadius: '8px',
+              border: 'none',
+              fontWeight: 800,
               fontSize: '0.95rem',
               cursor: 'pointer',
               boxShadow: '0 4px 14px rgba(111, 175, 154, 0.35)',
@@ -2176,515 +2282,101 @@ function EditorComponent() {
   const wordCount = liveDocWordCount;
 
   return (
-    <div className={`editor-container ${isGoogleDoc ? 'google-docs-mode' : isMSWord ? 'ms-word-mode' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
-      
-      {/* 1. Google Docs Background Theme Header */}
-      {isGoogleDoc && (
-        <>
-          <div className="google-docs-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ background: '#4285F4', color: 'white', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                ≡
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <h3 
-                    onClick={() => handleRenameDocument()}
-                    title="Click to rename document"
-                    style={{ margin: 0, fontSize: '1rem', color: '#202124', fontWeight: '500', cursor: 'pointer' }}
-                  >
-                    {docDetails?.title || selectedDocId}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: '#70757a', background: '#e8f0fe', padding: '0.1rem 0.4rem', borderRadius: '12px' }}>
-                    Saved to Drive & Inkie
-                  </span>
-                </div>
-                <div className="google-docs-menubar">
-                  <span>File</span>
-                  <span>Edit</span>
-                  <span>View</span>
-                  <span>Insert</span>
-                  <span>Format</span>
-                  <span>Tools</span>
-                  <span>Extensions</span>
-                  <span>Help</span>
-                </div>
-              </div>
-            </div>
+    <div className={`editor-container ${currentSkin === 'google' ? 'google-docs-mode' : currentSkin === 'word' ? 'ms-word-mode' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button
-                onClick={() => handleRenameDocument()}
-                style={{
-                  background: '#e8f0fe',
-                  color: '#1a73e8',
-                  border: '1px solid #c2e7ff',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '16px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                Rename
-              </button>
+      {/* Unified Document Top Header & MenuBar (Google Docs, Word 365, and Inkie skins) */}
+      <DocumentMenuBar
+        editor={editor}
+        docDetails={docDetails}
+        selectedDocId={selectedDocId}
+        themeSkin={currentSkin}
+        onThemeSkinChange={(skin) => setUserSkinPreference(skin)}
+        onRename={handleRenameDocument}
+        onSave={handleSave}
+        onOpenDocModal={() => setOpenDocModalOpen(true)}
+        onOpenCreateModal={() => setCreateModalOpen(true)}
+        onOpenImportModal={() => setImportModalOpen(true)}
+        onOpenDetailsModal={() => setDetailsModalOpen(true)}
+        onOpenShortcutsModal={() => setShortcutsModalOpen(true)}
+        onToggleFindReplace={() => setFindReplaceOpen(prev => !prev)}
+        onToggleRuler={() => setShowRuler(prev => !prev)}
+        showRuler={showRuler}
+        onZoomChange={(zoom) => setZoomLevel(zoom)}
+        zoomLevel={zoomLevel}
+        onPromptImage={() => {
+          setPromptDialog({
+            isOpen: true,
+            title: 'Insert Image URL',
+            subtitle: 'Embed an image link directly into the document',
+            defaultValue: '',
+            placeholder: 'https://example.com/figure.png',
+            confirmLabel: 'Insert Image',
+            onConfirm: (url: string) => {
+              if (url && url.trim()) {
+                editor?.chain().focus().setImage({ src: url.trim() }).run();
+                showToast('Image inserted successfully', 'success', 'Image Added');
+              }
+              setPromptDialog(prev => ({ ...prev, isOpen: false }));
+            }
+          });
+        }}
+        onPromptLink={() => {
+          const previousUrl = editor?.getAttributes('link').href || '';
+          setPromptDialog({
+            isOpen: true,
+            title: 'Insert / Edit Hyperlink',
+            subtitle: 'Attach a web URL to the highlighted text',
+            defaultValue: previousUrl,
+            placeholder: 'https://example.com',
+            confirmLabel: 'Set Link',
+            onConfirm: (url: string) => {
+              if (url === null) {
+                setPromptDialog(prev => ({ ...prev, isOpen: false }));
+                return;
+              }
+              if (url === '') {
+                editor?.chain().focus().extendMarkRange('link').unsetLink().run();
+                showToast('Link removed', 'info', 'Link Removed');
+              } else {
+                editor?.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
+                showToast('Link attached successfully', 'success', 'Link Updated');
+              }
+              setPromptDialog(prev => ({ ...prev, isOpen: false }));
+            }
+          });
+        }}
+        onOpenShareModal={() => setShareModalOpen(true)}
+        onOpenReportsModal={() => setReportsModalOpen(true)}
+        onDeleteDocument={handleDeleteActiveDocument}
+        onToggleAuthorHighlights={() => {
+          if (isHighlightMode) {
+            setIsHighlightMode(false);
+            setSelectedAuthorFilter('ALL');
+          } else {
+            setIsHighlightMode(true);
+          }
+        }}
+        isHighlightMode={isHighlightMode}
+        onToggleTimeline={() => setReportsModalOpen(true)}
+        onToggleMLAnalytics={() => setReportsModalOpen(true)}
+        onToggleGrowthChart={() => setReportsModalOpen(true)}
+        onToggleHeatmap={() => setReportsModalOpen(true)}
+        syncStatus={syncStatus}
+      />
 
-              <button
-                onClick={() => setReportsModalOpen(true)}
-                style={{
-                  background: '#e8f0fe',
-                  color: '#1a73e8',
-                  border: '1px solid #c2e7ff',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '16px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                All Reports
-              </button>
-
-              <button
-                onClick={() => setCreateModalOpen(true)}
-                style={{
-                  background: '#e8f0fe',
-                  color: '#1a73e8',
-                  border: '1px solid #c2e7ff',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '16px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                + New Doc
-              </button>
-
-              <button
-                onClick={() => setShareModalOpen(true)}
-                style={{
-                  background: '#1a73e8',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.45rem 1rem',
-                  borderRadius: '24px',
-                  fontWeight: '600',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem'
-                }}
-              >
-                Share
-              </button>
-
-              <button
-                onClick={handleDeleteActiveDocument}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  color: '#ef4444',
-                  border: '1px solid #ef4444',
-                  padding: '0.35rem 0.65rem',
-                  borderRadius: '16px',
-                  fontWeight: 'bold',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-          <div className="google-docs-ruler">
-            1 · · · 2 · · · 3 · · · 4 · · · 5 · · · 6 · · · 7 · · · 8
-          </div>
-        </>
-      )}
-
-      {/* 2. MS Word 365 Background Theme Header */}
-      {isMSWord && (
-        <>
-          <div className="word-top-bar">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ background: '#005a9e', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '3px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                W
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.2)', padding: '0.15rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem' }}>
-                <span>AutoSave</span>
-                <strong style={{ background: '#10b981', padding: '0.05rem 0.3rem', borderRadius: '8px', fontSize: '0.7rem' }}>ON</strong>
-              </div>
-              <span 
-                onClick={() => handleRenameDocument()}
-                title="Click to rename document"
-                style={{ fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' }}
-              >
-                {docDetails?.title || selectedDocId} &mdash; Word 365
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button
-                onClick={() => handleRenameDocument()}
-                style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                Rename
-              </button>
-
-              <button
-                onClick={() => setReportsModalOpen(true)}
-                style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                All Reports
-              </button>
-
-              <button
-                onClick={() => setCreateModalOpen(true)}
-                style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.4)',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                + New Doc
-              </button>
-
-              <button
-                onClick={() => setShareModalOpen(true)}
-                style={{
-                  background: 'white',
-                  color: '#0078d4',
-                  border: 'none',
-                  padding: '0.35rem 0.8rem',
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Share
-              </button>
-
-              <button
-                onClick={handleDeleteActiveDocument}
-                style={{
-                  background: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.35rem 0.65rem',
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-
-          <div className="word-ribbon-tabs">
-            <div className="word-ribbon-tab active">Home</div>
-            <div className="word-ribbon-tab">Insert</div>
-            <div className="word-ribbon-tab">Layout</div>
-            <div className="word-ribbon-tab">References</div>
-            <div className="word-ribbon-tab">Review</div>
-            <div className="word-ribbon-tab">View</div>
-          </div>
-        </>
-      )}
-
-      {/* Default Header Banner for Built-in Mode - Sleek Single-Line Compact Header */}
-      {!isExternalDoc && (
-        <div style={{
-          background: '#FFFFFF',
-          padding: '0.35rem 1.25rem',
-          borderBottom: '1px solid rgba(111, 175, 154, 0.22)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '0.75rem',
-          minHeight: '42px',
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
-          boxSizing: 'border-box'
-        }}>
-          {/* Left Side: Document Title + Rename + Compact Metadata Badges in ONE unified line */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0, flex: 1 }}>
-            <h3 
-              onClick={() => handleRenameDocument()}
-              title="Click to rename document"
-              style={{
-                margin: 0,
-                fontSize: '0.96rem',
-                fontWeight: 700,
-                color: '#0D1110',
-                cursor: 'pointer',
-                letterSpacing: '-0.01em',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '340px'
-              }}
-            >
-              {docDetails?.title || selectedDocId}
-            </h3>
-
-            <button
-              onClick={() => handleRenameDocument()}
-              title="Rename Document"
-              style={{
-                background: '#EFF8F3',
-                border: '1px solid rgba(111, 175, 154, 0.4)',
-                color: '#225243',
-                padding: '0.15rem 0.45rem',
-                borderRadius: '5px',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                whiteSpace: 'nowrap',
-                height: '24px'
-              }}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              <span>Rename</span>
-            </button>
-
-            <span style={{ width: '1px', height: '14px', background: '#D1D5DB', margin: '0 0.15rem' }} />
-
-            {/* Assignment Type */}
-            <span style={{
-              fontSize: '0.7rem',
-              background: docDetails?.assignmentType === 'individual' ? '#E0F2FE' : '#EEF2FF',
-              border: `1px solid ${docDetails?.assignmentType === 'individual' ? '#BAE6FD' : '#C7D2FE'}`,
-              color: docDetails?.assignmentType === 'individual' ? '#0369A1' : '#4338CA',
-              padding: '0.12rem 0.5rem',
-              borderRadius: '10px',
-              fontWeight: 700,
-              whiteSpace: 'nowrap'
-            }}>
-              {docDetails?.assignmentType === 'individual' ? '👤 Individual' : '👥 Group'}
-            </span>
-
-            {/* Leader / Author */}
-            <span style={{
-              fontSize: '0.7rem',
-              background: '#EFF8F3',
-              border: '1px solid rgba(111, 175, 154, 0.35)',
-              color: '#225243',
-              padding: '0.12rem 0.5rem',
-              borderRadius: '10px',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
-            }}>
-              {docDetails?.assignmentType === 'individual'
-                ? `Author: ${docDetails?.ownerName || docDetails?.owner || 'Student'}`
-                : `Leader: ${docDetails?.ownerName || docDetails?.owner || 'Leader'}`}
-            </span>
-
-            {/* Status */}
-            <span style={{
-              fontSize: '0.7rem',
-              background: docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-              border: `1px solid ${docDetails?.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-              color: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
-              padding: '0.12rem 0.5rem',
-              borderRadius: '10px',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              whiteSpace: 'nowrap'
-            }}>
-              <span style={{
-                width: '5px',
-                height: '5px',
-                borderRadius: '50%',
-                background: docDetails?.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
-              }} />
-              <span>{docDetails?.submissionStatus === 'submitted' ? 'Submitted' : 'Draft'}</span>
-            </span>
-
-            {/* Course */}
-            {docDetails?.course && (
-              <span style={{
-                fontSize: '0.7rem',
-                background: '#F1F5F9',
-                border: '1px solid #E2E8F0',
-                color: '#334155',
-                padding: '0.12rem 0.5rem',
-                borderRadius: '6px',
-                fontWeight: 600,
-                whiteSpace: 'nowrap'
-              }}>
-                {docDetails.course}
-              </span>
-            )}
-
-            {/* Grade (if awarded) */}
-            {docDetails?.grade && (
-              <span style={{
-                fontSize: '0.7rem',
-                background: 'rgba(34, 197, 94, 0.15)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                color: '#16a34a',
-                padding: '0.12rem 0.5rem',
-                borderRadius: '6px',
-                fontWeight: 800,
-                whiteSpace: 'nowrap'
-              }}>
-                Grade: {docDetails.grade}
-              </span>
-            )}
-          </div>
-
-          {/* Right Side: Sleek Compact Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
-            <button
-              onClick={handleManualRefresh}
-              title="Click to refresh collaborator word counts and document data"
-              style={{
-                background: '#EFF8F3',
-                color: '#225243',
-                border: '1px solid rgba(111, 175, 154, 0.35)',
-                padding: '0.2rem 0.55rem',
-                borderRadius: '6px',
-                fontWeight: 700,
-                fontSize: '0.76rem',
-                cursor: isRefreshing ? 'wait' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                height: '28px'
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }}>
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-              </svg>
-              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-            </button>
-
-            <button
-              onClick={() => setReportsModalOpen(true)}
-              style={{
-                background: '#F8FAFC',
-                color: '#334155',
-                border: '1px solid #CBD5E1',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '6px',
-                fontWeight: 600,
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                height: '28px'
-              }}
-            >
-              All Reports
-            </button>
-
-            <button
-              onClick={() => setCreateModalOpen(true)}
-              style={{
-                background: '#6FAF9A',
-                color: '#0D1110',
-                border: 'none',
-                padding: '0.2rem 0.7rem',
-                borderRadius: '6px',
-                fontWeight: 700,
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                height: '28px',
-                boxShadow: '0 1px 4px rgba(111, 175, 154, 0.35)'
-              }}
-              onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
-              onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
-            >
-              + Create Group Doc
-            </button>
-
-            <button
-              onClick={() => setShareModalOpen(true)}
-              style={{
-                background: '#0D1110',
-                color: '#FFFFFF',
-                border: 'none',
-                padding: '0.2rem 0.75rem',
-                borderRadius: '6px',
-                fontWeight: 600,
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                height: '28px',
-                boxShadow: '0 1px 4px rgba(13, 17, 16, 0.2)'
-              }}
-              onMouseOver={e => e.currentTarget.style.background = '#222926'}
-              onMouseOut={e => e.currentTarget.style.background = '#0D1110'}
-            >
-              Share
-            </button>
-
-            <button
-              onClick={handleDeleteActiveDocument}
-              style={{
-                background: '#FEF2F2',
-                color: '#DC2626',
-                border: '1px solid #FECACA',
-                padding: '0.2rem 0.55rem',
-                borderRadius: '6px',
-                fontWeight: 600,
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                height: '28px'
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Floating Find & Replace Bar (Ctrl+F) */}
+      <FindReplaceBar
+        isOpen={findReplaceOpen}
+        onClose={() => setFindReplaceOpen(false)}
+        editor={editor}
+      />
 
       {/* Editor Toolbar */}
-      <MenuBar 
-        editor={editor} 
-        isOffline={isOffline} 
-        syncStatus={syncStatus} 
-        toggleOffline={toggleOffline} 
+      <MenuBar
+        editor={editor}
+        isOffline={isOffline}
+        syncStatus={syncStatus}
+        toggleOffline={toggleOffline}
         onSave={handleSave}
         onSaveAndRename={handleSaveAndRename}
         onSubmitAssignment={handleSubmitAssignment}
@@ -2735,8 +2427,13 @@ function EditorComponent() {
 
       {/* Editor Page Area & Collaborators Panel */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Main Document Area (Word-like canvas) */}
-        <div style={{ flex: 3, padding: '1.5rem', overflowY: 'auto', background: '#f1f5f9', display: 'flex', justifyContent: 'center' }}>
+        {/* Main Document Area (Word/Docs canvas) */}
+        <div style={{ flex: 3, padding: '1.25rem 1rem 3rem 1rem', overflowY: 'auto', background: currentSkin === 'word' ? '#edebe9' : '#f8f9fa', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {showRuler && (
+            <div style={{ width: '100%', maxWidth: '850px', marginBottom: '10px' }}>
+              <DocumentRuler mode={currentSkin} zoom={zoomLevel} />
+            </div>
+          )}
           {isHighlightMode ? (
             <div style={{
               background: '#fff',
@@ -2750,7 +2447,7 @@ function EditorComponent() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '1rem' }}>
                 <h2 style={{ margin: 0, color: '#334155' }}>{docDetails?.title || 'Document'}</h2>
-                <button 
+                <button
                   onClick={() => { setIsHighlightMode(false); setSelectedAuthorFilter('ALL'); }}
                   style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                 >
@@ -2759,12 +2456,12 @@ function EditorComponent() {
               </div>
 
               {markupData?.segments?.map((seg: any) => {
-                const isMatched = selectedAuthorFilter === 'ALL' || 
-                  seg.author === selectedAuthorFilter || 
+                const isMatched = selectedAuthorFilter === 'ALL' ||
+                  seg.author === selectedAuthorFilter ||
                   (selectedAuthorFilter.includes('(') && seg.author === selectedAuthorFilter.split('(')[0].trim());
                 const authorColor = seg.color || '#4285f4';
                 const authorBg = seg.bgColor || 'rgba(66, 133, 244, 0.2)';
-                
+
                 return (
                   <div
                     key={seg.id}
@@ -2862,8 +2559,8 @@ function EditorComponent() {
                 const authorLiveWords = typeof a.liveWords === 'number'
                   ? a.liveWords
                   : (liveDocWordCount > 0 && typeof a.percentage === 'number'
-                      ? Math.round((a.percentage / 100) * liveDocWordCount)
-                      : (a.totalWordsAdded || 0));
+                    ? Math.round((a.percentage / 100) * liveDocWordCount)
+                    : (a.totalWordsAdded || 0));
                 return (
                   <div
                     key={a.author}

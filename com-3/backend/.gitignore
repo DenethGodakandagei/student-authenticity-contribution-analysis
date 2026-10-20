@@ -23,3 +23,6 @@ venv/
 *.log
 scratch/
 seed_*.js
+
+.env
+com-3/backend/.env
