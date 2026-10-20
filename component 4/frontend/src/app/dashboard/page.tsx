@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import GreetingCard from '../components/dashboard/GreetingCard';
 import StartTeachingCard from '../components/dashboard/StartTeachingCard';
 import SessionsList from '../components/dashboard/SessionsList';
+import MaterialsCard from '../components/dashboard/MaterialsCard';
 import HowItWorksCard from '../components/dashboard/HowItWorksCard';
+import QuizzesList from '../components/dashboard/QuizzesList';
 import {
   apiRequest,
   getAccessToken,
@@ -77,6 +79,10 @@ export default function DashboardPage() {
           <StartTeachingCard />
           <HowItWorksCard />
         </div>
+
+        <MaterialsCard />
+
+        <QuizzesList />
 
         <SessionsList sessions={sessions} error={sessionsError} />
       </main>

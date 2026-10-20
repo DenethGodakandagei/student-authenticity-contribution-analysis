@@ -7,6 +7,7 @@ build/load/retrieve using NumPy cosine similarity (no faiss/chromadb).
 import os
 import sys
 import json
+import time
 import logging
 from typing import Any, Dict, List, Optional
 # pyrefly: ignore [missing-import]
@@ -15,6 +16,8 @@ import numpy as np
 from pypdf import PdfReader
 # pyrefly: ignore [missing-import]
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from app.demo_log import step
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +86,25 @@ def chunk_pages(
     return chunks
 
 
+def save_pages(pages: List[Dict[str, Any]], kb_id: str) -> None:
+    """Saves page text as numbered lines to knowledge/{kb_id}/pages.json."""
+    kb_dir = os.path.join(KNOWLEDGE_DIR, kb_id)
+    os.makedirs(kb_dir, exist_ok=True)
+    numbered_pages = [
+        {
+            "page": page["page"],
+            "lines": [
+                f"{line_number}: {line}"
+                for line_number, line in enumerate(page["text"].splitlines(), start=1)
+            ],
+        }
+        for page in pages
+    ]
+    pages_path = os.path.join(kb_dir, "pages.json")
+    with open(pages_path, "w", encoding="utf-8") as f:
+        json.dump(numbered_pages, f, indent=2, ensure_ascii=False)
+
+
 class KnowledgeBase:
     """Page-aware local knowledge base backed by NumPy cosine similarity."""
 
@@ -98,13 +120,24 @@ class KnowledgeBase:
         to backend/knowledge/{kb_id}/chunks.json and vectors.npy.
         """
         pages = extract_pages(pdf_path)
+        step("INGEST", "pages extracted", kb_id=kb_id, pages=len(pages))
+        save_pages(pages, kb_id)
         chunks = chunk_pages(pages)
         if not chunks:
             raise ValueError(f"No extractable text found in PDF: {pdf_path}")
+        step("INGEST", "chunks created", kb_id=kb_id, chunks=len(chunks))
 
         model = _get_embedding_model()
+        embed_started = time.perf_counter()
         embeddings = model.encode([c["text"] for c in chunks], convert_to_numpy=True)
         vectors = np.asarray(embeddings, dtype=np.float32)
+        step(
+            "INGEST",
+            "embeddings created",
+            kb_id=kb_id,
+            embeddings=len(chunks),
+            seconds=round(time.perf_counter() - embed_started, 3),
+        )
 
         kb_dir = os.path.join(KNOWLEDGE_DIR, kb_id)
         os.makedirs(kb_dir, exist_ok=True)
@@ -135,6 +168,7 @@ class KnowledgeBase:
         similarity, each with an added float "score" field.
         """
         if not self.chunks:
+            step("RAG", "retrieve", kb_id=self.kb_id, query=query, k=k, hits=[])
             return []
 
         model = _get_embedding_model()
@@ -153,6 +187,15 @@ class KnowledgeBase:
         )
 
         top_indices = np.argsort(scores)[::-1][:k]
+        hits = [
+            {
+                "chunk_id": self.chunks[i]["chunk_id"],
+                "page": self.chunks[i]["page"],
+                "score": round(float(scores[i]), 3),
+            }
+            for i in top_indices
+        ]
+        step("RAG", "retrieve", kb_id=self.kb_id, query=query, k=k, hits=hits)
         return [{**self.chunks[i], "score": float(scores[i])} for i in top_indices]
 
 

@@ -145,6 +145,67 @@ function handleUnauthorized(): void {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+const DEMO_LOG = process.env.NEXT_PUBLIC_DEMO_LOG === '1';
+const DEMO_LOG_SENSITIVE_KEYS = new Set([
+  'password',
+  'password_hash',
+  'salt',
+  'token',
+  'access_token',
+  'refresh_token',
+  'authorization',
+  'jwt',
+  'secret',
+  'api_key',
+  'mongo_uri',
+  'lecturer_code',
+  'correct_index',
+  'expected_answer',
+  'answer_key',
+  'correct_concept',
+]);
+const JWT_VALUE_RE = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
+
+function redactForDemo(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactForDemo);
+  if (value && typeof value === 'object') {
+    if (typeof FormData !== 'undefined' && value instanceof FormData) {
+      return '<FormData>';
+    }
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        DEMO_LOG_SENSITIVE_KEYS.has(key.toLowerCase().replace(/-/g, '_'))
+          ? '***'
+          : redactForDemo(item),
+      ])
+    );
+  }
+  if (typeof value === 'string' && JWT_VALUE_RE.test(value.trim())) return '***';
+  return value;
+}
+
+function logDemoRequest(
+  method: HttpMethod,
+  path: string,
+  requestBody: unknown,
+  status: number | string,
+  durationMs: number,
+  responseData?: unknown,
+  error?: string
+): void {
+  if (!DEMO_LOG || typeof console === 'undefined') return;
+  console.groupCollapsed(`[DEMO] ${method} ${path} -> ${status}`);
+  console.log('method:', method);
+  console.log('path:', path);
+  console.log('request body:', redactForDemo(requestBody));
+  console.log('status:', status);
+  console.log('duration ms:', Math.round(durationMs * 10) / 10);
+  if (responseData !== undefined) console.log('response data:', redactForDemo(responseData));
+  if (error) console.log('error:', error);
+  console.groupEnd();
+}
+
 /**
  * fetch wrapper: injects NEXT_PUBLIC_API_URL, JSON headers and the stored
  * bearer token, and turns a 401 into a logout + redirect to /login.
@@ -154,6 +215,7 @@ export async function apiRequest<T>(
   method: HttpMethod = 'GET',
   body?: unknown
 ): Promise<ApiResponse<T>> {
+  const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
   const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') ?? '';
   const url = `${base}${path}`;
 
@@ -187,6 +249,53 @@ export async function apiRequest<T>(
     }
     // Bad credentials on the auth routes are a form error, not a session expiry.
     if (res.status === 401 && !path.startsWith('/auth/')) {
+      handleUnauthorized();
+    }
+    const durationMs =
+      (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt;
+    logDemoRequest(method, path, body, res.status, durationMs, data);
+    return { ok: res.ok, data, status: res.status };
+  } catch (e) {
+    const durationMs =
+      (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt;
+    logDemoRequest(
+      method,
+      path,
+      body,
+      'network-error',
+      durationMs,
+      undefined,
+      (e as Error).message
+    );
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+/**
+ * Multipart fetch wrapper for FormData uploads. The browser must set the
+ * Content-Type (including its boundary), so this helper sends only auth headers.
+ */
+export async function apiUpload<T>(
+  path: string,
+  formData: FormData
+): Promise<ApiResponse<T>> {
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') ?? '';
+  const url = `${base}${path}`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...authHeaders() },
+      body: formData,
+      credentials: 'same-origin',
+    });
+    let data: T | undefined;
+    try {
+      data = (await res.json()) as T;
+    } catch {
+      data = undefined;
+    }
+    if (res.status === 401) {
       handleUnauthorized();
     }
     return { ok: res.ok, data, status: res.status };

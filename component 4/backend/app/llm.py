@@ -7,6 +7,7 @@ from typing import Optional
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel, ValidationError  # pyright: ignore[reportMissingImports]
 from app.config import settings
+from app.demo_log import llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class OllamaProvider(BaseLLMProvider):
         req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
         max_attempts = 2  # one retry when Ollama fails with HTTP 500
         for attempt in range(max_attempts):
+            started = time.perf_counter()
             try:
                 with urllib.request.urlopen(req, timeout=settings.OLLAMA_TIMEOUT) as response:
                     if response.status != 200:
@@ -48,18 +50,57 @@ class OllamaProvider(BaseLLMProvider):
                     res_data = json.loads(response.read().decode("utf-8"))
                     if "response" not in res_data:
                         raise ValueError("Invalid response format received from Ollama API.")
-                    return res_data.get("response", "")
+                    response_text = res_data.get("response", "")
+                    llm_call(
+                        type(self).__name__,
+                        self.model_name,
+                        prompt,
+                        json_mode=json_mode,
+                        seconds=time.perf_counter() - started,
+                        response=response_text,
+                        attempt=attempt + 1,
+                    )
+                    return response_text
             except urllib.error.HTTPError as e:
+                elapsed = time.perf_counter() - started
                 if e.code == 500 and attempt < max_attempts - 1:
+                    llm_call(
+                        type(self).__name__,
+                        self.model_name,
+                        prompt,
+                        json_mode=json_mode,
+                        seconds=elapsed,
+                        attempt=attempt + 1,
+                        error=f"HTTP {e.code}: {e}",
+                    )
                     logger.warning(f"Ollama returned HTTP 500; retrying once in 3 seconds: {e}")
                     time.sleep(3)
                     continue
+                llm_call(
+                    type(self).__name__,
+                    self.model_name,
+                    prompt,
+                    json_mode=json_mode,
+                    seconds=elapsed,
+                    attempt=attempt + 1,
+                    error=f"HTTP {e.code}: {e}",
+                )
                 logger.error(f"Failed to connect to Ollama server at {self.host}: {e}")
                 raise ConnectionError(
                     f"LLM Connection Error: Unable to connect to local Ollama server at {self.host}. "
                     "Please verify that Ollama is installed and running."
                 ) from e
             except (TimeoutError, urllib.error.URLError) as e:
+                elapsed = time.perf_counter() - started
+                llm_call(
+                    type(self).__name__,
+                    self.model_name,
+                    prompt,
+                    json_mode=json_mode,
+                    seconds=elapsed,
+                    attempt=attempt + 1,
+                    error=str(e),
+                )
                 if "timed out" in str(e).lower() or isinstance(e, TimeoutError):
                     logger.error(f"Ollama local model generation timed out ({settings.OLLAMA_TIMEOUT}s): {e}")
                     raise TimeoutError(
@@ -72,9 +113,27 @@ class OllamaProvider(BaseLLMProvider):
                     "Please verify that Ollama is installed and running."
                 ) from e
             except json.JSONDecodeError as e:
+                llm_call(
+                    type(self).__name__,
+                    self.model_name,
+                    prompt,
+                    json_mode=json_mode,
+                    seconds=time.perf_counter() - started,
+                    attempt=attempt + 1,
+                    error=f"Invalid JSON: {e}",
+                )
                 logger.error(f"Failed to parse Ollama response as JSON: {e}")
                 raise ValueError(f"LLM Response Error: Ollama returned invalid JSON output: {e}") from e
             except Exception as e:
+                llm_call(
+                    type(self).__name__,
+                    self.model_name,
+                    prompt,
+                    json_mode=json_mode,
+                    seconds=time.perf_counter() - started,
+                    attempt=attempt + 1,
+                    error=str(e),
+                )
                 logger.error(f"Ollama generation failed: {e}")
                 raise RuntimeError(f"Ollama generation failed: {e}") from e
         raise RuntimeError("Ollama generation failed: retries exhausted.")
@@ -103,12 +162,32 @@ class OpenAIProvider(BaseLLMProvider):
         }
         if json_mode:
             data["response_format"] = {"type": "json_object"}
+        started = time.perf_counter()
         try:
             req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
             with urllib.request.urlopen(req, timeout=60) as response:
                 res_data = json.loads(response.read().decode("utf-8"))
-                return res_data["choices"][0]["message"]["content"]
+                response_text = res_data["choices"][0]["message"]["content"]
+                llm_call(
+                    type(self).__name__,
+                    self.model_name,
+                    prompt,
+                    json_mode=json_mode,
+                    seconds=time.perf_counter() - started,
+                    response=response_text,
+                    attempt=1,
+                )
+                return response_text
         except Exception as e:
+            llm_call(
+                type(self).__name__,
+                self.model_name,
+                prompt,
+                json_mode=json_mode,
+                seconds=time.perf_counter() - started,
+                attempt=1,
+                error=str(e),
+            )
             logger.error(f"OpenAI API call failed: {e}")
             raise ConnectionError(f"LLM Connection Error: OpenAI API request failed: {e}") from e
 
@@ -127,14 +206,35 @@ class HuggingFaceProvider(BaseLLMProvider):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
+        started = time.perf_counter()
         try:
             req = urllib.request.Request(url, data=payload, headers=headers)
             with urllib.request.urlopen(req, timeout=60) as response:
                 res_data = json.loads(response.read().decode("utf-8"))
                 if isinstance(res_data, list) and "generated_text" in res_data[0]:
-                    return res_data[0]["generated_text"]
-                return json.dumps(res_data)
+                    response_text = res_data[0]["generated_text"]
+                else:
+                    response_text = json.dumps(res_data)
+                llm_call(
+                    type(self).__name__,
+                    self.model_name,
+                    prompt,
+                    json_mode=json_mode,
+                    seconds=time.perf_counter() - started,
+                    response=response_text,
+                    attempt=1,
+                )
+                return response_text
         except Exception as e:
+            llm_call(
+                type(self).__name__,
+                self.model_name,
+                prompt,
+                json_mode=json_mode,
+                seconds=time.perf_counter() - started,
+                attempt=1,
+                error=str(e),
+            )
             logger.error(f"HuggingFace API request failed: {e}")
             raise ConnectionError(f"LLM Connection Error: HuggingFace API request failed: {e}") from e
 
@@ -199,6 +299,8 @@ def generate_json(
     if provider is None:
         provider = get_llm_provider()
 
+    provider_name = type(provider).__name__
+    model_name = getattr(provider, "model_name", "")
     current_prompt = prompt
     last_error: Optional[Exception] = None
     for attempt in range(retries + 1):
@@ -209,6 +311,15 @@ def generate_json(
             return schema(**parsed)
         except (json.JSONDecodeError, ValidationError) as e:
             last_error = e
+            llm_call(
+                provider_name,
+                model_name,
+                current_prompt,
+                json_mode=True,
+                response=raw_response,
+                attempt=attempt + 1,
+                error=f"{type(e).__name__}: {e}",
+            )
             logger.warning(
                 f"generate_json attempt {attempt + 1}/{retries + 1} failed for {schema.__name__}: {e}"
             )

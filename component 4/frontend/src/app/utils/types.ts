@@ -186,6 +186,34 @@ export interface UploadMaterialResponse {
   nova_state: SessionState;
 }
 
+/** Private PDF material processing state. */
+export type MaterialState =
+  | 'ingesting'
+  | 'extracting_concepts'
+  | 'generating_misconceptions'
+  | 'ready'
+  | 'failed';
+
+/** One item of GET /materials and GET /materials/{kb_id}/status. */
+export interface MaterialSummary {
+  kb_id: string;
+  name: string;
+  state: MaterialState;
+  message: string;
+  created_at?: string | null;
+  page_count: number;
+  chunk_count: number;
+  concept_count: number;
+}
+
+/** POST /materials */
+export interface MaterialUploadResponse {
+  kb_id: string;
+  name: string;
+  state: MaterialState;
+  message: string;
+}
+
 /** One Nova answer inside POST /sessions/{id}/exam. */
 export interface ExamQuestionResult {
   question: string;
@@ -243,4 +271,124 @@ export interface ChatResponse {
 /** FastAPI HTTPException body: {detail: "..."} */
 export interface ApiError {
   detail?: string;
+}
+
+export type QuizAngle =
+  | 'definition'
+  | 'application'
+  | 'code_trace'
+  | 'spot_the_error'
+  | 'compare_why';
+
+export type QuizConceptStatus = 'new' | 'practicing' | 'mastered' | 'needs_review';
+
+export interface QuizConceptState {
+  name: string;
+  status: QuizConceptStatus;
+  streak: number;
+  wrong_count: number;
+  angles_used: string[];
+  misconceptions_hit: string[];
+}
+
+export interface QuizSource {
+  page: number;
+  line_start: number;
+  line_end: number;
+  quote: string;
+}
+
+export interface QuizPublicQuestion {
+  question_id: string;
+  concept: string;
+  angle: QuizAngle | string;
+  question: string;
+  options: string[];
+}
+
+export interface QuizHistoryEntry {
+  question: QuizPublicQuestion;
+  choice: number | null;
+  correct: boolean;
+  confident: boolean;
+  reasoning: string;
+  time: string;
+  uncertain: boolean;
+  chosen_misconception: string;
+  why_wrong: string;
+}
+
+export interface QuizProgress {
+  completed: number;
+  total: number;
+  mastered: number;
+  needs_review: number;
+  percent: number;
+}
+
+export interface QuizStateResponse {
+  quiz_id: string;
+  kb_id: string;
+  kb_name: string;
+  concepts: QuizConceptState[];
+  history: QuizHistoryEntry[];
+  current_concept: string | null;
+  current_question: QuizPublicQuestion | null;
+  created_at: string;
+  finished: boolean;
+  progress: QuizProgress;
+}
+
+export interface QuizListItem extends QuizProgress {
+  quiz_id: string;
+  kb_id: string;
+  kb_name: string;
+  created_at: string;
+  current_concept: string | null;
+  finished: boolean;
+}
+
+export interface QuizAnswerResponse {
+  correct: boolean;
+  correct_index: number;
+  chosen_option: string;
+  correct_option: string;
+  chosen_misconception: string;
+  why_wrong: string;
+  explanation: string;
+  example: string;
+  source: QuizSource | null;
+  concept_status: QuizConceptStatus;
+  streak: number;
+  finished: boolean;
+  uncertain: boolean;
+  next_concept: string | null;
+}
+
+export interface CreateQuizResponse {
+  quiz_id: string;
+}
+
+export interface QuizSummaryMisconception {
+  misconception: string;
+  source_page: number | null;
+}
+
+export interface QuizSummaryConcept {
+  name: string;
+  status: QuizConceptStatus;
+  attempts: number;
+  correct_count: number;
+  uncertain_count: number;
+  misconceptions_hit: QuizSummaryMisconception[];
+  pages_to_revisit: number[];
+}
+
+export interface QuizSummaryResponse {
+  quiz_id: string;
+  kb_id: string;
+  kb_name: string;
+  mastery_percent: number;
+  concepts: QuizSummaryConcept[];
+  weak_misconception_ids: string[];
 }

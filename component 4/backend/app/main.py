@@ -1,16 +1,28 @@
 import os
 import json
+import re
 import shutil
+import time
+import logging
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from email.parser import BytesParser
+from email.policy import default as email_policy
+from typing import Any, List, Optional
+from urllib.parse import parse_qsl
+# pyrefly: ignore [missing-import]
+import jwt
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 # Load environment variables from .env
 load_dotenv()
 
+# Existing app loggers (logger.info/warning/error) should be visible in the terminal.
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("app").setLevel(logging.INFO)
+
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, UploadFile, File, HTTPException, status, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, status, Depends, Request, Response
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
@@ -20,6 +32,10 @@ from app.misconception_generator import generate_student_misconceptions
 from app.nova_agent import NovaStudentAgent, understanding_summary
 from app.auth import router as auth_router, get_current_user, check_connection
 from app.learning_eval import router as learning_eval_router
+from app.materials import router as materials_router, check_kb_access
+from app.quiz_routes import router as quiz_router
+from app.config import settings
+from app.demo_log import DEMO_LOG_ENABLED, step
 
 
 @asynccontextmanager
@@ -37,6 +53,12 @@ app.include_router(auth_router)
 # Stage 9 pre/post test routes
 app.include_router(learning_eval_router)
 
+# Student PDF materials (private knowledge bases)
+app.include_router(materials_router)
+
+# Adaptive quiz sessions
+app.include_router(quiz_router)
+
 # Setup CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -51,6 +73,264 @@ UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 SESSIONS_DIR = os.path.join(BASE_DIR, "sessions")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(SESSIONS_DIR, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# Demo HTTP logging (terminal only; never changes request/response contents)
+# ---------------------------------------------------------------------------
+DEMO_LOG_BODY_LIMIT = 800
+DEMO_LOG_RESPONSE_BYTES_LIMIT = 200_000
+_SENSITIVE_KEYS = {
+    "password",
+    "password_hash",
+    "salt",
+    "token",
+    "access_token",
+    "refresh_token",
+    "authorization",
+    "jwt",
+    "jwt_secret",
+    "secret",
+    "api_key",
+    "openai_api_key",
+    "hf_token",
+    "mongo_uri",
+    "lecturer_code",
+}
+_JWT_VALUE_RE = re.compile(r"^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$")
+_JSON_BODY_RE = re.compile(rb"^\s*[\[{]")
+_BINARY_CONTENT_TYPES = (
+    "application/pdf",
+    "application/octet-stream",
+    "application/zip",
+    "image/",
+    "audio/",
+    "video/",
+    "text/event-stream",
+)
+
+
+def _truncate_log_text(text: str, limit: int = DEMO_LOG_BODY_LIMIT) -> str:
+    return text if len(text) <= limit else f"{text[:limit]}...(truncated)"
+
+
+def _is_sensitive_key(key: str) -> bool:
+    return key.strip().lower().replace("-", "_") in _SENSITIVE_KEYS
+
+
+def _redact_log_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: "***" if _is_sensitive_key(str(key)) else _redact_log_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_log_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_log_value(item) for item in value)
+    if isinstance(value, str) and _JWT_VALUE_RE.match(value.strip()):
+        return "***"
+    return value
+
+
+def _contains_answer_key(value: Any) -> bool:
+    if isinstance(value, dict):
+        if any(key in {"correct_index", "expected_answer", "answer_key"} for key in value):
+            return True
+        return any(_contains_answer_key(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_answer_key(item) for item in value)
+    return False
+
+
+def _format_json_log(value: Any) -> tuple[str, bool]:
+    text = json.dumps(_redact_log_value(value), indent=2, ensure_ascii=False, default=str)
+    return _truncate_log_text(text), _contains_answer_key(value)
+
+
+def _format_payload_log(raw: bytes, content_type: str) -> tuple[str, bool]:
+    if not raw:
+        return "<empty>", False
+    lower_type = (content_type or "").lower()
+    if "json" in lower_type or _JSON_BODY_RE.match(raw):
+        try:
+            return _format_json_log(json.loads(raw))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
+    return _truncate_log_text(raw.decode("utf-8", errors="replace")), False
+
+
+def _multipart_file_summary(raw: bytes, content_type: str) -> str:
+    try:
+        message = BytesParser(policy=email_policy).parsebytes(
+            b"Content-Type: "
+            + content_type.encode("latin-1", errors="replace")
+            + b"\r\nMIME-Version: 1.0\r\n\r\n"
+            + raw
+        )
+        files = []
+        for part in message.iter_parts():
+            filename = part.get_filename()
+            if filename:
+                payload = part.get_payload(decode=True) or b""
+                files.append(f"{filename} ({len(payload)} bytes)")
+        return ", ".join(files) if files else "<multipart upload>"
+    except Exception:
+        return "<multipart upload>"
+
+
+def _form_body_log(raw: bytes) -> str:
+    try:
+        pairs = parse_qsl(raw.decode("utf-8", errors="replace"), keep_blank_values=True)
+    except Exception:
+        return "<form body>"
+    return "&".join(
+        f"{key}={'***' if _is_sensitive_key(key) or _JWT_VALUE_RE.match(value.strip()) else value}"
+        for key, value in pairs
+    )
+
+
+def _request_body_log(raw: bytes, content_type: str) -> str:
+    lower_type = (content_type or "").lower()
+    if "multipart/form-data" in lower_type:
+        return _multipart_file_summary(raw, content_type)
+    if "application/x-www-form-urlencoded" in lower_type:
+        return _truncate_log_text(_form_body_log(raw))
+    text, _ = _format_payload_log(raw, content_type)
+    return text
+
+
+def _caller_from_request(request: Request) -> str:
+    header = request.headers.get("authorization", "")
+    if not header.lower().startswith("bearer "):
+        return "anonymous"
+    token = header[7:].strip()
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+    except Exception:
+        return "anonymous"
+    subject = payload.get("sub")
+    return f"user:{subject}" if subject else "anonymous"
+
+
+def _query_log(request: Request) -> str:
+    parts = []
+    for key, value in request.query_params.multi_items():
+        safe_value = (
+            "***"
+            if _is_sensitive_key(key) or _JWT_VALUE_RE.match(value.strip())
+            else value
+        )
+        parts.append(f"{key}={safe_value}")
+    return "&".join(parts) if parts else "-"
+
+
+def _is_file_response(response: Response) -> bool:
+    content_type = response.headers.get("content-type", "").lower()
+    disposition = response.headers.get("content-disposition", "").lower()
+    if "attachment" in disposition:
+        return True
+    return any(token in content_type for token in _BINARY_CONTENT_TYPES)
+
+
+def _rebuild_response(response: Response, body: bytes) -> Response:
+    return Response(
+        content=body,
+        status_code=response.status_code,
+        headers=dict(response.headers),
+        media_type=response.media_type,
+        background=response.background,
+    )
+
+
+@app.middleware("http")
+async def demo_http_logger(request: Request, call_next):
+    """Logs every request/response without changing what the route returns."""
+    if not DEMO_LOG_ENABLED:
+        return await call_next(request)
+
+    started = time.perf_counter()
+    raw_body = b""
+    try:
+        raw_body = await request.body()
+    except Exception as exc:
+        step("ERROR", "request body read failed", path=request.url.path, error=str(exc))
+
+    content_type = request.headers.get("content-type", "")
+    step(
+        "HTTP",
+        "request",
+        method=request.method,
+        path=request.url.path,
+        query=_query_log(request),
+        caller=_caller_from_request(request),
+        body=_request_body_log(raw_body, content_type),
+    )
+
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        step(
+            "ERROR",
+            "request failed",
+            method=request.method,
+            path=request.url.path,
+            ms=round((time.perf_counter() - started) * 1000, 1),
+            error=str(exc),
+        )
+        raise
+
+    duration_ms = round((time.perf_counter() - started) * 1000, 1)
+    body_log = "<file/binary response omitted>"
+    answer_key = False
+
+    if not _is_file_response(response):
+        content_length = response.headers.get("content-length")
+        try:
+            too_large = (
+                content_length is not None
+                and int(content_length) > DEMO_LOG_RESPONSE_BYTES_LIMIT
+            )
+        except ValueError:
+            too_large = False
+
+        if too_large:
+            body_log = f"<large response omitted ({content_length} bytes)>"
+        else:
+            if hasattr(response, "body_iterator"):
+                chunks = []
+                try:
+                    async for chunk in response.body_iterator:
+                        chunks.append(chunk)
+                except Exception as exc:
+                    step(
+                        "ERROR",
+                        "response read failed",
+                        path=request.url.path,
+                        error=str(exc),
+                    )
+                    raise
+                raw_response = b"".join(chunks)
+                response = _rebuild_response(response, raw_response)
+            else:
+                raw_response = response.body
+            body_log, answer_key = _format_payload_log(
+                raw_response, response.headers.get("content-type", "")
+            )
+
+    step(
+        "HTTP",
+        "response",
+        status=response.status_code,
+        ms=duration_ms,
+        body=body_log,
+        **({"note": "server-side only"} if answer_key else {}),
+    )
+    return response
+
 
 class ChatMessageRequest(BaseModel):
     message: str
@@ -157,6 +437,7 @@ def create_nova_session(req: CreateSessionRequest, user: dict = Depends(get_curr
 @app.post("/sessions/create-from-kb")
 def create_session_from_kb(req: CreateFromKbRequest, user: dict = Depends(get_current_user)):
     """Creates a Nova session from a knowledge base's misconception repository."""
+    check_kb_access(req.kb_id, user)
     try:
         nova = NovaStudentAgent.from_repository(
             kb_id=req.kb_id,
@@ -166,6 +447,22 @@ def create_session_from_kb(req: CreateFromKbRequest, user: dict = Depends(get_cu
         nova.state.owner_id = str(user["id"])
         session_file = os.path.join(SESSIONS_DIR, f"{nova.state.session_id}.json")
         nova.save_state(session_file)
+        step(
+            "NOVA",
+            "create-from-kb misconceptions",
+            kb_id=req.kb_id,
+            requested_ids=", ".join(req.misconception_ids or []) or "-",
+            requested_count=req.count,
+            chosen_count=len(nova.state.misconceptions),
+            chosen=[
+                {
+                    "id": item.id,
+                    "concept": item.concept,
+                    "wrong_concept": item.wrong_concept,
+                }
+                for item in nova.state.misconceptions
+            ],
+        )
         return {
             "session_id": nova.state.session_id,
             "state": nova.to_dict()

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.llm import BaseLLMProvider, get_llm_provider, generate_json
 from app.detector import detect_misconceptions_checked
 from app.config import settings
+from app.demo_log import decision, step
 
 logger = logging.getLogger(__name__)
 
@@ -594,6 +595,14 @@ Return ONLY valid JSON:
         m.question_index = 0
         m.attempts = []
         m.status = "testing"
+        decision(
+            "STATE",
+            "status change",
+            id=m.id,
+            concept=m.concept,
+            previous=previous_status,
+            status="testing",
+        )
         self._log_event({"type": "status_change", "id": m.id, "from": previous_status, "to": "testing"})
         self._log_event({
             "type": "question_asked",
@@ -603,6 +612,13 @@ Return ONLY valid JSON:
             "questions": [q["question"] for q in questions],
         })
         logger.info(f"Nova misconception [{m.id}] moved to testing; asking: {questions[0]['question']}")
+        decision(
+            "NOVA",
+            "check question asked",
+            id=m.id,
+            index=0,
+            question=questions[0]["question"],
+        )
         return True
 
     def _handle_teaching_message(self, user_message: str) -> Dict[str, Any]:
@@ -637,6 +653,13 @@ Return ONLY valid JSON:
 
         by_id = {m.id: m for m in self.state.misconceptions}
         for item in results:
+            decision(
+                "NOVA",
+                "correction check",
+                id=item.get("id", ""),
+                addressed=item.get("addressed"),
+                quality=item.get("quality"),
+            )
             m = by_id.get(item.get("id", ""))
             if m is None or m.status != "active":
                 continue
@@ -693,6 +716,14 @@ Return ONLY valid JSON:
             return outcome
 
         passed = bool(verdict.passed) and bool(verdict.reasoning_ok)
+        decision(
+            "NOVA",
+            "answer judged",
+            id=m.id,
+            question=question["question"],
+            passed=passed,
+            reasoning_ok=bool(verdict.reasoning_ok),
+        )
         m.attempts.append({
             "question": question["question"],
             "answer": answer,
@@ -715,6 +746,14 @@ Return ONLY valid JSON:
             previous_status = m.status
             m.mark_learned(answer)
             m.confidence = round(m.confidence * 0.5, 2)
+            decision(
+                "STATE",
+                "status change",
+                id=m.id,
+                concept=m.concept,
+                previous=previous_status,
+                status="learned",
+            )
             self._log_event({"type": "status_change", "id": m.id, "from": previous_status, "to": "learned"})
             logger.info(f"Nova learned concept [{m.id}] after a passed answer.")
             outcome["check_result"] = "passed"
@@ -730,6 +769,13 @@ Return ONLY valid JSON:
             # Not the last question: move on to the NEXT different question.
             m.question_index += 1
             nxt = m.current_question()
+            decision(
+                "NOVA",
+                "check question asked",
+                id=m.id,
+                index=m.question_index,
+                question=nxt["question"],
+            )
             self._log_event({
                 "type": "question_asked",
                 "id": m.id,
@@ -751,6 +797,14 @@ Return ONLY valid JSON:
         previous_status = m.status
         m.status = "needs_review"
         m.is_corrected = False
+        decision(
+            "STATE",
+            "status change",
+            id=m.id,
+            concept=m.concept,
+            previous=previous_status,
+            status="needs_review",
+        )
         self._log_event({"type": "status_change", "id": m.id, "from": previous_status, "to": "needs_review"})
         logger.info(f"Nova misconception [{m.id}] needs review after {len(m.attempts)} failed attempts.")
         outcome["check_result"] = "needs_review"
@@ -810,8 +864,10 @@ Return ONLY valid JSON:
         self._log_event({"type": "teacher_message", "text": user_message})
         testing = [m for m in self.state.misconceptions if m.status == "testing"]
         if testing:
+            decision("NOVA", "turn mode", mode="answer", testing_id=testing[0].id)
             outcome = self._handle_answer_message(user_message, testing[0])
         else:
+            decision("NOVA", "turn mode", mode="teaching")
             outcome = self._handle_teaching_message(user_message)
 
         # Step 2: Generate Nova's response in character.
@@ -821,6 +877,12 @@ Return ONLY valid JSON:
         if required and required.lower() not in raw_response.lower():
             # The model dropped the question / lecture page: keep the turn usable.
             raw_response = outcome["fallback"]
+        step(
+            "NOVA",
+            "reply generated",
+            chars=len(raw_response),
+            preview=raw_response[:150],
+        )
 
         # Step 3: Append to history and event log
         self.state.conversation_history.append({"role": "teacher", "content": user_message})
@@ -850,6 +912,15 @@ Return ONLY valid JSON:
                 ]
             if detection_error:
                 self._log_event({"type": "detector_error", "error": detection_error})
+            for verdict in detection:
+                decision(
+                    "NOVA",
+                    "detector verdict",
+                    id=verdict.get("id", ""),
+                    still_present=verdict.get("still_present"),
+                    confidence=verdict.get("confidence"),
+                    evidence=str(verdict.get("evidence", ""))[:120],
+                )
             self._log_event({"type": "detection", "results": detection})
 
         self.state.updated_at = datetime.now().isoformat()

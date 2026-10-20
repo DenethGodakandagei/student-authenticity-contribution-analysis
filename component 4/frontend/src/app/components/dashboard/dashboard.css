@@ -163,6 +163,53 @@
   max-width: 46rem;
 }
 
+/* ── Fields ─────────────────────────────────────────────────────────────── */
+.dash-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.dash-field__label {
+  color: var(--d-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dash-select {
+  width: 100%;
+  appearance: none;
+  padding: 0.65rem 2.2rem 0.65rem 0.8rem;
+  border: 1px solid var(--d-line);
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.045);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a8a8c0' d='M1.4 0.6 6 5.2 10.6 0.6 12 2 6 8 0 2z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  color: var(--d-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.dash-select:focus-visible {
+  outline: 2px solid rgba(124, 92, 255, 0.75);
+  outline-offset: 2px;
+}
+
+.dash-select:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.dash-select option {
+  background: #181826;
+  color: #f4f4f8;
+}
+
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 .dash-btn {
   display: inline-flex;
@@ -279,6 +326,23 @@
   border: 1px solid rgba(52, 211, 153, 0.4);
 }
 
+.dash-quiz-state {
+  flex: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  color: #ddd6fe;
+  background: rgba(124, 92, 255, 0.16);
+  border: 1px solid rgba(160, 140, 255, 0.4);
+}
+
+.dash-quiz-state.is-finished {
+  color: #a7f3d0;
+  background: rgba(52, 211, 153, 0.14);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
 .dash-empty {
   margin: 0;
   color: var(--d-muted);
@@ -347,6 +411,221 @@
   font-weight: 700;
   color: #fff;
   background: linear-gradient(135deg, var(--d-violet), var(--d-indigo, #4f46e5));
+}
+
+/* ── PDF materials ──────────────────────────────────────────────────────── */
+.dash-material-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1.35rem 1rem;
+  border: 1px dashed var(--d-line-strong);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.dash-material-drop.is-dragging {
+  border-color: var(--d-violet-soft);
+  background: rgba(124, 92, 255, 0.12);
+}
+
+.dash-material-drop__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.dash-material-drop__hint {
+  margin: 0 0 0.55rem;
+  color: var(--d-faint);
+  font-size: 0.78rem;
+}
+
+.dash-material-note {
+  margin: 0.75rem 0 1.1rem;
+  color: var(--d-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.dash-material-progress {
+  margin: 0 0 1.15rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--d-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dash-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.dash-step {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--d-faint);
+  font-size: 0.72rem;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.dash-step__dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--d-line-strong);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.dash-step.is-done {
+  color: #a7f3d0;
+}
+
+.dash-step.is-done .dash-step__dot {
+  border-color: rgba(52, 211, 153, 0.55);
+  background: rgba(52, 211, 153, 0.16);
+  color: #d1fae5;
+}
+
+.dash-step.is-active {
+  color: var(--d-ink);
+}
+
+.dash-step.is-active .dash-step__dot {
+  border-color: var(--d-violet-soft);
+  background: linear-gradient(135deg, var(--d-violet), #4f46e5);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.16);
+}
+
+.dash-step.is-failed .dash-step__dot {
+  border-color: rgba(251, 113, 133, 0.4);
+}
+
+.dash-step__hint {
+  margin: 0.7rem 0 0;
+  color: var(--d-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.dash-step__hint.is-failed {
+  color: #fecdd3;
+}
+
+.dash-materials__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dash-material {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--d-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dash-material__info {
+  min-width: 0;
+}
+
+.dash-material__name {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-material__badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--d-line-strong);
+  color: var(--d-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.dash-material__meta {
+  margin: 0.2rem 0 0;
+  color: var(--d-faint);
+  font-size: 0.76rem;
+}
+
+.dash-material__right {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dash-material__state {
+  flex: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--d-line-strong);
+  color: var(--d-muted);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dash-material__state--ready {
+  color: #a7f3d0;
+  background: rgba(52, 211, 153, 0.14);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.dash-material__state--failed {
+  color: #fecdd3;
+  background: rgba(251, 113, 133, 0.1);
+  border-color: rgba(251, 113, 133, 0.36);
+}
+
+.dash-material__state--ingesting,
+.dash-material__state--extracting_concepts,
+.dash-material__state--generating_misconceptions {
+  color: #ddd6fe;
+  background: rgba(124, 92, 255, 0.16);
+  border-color: rgba(160, 140, 255, 0.4);
+}
+
+@media (max-width: 560px) {
+  .dash-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem 0.35rem;
+  }
+
+  .dash-material {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
 
 /* ── Full-page loading ──────────────────────────────────────────────────── */

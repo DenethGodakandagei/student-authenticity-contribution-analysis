@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from app.ingest import KNOWLEDGE_DIR, KnowledgeBase
 from app.llm import generate_json
+from app.demo_log import step
 
 logger = logging.getLogger(__name__)
 
@@ -279,6 +280,13 @@ def _filter_batch(
             or item.source_quote.strip() == "..."
         ):
             discarded += 1
+            step(
+                "INGEST",
+                "misconception discarded",
+                concept=item.concept,
+                reason="source quote too short",
+                quote_words=len(item.source_quote.split()),
+            )
             continue
         cited_texts = [
             chunk_lookup[cid]["text"]
@@ -287,6 +295,13 @@ def _filter_batch(
         ]
         if not _is_grounded(item.source_quote, cited_texts):
             discarded += 1
+            step(
+                "INGEST",
+                "misconception discarded",
+                concept=item.concept,
+                reason="source quote not grounded in cited chunks",
+                quote=item.source_quote,
+            )
             continue
         kept.append(item)
     return kept, discarded
@@ -323,15 +338,18 @@ def _generate_grounded_for_concept(
 
 
 def build_misconception_repository(
-    kb_id: str, max_concepts: int = 6, per_concept: int = 2
+    kb_id: str,
+    max_concepts: int = 6,
+    per_concept: int = 2,
+    concepts: List[str] | None = None,
 ) -> List[dict]:
     """
     Runs Stage 3 for a built knowledge base: extracts key OOP concepts from
-    retrieved chunks, generates per-concept misconceptions with the LLM,
-    discards items with short/ungrounded quotes (retrying a concept once if
-    nothing survives) and duplicate correct_concept values, assigns ids
-    "m1", "m2", ..., and saves only the kept items to
-    backend/knowledge/{kb_id}/misconceptions.json.
+    retrieved chunks (or reuses `concepts` when supplied), generates
+    per-concept misconceptions with the LLM, discards items with
+    short/ungrounded quotes (retrying a concept once if nothing survives) and
+    duplicate correct_concept values, assigns ids "m1", "m2", ..., and saves
+    only the kept items to backend/knowledge/{kb_id}/misconceptions.json.
 
     The number of discarded items from the last run is recorded in
     LAST_RUN_STATS["discarded"].
@@ -343,8 +361,13 @@ def build_misconception_repository(
     kb = KnowledgeBase.load(kb_id)
     chunk_lookup = {c["chunk_id"]: c for c in kb.chunks}
 
-    concepts = _extract_concepts(kb, max_concepts)
+    if concepts is None:
+        concepts = _extract_concepts(kb, max_concepts)
+    else:
+        concepts = [concept for concept in concepts if concept]
     logger.info(f"Extracted {len(concepts)} concepts for knowledge base '{kb_id}': {concepts}")
+    for concept in concepts:
+        step("INGEST", "concept extracted", kb_id=kb_id, concept=concept)
 
     items: List[GroundedMisconception] = []
     discarded = 0
@@ -362,6 +385,12 @@ def build_misconception_repository(
         ckey = _normalise(item.correct_concept)
         if ckey in seen_correct:
             discarded += 1
+            step(
+                "INGEST",
+                "misconception discarded",
+                concept=item.concept,
+                reason="duplicate correct_concept",
+            )
             continue
         seen_correct.add(ckey)
 
@@ -370,6 +399,14 @@ def build_misconception_repository(
         record["source_pages"] = _source_pages(item.source_chunk_ids, chunk_lookup)
         record["grounded"] = True
         output.append(record)
+        step(
+            "INGEST",
+            "misconception kept",
+            kb_id=kb_id,
+            id=record["id"],
+            concept=record["concept"],
+            correct_concept=record["correct_concept"],
+        )
 
     LAST_RUN_STATS["discarded"] = discarded
     LAST_RUN_STATS["kept"] = len(output)
@@ -380,6 +417,13 @@ def build_misconception_repository(
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved {len(output)} misconceptions to {output_path}")
+    step(
+        "INGEST",
+        "misconception repository saved",
+        kb_id=kb_id,
+        kept=len(output),
+        discarded=discarded,
+    )
 
     return output
 
