@@ -91,6 +91,10 @@ function openInteractiveDashboard(context, callbacks, initialTab = 'overview') {
                     vscode.commands.executeCommand('collabintel.viewQueueStatus');
                 }
                 break;
+            case 'toggleProvenanceHighlighting':
+                vscode.commands.executeCommand('extension.toggleProvenanceHighlighting');
+                panel.webview.postMessage({ type: 'updateState', state: callbacks.getTelemetrySnapshot() });
+                break;
             case 'testConnection':
                 const testConfig = {
                     serverUrl: msg.serverUrl || cfg.get('serverUrl') || 'http://localhost:5000',

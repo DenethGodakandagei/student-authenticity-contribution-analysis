@@ -1,8 +1,8 @@
 {
   "name": "student-contribution-tracker",
-  "displayName": "INCODE – Student Contribution Tracker",
+  "displayName": "INCODE - Student Contribution Tracker",
   "description": "Automatically tracks coding sessions, file edits, git commits, and keystrokes inside your assigned project repo and syncs contribution analytics to the INCODE platform.",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "publisher": "academic-innovation",
   "engines": {
     "vscode": "^1.74.0"
@@ -15,6 +15,7 @@
     "url": "https://github.com/academic-innovation/collabintel"
   },
   "activationEvents": [
+    "*",
     "onStartupFinished",
     "onView:collabintel.sidebarView"
   ],
@@ -75,6 +76,16 @@
         "command": "collabintel.exportLocalData",
         "title": "INCODE: 1-Click Export Local Telemetry Database (.sqlite / JSON)",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "extension.toggleProvenanceHighlighting",
+        "title": "INCODE: Toggle Live Line Provenance Highlighting (Typed vs Pasted)",
+        "icon": "$(paintcan)"
+      },
+      {
+        "command": "collabintel.toggleProvenanceHighlighting",
+        "title": "INCODE: Toggle Live Line Provenance Highlighting",
+        "icon": "$(paintcan)"
       }
     ],
     "viewsContainers": {

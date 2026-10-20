@@ -49,6 +49,8 @@ const health_check_1 = require("./sync/health-check");
 const batch_sync_1 = require("./sync/batch-sync");
 // ─── ML Features & Sliding Window (Plan 5) ───────────────────────────────────
 const sliding_window_1 = require("./features/sliding-window");
+// ─── Line Provenance & Visual Highlighting ──────────────────────────────────
+const line_provenance_tracker_1 = require("./features/line-provenance-tracker");
 // ─── UI Polish, Audit Viewer, Performance & Privacy (Plan 6) ─────────────────
 const audit_viewer_1 = require("./ui/audit-viewer");
 const performance_1 = require("./utils/performance");
@@ -274,7 +276,10 @@ function getTelemetrySnapshot() {
         // ── Plan 5 & 6 Sliding Window & Performance ──
         latestWindow: sliding_window_1.defaultSlidingWindowManager.getLatestWindow(),
         recentWindows: sliding_window_1.defaultSlidingWindowManager.getRecentWindows(),
-        performance: (0, performance_1.getPerformanceStats)()
+        performance: (0, performance_1.getPerformanceStats)(),
+        // ── Line Provenance & Visual Highlighting ──
+        activeDocumentProvenance: line_provenance_tracker_1.defaultLineProvenanceTracker.getActiveSummary(),
+        isProvenanceHighlightingEnabled: line_provenance_tracker_1.defaultLineProvenanceTracker.isHighlightingEnabled
     };
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -638,6 +643,12 @@ function activate(context) {
     context.subscriptions.push(sliding_window_1.defaultSlidingWindowManager.onWindowComputed(() => {
         broadcastStateToWebviews();
     }));
+    // ── Line-Level Provenance & Visual Highlighting ─────────────────────────
+    line_provenance_tracker_1.defaultLineProvenanceTracker.register(context);
+    context.subscriptions.push(line_provenance_tracker_1.defaultLineProvenanceTracker);
+    context.subscriptions.push(line_provenance_tracker_1.defaultLineProvenanceTracker.onProvenanceChanged(() => {
+        broadcastStateToWebviews();
+    }));
     // ── Dashboard Helper (Plan 6: ML tab & sliding window compute) ─────────
     function openDashboard(tab) {
         (0, dashboard_panel_1.openInteractiveDashboard)(context, {
@@ -809,8 +820,9 @@ function activate(context) {
                 });
                 idleSensor.reportActivity();
             }
-            // B. User Clipboard Paste (Ctrl+V from browser/external window or workspace copy)
-            else if (clipboardMatched) {
+            // B. User Clipboard Paste or Multi-Line / Large insertion burst
+            // (Ctrl+V from browser/external window, workspace copy, or multi-line paste)
+            else if (clipboardMatched || isMultiLine || textLen >= 25) {
                 lineProvenance = 'copy_paste';
                 pasteCount++;
                 charactersPasted += textLen;
@@ -829,24 +841,7 @@ function activate(context) {
                 });
                 idleSensor.reportActivity();
             }
-            // C. In-Editor Inline AI Code Completion (Copilot, Cursor, Tab completion)
-            // When code is inserted programmatically without clipboard:
-            // Multi-line code block or code statement >= 20 chars containing code syntax symbols
-            else if (isMultiLine || (textLen >= 20 && /[;{}()=\[\]><+\-*/]/.test(text))) {
-                lineProvenance = 'ai_assisted';
-                aiEventsCount++;
-                aiCharsCount += textLen;
-                fileItem.aiEvents++;
-                fileItem.aiChars += textLen;
-                storeEvent('KEYSTROKE', fileItem.category, relativePath, {
-                    provenance: 'ai_assisted',
-                    action: 'inline_ai_completion',
-                    charCount: textLen,
-                    lineCount: addedLines
-                });
-                idleSensor.reportActivity();
-            }
-            // D. Authentic Human Manual Keystroke
+            // C. Authentic Human Manual Keystroke
             else {
                 lineProvenance = 'manual';
                 const strokeInc = (isSingleKey || isEnterKey) ? 1 : Math.max(1, Math.round(textLen * 0.7));
@@ -863,9 +858,10 @@ function activate(context) {
             // 4. Record Exact Line-by-Line Provenance
             insertedLines.forEach((lText, idx) => {
                 const lNum = startLine0 + 1 + idx;
+                const cleanLText = lText.replace(/\r$/, '');
                 const lineRec = {
                     lineNumber: lNum,
-                    lineText: lText.slice(0, 120),
+                    lineText: cleanLText.slice(0, 120),
                     provenance: lineProvenance,
                     isOffline: isCurrentlyOffline,
                     timestamp: timeIso
@@ -978,25 +974,25 @@ function activate(context) {
                 let hasExplicitAi = false;
                 lines.forEach((lineText, idx) => {
                     const lNum = idx + 1;
+                    const cleanText = lineText.replace(/\r$/, '');
                     const exist = fileItem.lineRecords.find(r => r.lineNumber === lNum);
-                    const trimmed = lineText.trim();
+                    const trimmed = cleanText.trim();
                     const isAiLine = /^\/\/\s*(here('?s| is)|generated (by|with)|auto-?generated|ai[- ]assistant|copilot|chatgpt|claude|gemini|openai|step \d+:|helper function to)/i.test(trimmed) ||
                         /^\/\*\s*(auto-?generated|generated by ai)/i.test(trimmed);
-                    const isImportLine = /^[-*+]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed) || /^(import\s+|const\s+.*require)/.test(trimmed);
                     if (isAiLine)
                         hasExplicitAi = true;
-                    const defaultProv = isAiLine ? 'ai_assisted' : isImportLine ? 'copy_paste' : 'manual';
+                    const defaultProv = isAiLine ? 'ai_assisted' : 'copy_paste';
                     if (!exist) {
                         fileItem.lineRecords.push({
                             lineNumber: lNum,
-                            lineText: lineText.slice(0, 120),
+                            lineText: cleanText.slice(0, 120),
                             provenance: defaultProv,
                             isOffline: false,
                             timestamp: mtimeIso
                         });
                     }
-                    else if (exist.lineText !== lineText.slice(0, 120)) {
-                        exist.lineText = lineText.slice(0, 120);
+                    else if (exist.lineText !== cleanText.slice(0, 120)) {
+                        exist.lineText = cleanText.slice(0, 120);
                         if (isAiLine)
                             exist.provenance = 'ai_assisted';
                         exist.timestamp = mtimeIso;
@@ -1010,13 +1006,15 @@ function activate(context) {
                     aiEventsCount += 1;
                 }
                 else {
-                    fileItem.manualChars += deltaChars;
-                    fileItem.manualKeystrokes += Math.round(deltaChars * 0.9);
-                    keystrokeCount += Math.round(deltaChars * 0.9);
+                    fileItem.pasteChars += deltaChars;
+                    fileItem.pasteEvents += 1;
+                    fileItem.typingProvenance = fileItem.manualChars > 0 ? 'mixed' : 'copy_paste';
+                    charactersPasted += deltaChars;
+                    pasteCount += 1;
                 }
                 fileItem.linesAdded = Math.max(fileItem.linesAdded, lines.length);
                 storeEvent('KEYSTROKE', (0, noise_filter_1.categorizeFile)(uri), rel, {
-                    provenance: hasExplicitAi ? 'ai_assisted' : 'manual',
+                    provenance: hasExplicitAi ? 'ai_assisted' : 'copy_paste',
                     action: hasExplicitAi ? 'external_agent_file_mod' : 'disk_file_mod',
                     isExternalDiskWrite: true,
                     isOpenInEditor: false,
@@ -1049,27 +1047,21 @@ function activate(context) {
             catch { }
             const lines = content ? content.split(/\r?\n/) : [];
             const docLen = content.length;
-            // Classify lines intelligently based on content characteristics
+            // Classify lines accurately based on content characteristics
             if (docLen > 0 && fileItem.manualKeystrokes === 0) {
                 const mtimeIso = new Date(stats.mtimeMs).toISOString();
                 let aiLineCount = 0;
-                let pasteLineCount = 0;
-                let manualLineCount = 0;
                 fileItem.lineRecords = lines.map((lineText, idx) => {
-                    const trimmed = lineText.trim();
+                    const cleanText = lineText.replace(/\r$/, '');
+                    const trimmed = cleanText.trim();
                     const isAi = /^\/\/\s*(here('?s| is)|generated (by|with)|auto-?generated|ai[- ]assistant|copilot|chatgpt|claude|gemini|openai|step \d+:|helper function to)/i.test(trimmed) ||
                         /^\/\*\s*(auto-?generated|generated by ai)/i.test(trimmed);
-                    const isImport = /^[-*+]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed) || /^(import\s+|const\s+.*require)/.test(trimmed);
-                    const p = isAi ? 'ai_assisted' : isImport ? 'copy_paste' : 'manual';
+                    const p = isAi ? 'ai_assisted' : 'copy_paste';
                     if (p === 'ai_assisted')
                         aiLineCount++;
-                    else if (p === 'copy_paste')
-                        pasteLineCount++;
-                    else
-                        manualLineCount++;
                     return {
                         lineNumber: idx + 1,
-                        lineText: lineText.slice(0, 120),
+                        lineText: cleanText.slice(0, 120),
                         provenance: p,
                         isOffline: false,
                         timestamp: mtimeIso
@@ -1077,26 +1069,22 @@ function activate(context) {
                 });
                 fileItem.linesAdded = lines.length;
                 linesAddedCount += lines.length;
-                if (aiLineCount > 0 && aiLineCount >= manualLineCount) {
+                if (aiLineCount > 0) {
                     fileItem.aiChars = docLen;
                     fileItem.aiEvents = Math.max(1, fileItem.aiEvents);
                     fileItem.typingProvenance = 'ai_assisted';
                     aiCharsCount += docLen;
                     aiEventsCount += 1;
                 }
-                else if (pasteLineCount > 0 && pasteLineCount >= manualLineCount) {
+                else {
                     fileItem.pasteChars = docLen;
                     fileItem.pasteEvents = Math.max(1, fileItem.pasteEvents);
                     fileItem.typingProvenance = 'copy_paste';
                     charactersPasted += docLen;
                     pasteCount += 1;
                 }
-                else {
-                    fileItem.manualChars = docLen;
-                    fileItem.manualKeystrokes = Math.round(docLen * 0.9);
-                    fileItem.typingProvenance = 'manual';
-                    keystrokeCount += Math.round(docLen * 0.9);
-                }
+                fileItem.manualChars = 0;
+                fileItem.manualKeystrokes = 0;
                 storeEvent('FILE_CREATE', (0, noise_filter_1.categorizeFile)(uri), rel, {
                     provenance: fileItem.typingProvenance,
                     action: fileItem.typingProvenance === 'ai_assisted' ? 'ai_assistant_file_create' : 'file_create',
@@ -1104,7 +1092,7 @@ function activate(context) {
                     charCount: docLen,
                     sizeBytes: stats.size,
                     mtimeMs: stats.mtimeMs,
-                    description: fileItem.typingProvenance === 'ai_assisted' ? 'New file created by AI assistant' : 'New file created'
+                    description: fileItem.typingProvenance === 'ai_assisted' ? 'New file created by AI assistant' : 'New file created on disk'
                 });
                 broadcastStateToWebviews();
                 triggerDebouncedAutoSync(context, 1000);
@@ -1256,6 +1244,15 @@ function activate(context) {
     }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.setupParticipant', () => (0, onboarding_1.reconfigureParticipant)(context)));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.switchTask', () => (0, onboarding_1.switchTaskCondition)(context)));
+    context.subscriptions.push(vscode.commands.registerCommand('extension.toggleProvenanceHighlighting', () => {
+        const enabled = line_provenance_tracker_1.defaultLineProvenanceTracker.toggleHighlighting();
+        broadcastStateToWebviews();
+        return enabled;
+    }), vscode.commands.registerCommand('collabintel.toggleProvenanceHighlighting', () => {
+        const enabled = line_provenance_tracker_1.defaultLineProvenanceTracker.toggleHighlighting();
+        broadcastStateToWebviews();
+        return enabled;
+    }));
     // 1-Click offline failsafe exporter
     (0, export_bundle_1.registerExportCommand)(context, globalStoragePath);
     // ── Flush Offline Cache on Startup ─────────────────────────────────────

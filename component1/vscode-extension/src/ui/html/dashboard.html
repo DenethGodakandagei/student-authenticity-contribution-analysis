@@ -383,6 +383,47 @@
           <span>Paste: <strong id="lblPaste" style="color:var(--text);">0%</strong></span>
         </div>
       </div>
+
+      <!-- Live In-Editor Line Provenance & Visual Highlighting -->
+      <div class="glass-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div>
+            <div class="card-title">Live In-Editor Line Provenance</div>
+            <div style="font-size:11.5px; color:var(--text-sub); margin-top:2px;">
+              Active File: <strong id="provActiveFile" style="color:var(--text);">No file open</strong>
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="btnToggleHighlight" onclick="postCmd('toggleProvenanceHighlighting')" style="font-size:11px; padding:4px 12px;">
+            <span id="provToggleDot" style="width:7px; height:7px; border-radius:50%; background:#22c55e; display:inline-block; margin-right:4px;"></span>
+            <span id="provToggleText">Visual Highlighting: ON</span>
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px; margin-bottom:12px;">
+          <div class="highlight-stat">
+            <div class="hl-label">Total Lines</div>
+            <div class="hl-value" id="provTotalLines">0</div>
+          </div>
+          <div class="highlight-stat">
+            <div class="hl-label">Manual Typed</div>
+            <div class="hl-value" id="provManualLines" style="color:#22c55e;">0</div>
+          </div>
+          <div class="highlight-stat">
+            <div class="hl-label">Pasted / AI</div>
+            <div class="hl-value" id="provPastedLines" style="color:#ef4444;">0</div>
+          </div>
+          <div class="highlight-stat">
+            <div class="hl-label">Manual Score</div>
+            <div class="hl-value" id="provManualPct">100%</div>
+          </div>
+        </div>
+
+        <!-- Range List -->
+        <div id="provRangesContainer" style="display:none; font-size:11.5px; background:var(--sage-tint); border:1px solid var(--border); border-radius:8px; padding:8px 12px;">
+          <div style="font-weight:600; color:var(--text); margin-bottom:4px;">Detected Pasted / AI Ranges:</div>
+          <div id="provRangesList" style="color:var(--text-muted); font-family:monospace; font-size:11px;"></div>
+        </div>
+      </div>
     </div>
 
     <!-- TAB 2: ML FEATURES -->
@@ -601,6 +642,38 @@
         document.getElementById('ovActiveTyping').innerText = (s.idleSummary ? s.idleSummary.activeTypingSeconds : 0) + 's';
         document.getElementById('ovErrors').innerText = s.diagnosticSummary ? s.diagnosticSummary.currentErrorCount : 0;
         document.getElementById('ovFocus').innerText = s.focusSummary ? s.focusSummary.focusTransitions : 0;
+      }
+
+      // Render Live In-Editor Line Provenance
+      const prov = s.activeDocumentProvenance;
+      if (prov) {
+        setVal('provActiveFile', prov.fileName || 'Active Document');
+        setVal('provTotalLines', prov.totalLines);
+        setVal('provManualLines', prov.manualLineCount);
+        setVal('provPastedLines', prov.pastedLineCount + (prov.mixedLineCount || 0));
+        setVal('provManualPct', prov.manualPercentage + '%');
+
+        const rangesCont = document.getElementById('provRangesContainer');
+        const rangesList = document.getElementById('provRangesList');
+        if (rangesCont && rangesList) {
+          if (prov.pastedRanges && prov.pastedRanges.length > 0) {
+            rangesCont.style.display = 'block';
+            rangesList.innerHTML = prov.pastedRanges.map(r =>
+              `<div style="margin-bottom:3px;">&bull; Lines ${r.startLine}&ndash;${r.endLine} (${r.charCount} chars)${r.preview ? ': <span style="color:var(--text);">' + r.preview.replace(/</g, '&lt;') + '</span>' : ''}</div>`
+            ).join('');
+          } else {
+            rangesCont.style.display = 'none';
+            rangesList.innerHTML = '';
+          }
+        }
+      }
+
+      const isHighEnabled = s.isProvenanceHighlightingEnabled !== false;
+      const btnDot = document.getElementById('provToggleDot');
+      const btnText = document.getElementById('provToggleText');
+      if (btnDot && btnText) {
+        btnDot.style.background = isHighEnabled ? '#22c55e' : '#94a3b8';
+        btnText.innerText = 'Visual Highlighting: ' + (isHighEnabled ? 'ON' : 'OFF');
       }
     }
     function setVal(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
