@@ -110,12 +110,25 @@ const CONFIG_FILE_NAMES = new Set([
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Normalizes a file system path for case-insensitive cross-platform comparison (especially on Windows).
+ */
+export function normalizeFsPath(p: string): string {
+  if (!p) return '';
+  return p.replace(/\\/g, '/').toLowerCase();
+}
+
+/**
  * Check if a URI is inside the current workspace.
+ * Case-insensitive comparison ensures Windows drive letters ('f:' vs 'F:') match properly.
  */
 export function isInsideWorkspace(uri: vscode.Uri): boolean {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) return false;
-  return folders.some(f => uri.fsPath.startsWith(f.uri.fsPath));
+  const target = normalizeFsPath(uri.fsPath);
+  return folders.some(f => {
+    const root = normalizeFsPath(f.uri.fsPath);
+    return target === root || target.startsWith(root.endsWith('/') ? root : root + '/');
+  });
 }
 
 /**
@@ -123,14 +136,15 @@ export function isInsideWorkspace(uri: vscode.Uri): boolean {
  * Enforces: workspace check, directory blacklist, lockfile suppression.
  */
 export function shouldTrackFile(uri: vscode.Uri): boolean {
+  if (uri.scheme !== 'file') return false;
   if (!isInsideWorkspace(uri)) return false;
 
   // Normalize path for consistent matching
-  const normalized = uri.fsPath.replace(/\\/g, '/');
+  const normalized = normalizeFsPath(uri.fsPath);
 
   // Directory blacklist check
   for (const dir of BLACKLISTED_DIRS) {
-    if (normalized.includes(dir)) return false;
+    if (normalized.includes(dir.toLowerCase())) return false;
   }
 
   // Lockfile suppression
@@ -142,12 +156,15 @@ export function shouldTrackFile(uri: vscode.Uri): boolean {
 
 /**
  * Verify that the document being edited matches the active text editor.
- * Discards background writes from terminal, external linters, or formatters.
+ * Uses case-insensitive normalized path matching so Windows drive letters match reliably.
  */
 export function isActiveDocument(uri: vscode.Uri): boolean {
+  const norm = normalizeFsPath(uri.fsPath);
   const activeEditor = vscode.window.activeTextEditor;
-  if (!activeEditor) return false;
-  return activeEditor.document.uri.toString() === uri.toString();
+  if (activeEditor && normalizeFsPath(activeEditor.document.uri.fsPath) === norm) {
+    return true;
+  }
+  return vscode.window.visibleTextEditors.some(ed => normalizeFsPath(ed.document.uri.fsPath) === norm);
 }
 
 /**

@@ -1,7 +1,12 @@
 import * as vscode from 'vscode';
 import { EventCategory } from '../types';
 /**
+ * Normalizes a file system path for case-insensitive cross-platform comparison (especially on Windows).
+ */
+export declare function normalizeFsPath(p: string): string;
+/**
  * Check if a URI is inside the current workspace.
+ * Case-insensitive comparison ensures Windows drive letters ('f:' vs 'F:') match properly.
  */
 export declare function isInsideWorkspace(uri: vscode.Uri): boolean;
 /**
@@ -11,7 +16,7 @@ export declare function isInsideWorkspace(uri: vscode.Uri): boolean;
 export declare function shouldTrackFile(uri: vscode.Uri): boolean;
 /**
  * Verify that the document being edited matches the active text editor.
- * Discards background writes from terminal, external linters, or formatters.
+ * Uses case-insensitive normalized path matching so Windows drive letters match reliably.
  */
 export declare function isActiveDocument(uri: vscode.Uri): boolean;
 /**

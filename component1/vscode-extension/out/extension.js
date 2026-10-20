@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deactivate = exports.activate = void 0;
+exports.deactivate = exports.activate = exports.hasAiSignatures = exports.isMatchingClipboard = exports.refreshClipboardText = exports.addToClipboardHistory = void 0;
 const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -69,6 +69,7 @@ let pasteCount = 0;
 let charactersPasted = 0;
 let aiCharsCount = 0;
 let aiEventsCount = 0;
+let manualCharsCount = 0;
 let netInsertedChars = 0;
 let netDeletedChars = 0;
 const editedFiles = new Set();
@@ -94,11 +95,108 @@ const diagnosticSensor = new diagnostic_sensor_1.DiagnosticSensor();
 const focusSensor = new focus_sensor_1.FocusSensor();
 const idleSensor = new idle_sensor_1.IdleSensor();
 const documentSensor = new document_sensor_1.DocumentSensor();
+// ─── Clipboard History & Pre-caching ─────────────────────────────────────────
+let lastReadClipboardText = '';
+let lastClipboardReadTime = 0;
+const recentClipboardHistory = [];
+const MAX_CLIPBOARD_HISTORY = 15;
+function addToClipboardHistory(text) {
+    if (!text || text.trim().length === 0)
+        return;
+    const norm = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    if (norm.length === 0)
+        return;
+    if (recentClipboardHistory[0] === norm)
+        return;
+    const idx = recentClipboardHistory.indexOf(norm);
+    if (idx >= 0) {
+        recentClipboardHistory.splice(idx, 1);
+    }
+    recentClipboardHistory.unshift(norm);
+    if (recentClipboardHistory.length > MAX_CLIPBOARD_HISTORY) {
+        recentClipboardHistory.pop();
+    }
+}
+exports.addToClipboardHistory = addToClipboardHistory;
+async function refreshClipboardText() {
+    const now = Date.now();
+    if (now - lastClipboardReadTime < 300) {
+        return lastReadClipboardText;
+    }
+    try {
+        const text = await vscode.env.clipboard.readText();
+        lastReadClipboardText = text || '';
+        lastClipboardReadTime = now;
+        if (lastReadClipboardText) {
+            addToClipboardHistory(lastReadClipboardText);
+        }
+    }
+    catch {
+        // Win32 clipboard locked - retain cached value
+    }
+    return lastReadClipboardText;
+}
+exports.refreshClipboardText = refreshClipboardText;
+function isMatchingClipboard(insertedText, currentClip) {
+    if (!insertedText || insertedText.length === 0)
+        return false;
+    const normEndings = (s) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const stripWs = (s) => s.replace(/\s+/g, '');
+    const textNorm = normEndings(insertedText);
+    const textTrimmed = textNorm.trim();
+    if (textTrimmed.length === 0)
+        return false;
+    const textWs = stripWs(textNorm);
+    const candidates = [currentClip, ...recentClipboardHistory].filter(Boolean);
+    for (const candidate of candidates) {
+        const clipNorm = normEndings(candidate);
+        const clipTrimmed = clipNorm.trim();
+        if (clipTrimmed.length === 0)
+            continue;
+        // Direct matches
+        if (textNorm === clipNorm || textTrimmed === clipTrimmed)
+            return true;
+        if (clipNorm.startsWith(textNorm) || clipTrimmed.startsWith(textTrimmed))
+            return true;
+        if (clipTrimmed.endsWith(textTrimmed))
+            return true;
+        // Substring matches for partial pastes or selection pastes
+        if (textTrimmed.length >= 4 && clipTrimmed.includes(textTrimmed))
+            return true;
+        if (clipTrimmed.length >= 4 && textTrimmed.includes(clipTrimmed))
+            return true;
+        // Whitespace-agnostic match (auto-indentation by VS Code on paste)
+        const clipWs = stripWs(clipNorm);
+        if (clipWs.length >= 4 && textWs.length >= 4) {
+            if (clipWs === textWs || clipWs.includes(textWs) || textWs.includes(clipWs)) {
+                return true;
+            }
+        }
+        // Line-by-line overlap comparison for multiline pastes
+        const clipLines = clipNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 3);
+        const textLines = textNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 3);
+        if (clipLines.length > 0 && textLines.length > 0) {
+            const matchCount = textLines.filter(tl => clipLines.some(cl => cl === tl || cl.includes(tl) || tl.includes(cl))).length;
+            if (matchCount >= 2 || (textLines.length === 1 && matchCount === 1 && textTrimmed.length >= 6)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+exports.isMatchingClipboard = isMatchingClipboard;
+function hasAiSignatures(text) {
+    return (/\/\/\s*(here('?s| is)|generated (by|with)|auto-?generated|ai[- ]assistant|copilot|chatgpt|claude|gemini|openai|step \d+:|helper function to|implementation of|prompt:|solution:)/i.test(text) ||
+        /\/\*\s*(auto-?generated|generated by ai|ai assistant|solution provided by|copilot)/i.test(text) ||
+        /```(?:js|javascript|ts|typescript|python|py|html|css|json)?/i.test(text) ||
+        /^(?:Certainly!|Sure!|Here is|Below is the code|This function|I have created|Hope this helps)/im.test(text));
+}
+exports.hasAiSignatures = hasAiSignatures;
 // ─────────────────────────────────────────────────────────────────────────────
 //  PROVENANCE & TELEMETRY SNAPSHOT
 // ─────────────────────────────────────────────────────────────────────────────
 function computeLiveProvenance() {
-    const manual = keystrokeCount;
+    const manual = manualCharsCount > 0 ? manualCharsCount : keystrokeCount;
     const paste = charactersPasted;
     const ai = aiCharsCount;
     const total = manual + paste + ai;
@@ -141,6 +239,7 @@ function getTelemetrySnapshot() {
         linesRemoved: linesRemovedCount,
         pasteCount,
         charactersPasted,
+        manualCharsCount,
         aiCharsCount,
         aiEventsCount,
         netInsertedChars,
@@ -225,6 +324,7 @@ function startSession(workspaceRoot) {
     linesRemovedCount = 0;
     pasteCount = 0;
     charactersPasted = 0;
+    manualCharsCount = 0;
     aiCharsCount = 0;
     aiEventsCount = 0;
     netInsertedChars = 0;
@@ -299,6 +399,9 @@ async function saveAndSyncSession(context) {
         isOffline: false,
         pasteCount,
         charactersPasted,
+        manualChars: manualCharsCount,
+        aiChars: aiCharsCount,
+        aiEvents: aiEventsCount,
         // ── Plan 2 additions ──
         saveCount: documentSensor.saveCount,
         fileOpenCount: documentSensor.fileOpenCount,
@@ -597,6 +700,20 @@ function activate(context) {
     // ══════════════════════════════════════════════════════════════════════
     //  EVENT HANDLERS (enhanced with noise filtering & sensors)
     // ══════════════════════════════════════════════════════════════════════
+    // ── Window Focus Clipboard Pre-caching ──────────────────────────────────
+    context.subscriptions.push(vscode.window.onDidChangeWindowState(async (state) => {
+        if (state.focused) {
+            try {
+                const text = await vscode.env.clipboard.readText();
+                if (text) {
+                    lastReadClipboardText = text;
+                    lastClipboardReadTime = Date.now();
+                    addToClipboardHistory(text);
+                }
+            }
+            catch { }
+        }
+    }));
     // ── Text Document Change Handler (Keystroke / Paste / AI Detection) ────
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(async (event) => {
         if (event.document.uri.scheme !== 'file')
@@ -605,7 +722,6 @@ function activate(context) {
         if (!(0, noise_filter_1.shouldTrackEdit)(event.document.uri))
             return;
         const now = Date.now();
-        const timeDelta = lastActivityTime > 0 ? (now - lastActivityTime) : 150;
         lastActivityTime = now;
         idleSensor.reportActivity();
         if (!sessionStart && workspaceRoot)
@@ -613,140 +729,140 @@ function activate(context) {
         const relativePath = vscode.workspace.asRelativePath(event.document.uri, false).replace(/\\/g, '/');
         editedFiles.add(relativePath);
         const fileItem = getOrCreateFileActivity(relativePath, event.document.uri);
-        // Read OS clipboard as the gold standard paste signal
-        let clipboardText = '';
-        try {
-            clipboardText = await vscode.env.clipboard.readText();
-        }
-        catch {
-            clipboardText = '';
-        }
+        const records = fileItem.lineRecords || [];
+        fileItem.lineRecords = records;
+        const timeIso = new Date().toISOString();
+        const isCurrentlyOffline = (0, status_bar_1.getStatusState)() === 'error';
         for (const change of event.contentChanges) {
             const text = change.text;
             const textLen = text.length;
-            // Track net deleted chars (rangeLength = chars replaced/deleted)
+            const startLine0 = change.range.start.line;
+            const endLine0 = change.range.end.line;
+            const deletedLines = endLine0 - startLine0;
+            const insertedLines = text.split(/\r?\n/);
+            const addedLines = insertedLines.length - 1;
+            // 1. Handle Line Deletions & Line Number Shifting
+            if (deletedLines > 0) {
+                linesRemovedCount += deletedLines;
+                fileItem.linesRemoved += deletedLines;
+                // Remove records for lines deleted within the range (exclusive of startLine, up to endLine)
+                const kept = records.filter(r => !(r.lineNumber > startLine0 + 1 && r.lineNumber <= endLine0 + 1));
+                records.length = 0;
+                records.push(...kept);
+                // Shift all lines that were after the deleted range downwards
+                for (const r of records) {
+                    if (r.lineNumber > endLine0 + 1) {
+                        r.lineNumber -= deletedLines;
+                    }
+                }
+            }
+            // Track net deleted characters
             if (change.rangeLength > 0) {
                 netDeletedChars += change.rangeLength;
                 fileItem.netDeletedChars += change.rangeLength;
             }
-            if (textLen === 0)
-                continue; // pure deletion, no insertion
-            // Track net inserted chars
-            netInsertedChars += textLen;
-            fileItem.netInsertedChars += textLen;
-            const added = text.split('\n').length - 1;
-            if (added > 0) {
-                linesAddedCount += added;
-                fileItem.linesAdded += added;
+            // Pure deletion with no text inserted
+            if (textLen === 0) {
+                continue;
             }
-            if (change.rangeLength > 0) {
-                const removed = change.range.end.line - change.range.start.line;
-                if (removed > 0) {
-                    linesRemovedCount += removed;
-                    fileItem.linesRemoved += removed;
+            // 2. Handle Line Insertions & Line Number Shifting
+            if (addedLines > 0) {
+                linesAddedCount += addedLines;
+                fileItem.linesAdded += addedLines;
+                // Shift existing records after the insertion point upwards
+                for (const r of records) {
+                    if (r.lineNumber > startLine0 + 1) {
+                        r.lineNumber += addedLines;
+                    }
                 }
             }
-            // PRIMARY TIER 1: Exact Clipboard Match (Ctrl+V / User Clipboard Paste)
-            const normEndings = (s) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            const clipNorm = normEndings(clipboardText);
-            const textNorm = normEndings(text);
-            const clipTrimmed = clipNorm.trim();
-            const textTrimmed = textNorm.trim();
-            // Whitespace-agnostic comparison for indented or reformatted code pastes
-            const stripWs = (s) => s.replace(/\s+/g, '');
-            const clipWs = stripWs(clipNorm);
-            const textWs = stripWs(textNorm);
-            const isWsMatch = clipWs.length > 0 && textWs.length > 0 && (clipWs === textWs ||
-                clipWs.includes(textWs) ||
-                textWs.includes(clipWs));
-            // Line-by-line overlap comparison for multi-line pastes
-            const clipLines = clipNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
-            const textLines = textNorm.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
-            const hasSharedLines = textLines.length > 0 && textLines.some(tl => clipLines.some(cl => cl === tl || cl.includes(tl) || tl.includes(cl)));
-            const isClipboardMatch = (clipTrimmed.length > 0 && textTrimmed.length > 0 && (textNorm === clipNorm ||
-                textTrimmed === clipTrimmed ||
-                clipNorm.startsWith(textNorm) ||
-                clipTrimmed.startsWith(textTrimmed) ||
-                (textTrimmed.length >= 2 && clipTrimmed.includes(textTrimmed)) ||
-                (clipTrimmed.length >= 2 && textTrimmed.includes(clipTrimmed)))) || isWsMatch || (textLines.length > 1 && hasSharedLines);
-            // AI AGENT vs USER PASTE vs MANUAL TYPING SIGNALS:
-            const lines = text.split(/\r?\n/);
-            const nonEmptyLines = lines.filter(l => l.trim().length > 0);
+            // Track net inserted characters
+            netInsertedChars += textLen;
+            fileItem.netInsertedChars += textLen;
+            // 3. Typing Pattern & Provenance Classification
+            const nonEmptyLines = insertedLines.filter(l => l.trim().length > 0);
             const isMultiLine = nonEmptyLines.length > 1;
-            // Realistic human typing patterns:
-            // A single keystroke produces 1 char, Enter (\n or \r\n), tab/indent (1-4 spaces), auto-close pair, or word completion (< 20 chars)
             const isSingleKey = textLen === 1;
             const isEnterKey = text === '\n' || text === '\r\n';
-            const isTabOrIndent = /^\s{1,4}$/.test(text);
+            const isTabOrIndent = /^\s{1,8}$/.test(text);
             const isAutoClosePair = /^(\(\)|\[\]|\{\}|""|''|``|<>)$/.test(text);
-            const isWordTyping = textLen <= 20 && !text.includes('\n') && !isClipboardMatch;
-            const isPlausibleKeystroke = (isSingleKey || isEnterKey || isTabOrIndent || isAutoClosePair || isWordTyping) && !isClipboardMatch;
-            // AI assistant code generation check:
-            // Explicit AI conversational comments, Copilot markers, AI signatures
-            const isAiExplicitSignature = (/\/\/\s*(here('?s| is)|generated (by|with)|auto-?generated|ai[- ]assistant|copilot|chatgpt|claude|gemini|openai|step \d+:|helper function to|implementation of)/i.test(text) ||
-                /\/\*\s*(auto-?generated|generated by ai|ai assistant)/i.test(text) ||
-                /```(?:js|javascript|ts|typescript|python|py)?/i.test(text));
+            let clipboardMatched = false;
+            if (!isSingleKey && !isEnterKey && !isTabOrIndent && !isAutoClosePair) {
+                const currentClip = await refreshClipboardText();
+                clipboardMatched = isMatchingClipboard(text, currentClip);
+            }
+            const hasAiMarker = hasAiSignatures(text);
             let lineProvenance = 'manual';
-            // 1. Explicit AI Assistant code generation
-            if (isAiExplicitSignature) {
+            // ── Provenance Decision Logic ──
+            // A. Explicit AI Assistant signatures (e.g. pasted ChatGPT code with prompts/comments or markdown blocks)
+            if (hasAiMarker) {
+                lineProvenance = 'ai_assisted';
                 aiEventsCount++;
                 aiCharsCount += textLen;
                 fileItem.aiEvents++;
                 fileItem.aiChars += textLen;
-                lineProvenance = 'ai_assisted';
-                // Store AI event to SQLite
                 storeEvent('KEYSTROKE', fileItem.category, relativePath, {
                     provenance: 'ai_assisted',
                     action: 'ai_assistant_code_generation',
                     charCount: textLen,
-                    lineCount: added
+                    lineCount: addedLines
                 });
                 idleSensor.reportActivity();
             }
-            // 2. User Clipboard Paste
-            else if (isClipboardMatch || isMultiLine || textLen >= 25) {
+            // B. User Clipboard Paste (Ctrl+V from browser/external window or workspace copy)
+            else if (clipboardMatched) {
+                lineProvenance = 'copy_paste';
                 pasteCount++;
                 charactersPasted += textLen;
                 fileItem.pasteEvents++;
                 fileItem.pasteChars += textLen;
-                lineProvenance = 'copy_paste';
-                // Record paste burst detail with text preview
                 pasteBursts.push({
                     charCount: textLen,
-                    lineCountDelta: added,
+                    lineCountDelta: addedLines,
                     textPreview: text.slice(0, 100),
-                    timestamp: new Date().toISOString()
+                    timestamp: timeIso
                 });
-                // Store PASTE_BURST event to SQLite
                 storeEvent('PASTE_BURST', fileItem.category, relativePath, {
                     charCount: textLen,
-                    lineCountDelta: added,
+                    lineCountDelta: addedLines,
                     textPreview: text.slice(0, 100)
                 });
                 idleSensor.reportActivity();
             }
-            // 3. Genuine Manual Keystroke
-            else {
-                keystrokeCount++;
-                fileItem.manualKeystrokes++;
-                fileItem.manualChars += textLen;
-                lineProvenance = 'manual';
-                idleSensor.reportKeystroke();
-                // Store KEYSTROKE event to SQLite
+            // C. In-Editor Inline AI Code Completion (Copilot, Cursor, Tab completion)
+            // When code is inserted programmatically without clipboard:
+            // Multi-line code block or code statement >= 20 chars containing code syntax symbols
+            else if (isMultiLine || (textLen >= 20 && /[;{}()=\[\]><+\-*/]/.test(text))) {
+                lineProvenance = 'ai_assisted';
+                aiEventsCount++;
+                aiCharsCount += textLen;
+                fileItem.aiEvents++;
+                fileItem.aiChars += textLen;
                 storeEvent('KEYSTROKE', fileItem.category, relativePath, {
-                    provenance: 'manual', charCount: textLen
+                    provenance: 'ai_assisted',
+                    action: 'inline_ai_completion',
+                    charCount: textLen,
+                    lineCount: addedLines
                 });
+                idleSensor.reportActivity();
             }
-            // Record exact line-by-line provenance
-            if (!fileItem.lineRecords)
-                fileItem.lineRecords = [];
-            const startLineNum = change.range.start.line + 1;
-            const insertedLines = text.split('\n');
-            const timeIso = new Date().toISOString();
-            const isCurrentlyOffline = (0, status_bar_1.getStatusState)() === 'error';
-            const records = fileItem.lineRecords;
-            insertedLines.forEach((lText, lIdx) => {
-                const lNum = startLineNum + lIdx;
+            // D. Authentic Human Manual Keystroke
+            else {
+                lineProvenance = 'manual';
+                const strokeInc = (isSingleKey || isEnterKey) ? 1 : Math.max(1, Math.round(textLen * 0.7));
+                keystrokeCount += strokeInc;
+                manualCharsCount += textLen;
+                fileItem.manualKeystrokes += strokeInc;
+                fileItem.manualChars += textLen;
+                storeEvent('KEYSTROKE', fileItem.category, relativePath, {
+                    provenance: 'manual',
+                    charCount: textLen
+                });
+                idleSensor.reportKeystroke();
+            }
+            // 4. Record Exact Line-by-Line Provenance
+            insertedLines.forEach((lText, idx) => {
+                const lNum = startLine0 + 1 + idx;
                 const lineRec = {
                     lineNumber: lNum,
                     lineText: lText.slice(0, 120),
@@ -762,6 +878,9 @@ function activate(context) {
                     records.push(lineRec);
                 }
             });
+            // Keep lineRecords cleanly sorted by line number
+            records.sort((a, b) => a.lineNumber - b.lineNumber);
+            fileItem.lineRecords = records;
             // Re-evaluate file-level typingProvenance
             const fTotal = fileItem.manualChars + fileItem.pasteChars + fileItem.aiChars;
             if (fTotal > 0) {
@@ -834,8 +953,9 @@ function activate(context) {
         if (uri.scheme !== 'file' || !(0, noise_filter_1.shouldTrackFile)(uri))
             return;
         const fsPath = uri.fsPath;
-        const isActivelyOpen = vscode.window.activeTextEditor?.document.uri.fsPath === fsPath;
-        if (!isActivelyOpen) {
+        const normUri = (0, noise_filter_1.normalizeFsPath)(fsPath);
+        const isOpenInAnyEditor = vscode.workspace.textDocuments.some(doc => (0, noise_filter_1.normalizeFsPath)(doc.uri.fsPath) === normUri);
+        if (!isOpenInAnyEditor) {
             try {
                 const stats = await fs.promises.stat(fsPath);
                 const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
