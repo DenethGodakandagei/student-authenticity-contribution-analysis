@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 
 const AUTHOR_COLORS = [
-  '#0ea5e9', // Sky Blue
-  '#a3e635', // Lime
-  '#8b5cf6', // Violet
-  '#f59e0b', // Amber
-  '#ec4899', // Pink
-  '#10b981', // Emerald
+  '#6FAF9A', // Primary Sage
+  '#2a9d8f', // Deep Seafoam
+  '#3b82f6', // Soft Blue
+  '#e76f51', // Terracotta
+  '#f4a261', // Warm Sand
+  '#264653', // Deep Obsidian
 ];
 
 export default function WordGrowthChart({ data }: { data: any[] }) {

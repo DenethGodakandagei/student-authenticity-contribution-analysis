@@ -51,7 +51,7 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
       {/* Top Navigation Bar matching Component 1 design */}
       <header style={{
         background: '#ffffff',
-        borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+        borderBottom: '1px solid rgba(111, 175, 154, 0.25)',
         padding: '0.65rem 2rem',
         display: 'flex',
         alignItems: 'center',
@@ -59,40 +59,42 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)'
+        boxShadow: '0 2px 10px rgba(13, 17, 16, 0.03)'
       }}>
         {/* Left: Brand, Node Pill, Telemetry Simulator / Editor Pill, and Nav Links */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none' }}>
             <div style={{
-              background: '#121417',
-              color: '#ffffff',
+              background: '#0D1110',
+              color: '#6FAF9A',
               borderRadius: '8px',
-              padding: '0.35rem 0.65rem',
-              fontFamily: 'monospace',
-              fontWeight: 800,
-              fontSize: '0.9rem',
+              padding: '0.35rem 0.55rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              &lt;/&gt;
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                <path d="M2 2l7.586 7.586" />
+                <circle cx="11" cy="11" r="2" />
+              </svg>
             </div>
             <span style={{
               fontWeight: 800,
               fontSize: '1.25rem',
-              color: '#0f172a',
+              color: '#0D1110',
               letterSpacing: '-0.02em'
             }}>
-              DocuTrace
+              Inkie
             </span>
           </Link>
 
           {/* Node Role Pill */}
           <span style={{
-            background: isAdmin ? 'rgba(217, 119, 6, 0.14)' : isLecturer ? 'rgba(99, 102, 241, 0.14)' : isLeader ? 'rgba(163, 230, 53, 0.16)' : user ? 'rgba(14, 165, 233, 0.12)' : '#f1f5f9',
-            color: isAdmin ? '#b45309' : isLecturer ? '#4338ca' : isLeader ? '#275306' : user ? '#0369a1' : '#64748b',
-            border: `1px solid ${isAdmin ? 'rgba(217, 119, 6, 0.35)' : isLecturer ? 'rgba(99, 102, 241, 0.35)' : isLeader ? 'rgba(163, 230, 53, 0.35)' : user ? 'rgba(14, 165, 233, 0.3)' : '#e2e8f0'}`,
+            background: isAdmin ? 'rgba(217, 119, 6, 0.14)' : isLecturer ? 'rgba(111, 175, 154, 0.18)' : isLeader ? 'rgba(111, 175, 154, 0.22)' : user ? '#EFF8F3' : '#EFF8F3',
+            color: isAdmin ? '#b45309' : isLecturer ? '#225243' : isLeader ? '#0D1110' : user ? '#225243' : '#43574f',
+            border: `1px solid ${isAdmin ? 'rgba(217, 119, 6, 0.35)' : 'rgba(111, 175, 154, 0.35)'}`,
             padding: '0.22rem 0.75rem',
             borderRadius: '9999px',
             fontSize: '0.74rem',
@@ -103,7 +105,7 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
             gap: '0.35rem'
           }}>
             {isAdmin && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#d97706' }} />}
-            {isLecturer && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6366f1' }} />}
+            {isLecturer && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6FAF9A' }} />}
             {getRoleLabel()}
           </span>
 
@@ -115,9 +117,9 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: '#f1f5f9',
-                border: '1px solid #e2e8f0',
-                color: '#0f172a',
+                background: '#EFF8F3',
+                border: '1px solid rgba(111, 175, 154, 0.3)',
+                color: '#0D1110',
                 padding: '0.35rem 0.9rem',
                 borderRadius: '9999px',
                 fontSize: '0.8rem',
@@ -127,7 +129,7 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                 transition: 'all 0.15s ease'
               }}
             >
-              <span>&gt;_</span> Document Editor
+              <span style={{ color: '#6FAF9A' }}>&gt;_</span> Document Editor
             </Link>
           )}
 
@@ -144,9 +146,10 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                     padding: '0.4rem 0.85rem',
                     borderRadius: '8px',
                     fontSize: '0.84rem',
-                    fontWeight: isActive ? 700 : 500,
-                    color: isActive ? '#275306' : '#64748b',
-                    background: isActive ? 'rgba(163, 230, 53, 0.16)' : 'transparent',
+                    fontWeight: isActive ? 800 : 500,
+                    color: isActive ? '#0D1110' : '#43574f',
+                    background: isActive ? '#EFF8F3' : 'transparent',
+                    border: isActive ? '1px solid rgba(111, 175, 154, 0.35)' : '1px solid transparent',
                     transition: 'all 0.15s ease'
                   }}
                 >
@@ -160,7 +163,7 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
         {/* Right: User Avatar, Profile, and Sign In/Sign Out */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {!mounted ? (
-            <div style={{ width: '120px', height: '36px', background: '#f1f5f9', borderRadius: '8px' }} />
+            <div style={{ width: '120px', height: '36px', background: '#EFF8F3', borderRadius: '8px' }} />
           ) : isAuthenticated && user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -168,8 +171,9 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  background: '#121417',
-                  color: '#ffffff',
+                  background: '#0D1110',
+                  color: '#6FAF9A',
+                  border: '1px solid rgba(111, 175, 154, 0.3)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -179,10 +183,10 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                   {(user.name || user.username || 'U')[0].toUpperCase()}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f172a' }}>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0D1110' }}>
                     {user.name || user.username}
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#43574f' }}>
                     {user.email || user.studentId || 'Student'}
                   </span>
                 </div>
@@ -197,8 +201,8 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                   alignItems: 'center',
                   gap: '0.35rem',
                   background: 'transparent',
-                  border: '1px solid #e2e8f0',
-                  color: '#64748b',
+                  border: '1px solid rgba(111, 175, 154, 0.3)',
+                  color: '#43574f',
                   padding: '0.4rem 0.85rem',
                   borderRadius: '8px',
                   fontSize: '0.8rem',
@@ -211,8 +215,8 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
                   e.currentTarget.style.color = '#ef4444';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.color = '#64748b';
+                  e.currentTarget.style.borderColor = 'rgba(111, 175, 154, 0.3)';
+                  e.currentTarget.style.color = '#43574f';
                 }}
               >
                 Logout
@@ -224,22 +228,22 @@ export default function NavigationLayout({ children }: { children: React.ReactNo
               type="button"
               onClick={openAuthModal}
               style={{
-                background: '#a3e635',
-                color: '#121417',
+                background: '#6FAF9A',
+                color: '#ffffff',
                 border: 'none',
                 padding: '0.5rem 1.25rem',
                 borderRadius: '9999px',
                 fontSize: '0.84rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(163, 230, 53, 0.35)',
+                boxShadow: '0 2px 10px rgba(111, 175, 154, 0.35)',
                 transition: 'all 0.15s ease'
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.background = '#8ee01d';
+                e.currentTarget.style.background = '#5d9d88';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.background = '#a3e635';
+                e.currentTarget.style.background = '#6FAF9A';
               }}
             >
               Sign In / Register

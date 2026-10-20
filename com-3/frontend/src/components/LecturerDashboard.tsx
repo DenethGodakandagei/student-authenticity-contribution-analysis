@@ -311,7 +311,14 @@ export default function LecturerDashboard({ onSwitchToStudentView }: LecturerDas
     try {
       const fetchJson = async (url: string) => {
         try {
-          const res = await fetch(url);
+          const sep = url.includes('?') ? '&' : '?';
+          const res = await fetch(`${url}${sep}_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!res.ok) return null;
           return await res.json();
         } catch {
@@ -668,8 +675,8 @@ export default function LecturerDashboard({ onSwitchToStudentView }: LecturerDas
                 type="button"
                 onClick={() => setActiveMainView('create_assignment')}
                 style={{
-                  background: activeMainView === 'create_assignment' ? '#a3e635' : 'transparent',
-                  color: activeMainView === 'create_assignment' ? '#121417' : '#cbd5e1',
+                  background: activeMainView === 'create_assignment' ? '#6FAF9A' : 'transparent',
+                  color: activeMainView === 'create_assignment' ? '#0D1110' : '#cbd5e1',
                   border: 'none',
                   borderRadius: '7px',
                   padding: '0.5rem 1.15rem',
@@ -1032,22 +1039,22 @@ export default function LecturerDashboard({ onSwitchToStudentView }: LecturerDas
                   type="submit"
                   disabled={assignCreating}
                   style={{
-                    background: '#a3e635',
-                    color: '#121417',
+                    background: '#6FAF9A',
+                    color: '#ffffff',
                     border: 'none',
                     borderRadius: '10px',
                     padding: '0.75rem 1.75rem',
                     fontSize: '0.92rem',
-                    fontWeight: 900,
+                    fontWeight: 800,
                     cursor: assignCreating ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 14px rgba(163, 230, 53, 0.4)',
+                    boxShadow: '0 4px 14px rgba(111, 175, 154, 0.35)',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseOver={e => {
-                    if (!assignCreating) e.currentTarget.style.background = '#8ee01d';
+                    if (!assignCreating) e.currentTarget.style.background = '#5d9d88';
                   }}
                   onMouseOut={e => {
-                    if (!assignCreating) e.currentTarget.style.background = '#a3e635';
+                    if (!assignCreating) e.currentTarget.style.background = '#6FAF9A';
                   }}
                 >
                   {assignCreating ? 'Publishing Assignment...' : 'Publish Assignment to Students →'}

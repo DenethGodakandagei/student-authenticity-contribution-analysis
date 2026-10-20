@@ -91,7 +91,14 @@ export default function AdminDashboard() {
       setSelectedLoading(true);
       const fetchJson = async (url: string) => {
         try {
-          const res = await fetch(url);
+          const sep = url.includes('?') ? '&' : '?';
+          const res = await fetch(`${url}${sep}_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!res.ok) return null;
           return await res.json();
         } catch {
@@ -165,6 +172,88 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleExportAllPlatformCSV = async () => {
+    try {
+      showToast("Fetching all actual database revisions across all documents...", "info", "Exporting Dataset");
+      const res = await fetch(`${getBackendUrl()}/api/admin/overview`);
+      const data = await res.json();
+      const docs = data.documents || [];
+
+      const escapeCsv = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/\r\n|\r|\n/g, ' ').replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const headers = [
+        "sample_id",
+        "document_id",
+        "document_title",
+        "author",
+        "anonymized_author_id",
+        "timestamp",
+        "section",
+        "before_text",
+        "after_text",
+        "words_added",
+        "words_deleted",
+        "predicted_intent",
+        "predicted_significance",
+        "semantic_distance",
+        "confidence",
+        "is_bulk_insertion",
+        "anomaly_flag",
+        "explanation"
+      ];
+
+      let csv = headers.join(',') + '\n';
+      let rowCount = 0;
+
+      for (const doc of docs) {
+        try {
+          const revRes = await fetch(`${getBackendUrl()}/api/documents/${doc._id}/revisions`);
+          if (revRes.ok) {
+            const revs = await revRes.json();
+            for (const r of revs) {
+              rowCount++;
+              const row = [
+                escapeCsv(`LIVE_${String(rowCount).padStart(4, '0')}`),
+                escapeCsv(doc._id),
+                escapeCsv(doc.title),
+                escapeCsv(r.author || doc.ownerName || 'Author'),
+                escapeCsv(r.anonymizedAuthorId || 'STU_ANON'),
+                escapeCsv(r.timestamp),
+                escapeCsv(r.section || 'General'),
+                escapeCsv(r.beforeText || r.deletedText || ''),
+                escapeCsv(r.afterText || r.addedText || ''),
+                r.words_added || r.wordCountAdded || 0,
+                r.words_deleted || r.wordCountDeleted || 0,
+                escapeCsv(r.predictedIntent || 'Content Addition'),
+                escapeCsv(r.predictedSignificance || 'Moderate'),
+                Number((r.semanticDistance || 0.05).toFixed(4)),
+                Number((r.confidence || 0.95).toFixed(4)),
+                r.isBulkInsertion ? 1 : 0,
+                escapeCsv(r.anomalyFlag || 'None'),
+                escapeCsv(r.explanation || '')
+              ];
+              csv += row.join(',') + '\n';
+            }
+          }
+        } catch (e) {}
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `actual_database_all_documents_dataset.csv`;
+      a.click();
+      showToast(`Exported all ${rowCount} actual revisions from all documents!`, "success", "Download Complete");
+    } catch (err: any) {
+      showToast("Failed to export complete platform dataset", "error", "Export Error");
+    }
+  };
+
   // Filtered documents
   const filteredDocuments = documents.filter(doc => {
     const q = searchQuery.toLowerCase().trim();
@@ -192,67 +281,69 @@ export default function AdminDashboard() {
 
       <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
         
-        {/* 1. Executive Admin Header Banner */}
+        {/* 1. Executive Admin Header Banner (Light Theme) */}
         <div style={{
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)',
-          borderRadius: '20px',
-          padding: '2rem 2.25rem',
+          background: 'linear-gradient(135deg, #EFF8F3 0%, #FFFFFF 100%)',
+          borderRadius: '18px',
+          padding: '1.75rem 2.25rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '1.5rem',
-          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.15)',
-          border: '1px solid rgba(255, 255, 255, 0.08)'
+          boxShadow: '0 4px 20px rgba(13, 17, 16, 0.05)',
+          border: '1px solid rgba(111, 175, 154, 0.35)'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', maxWidth: '750px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <span style={{
-                background: 'rgba(217, 119, 6, 0.25)',
-                color: '#fde68a',
-                border: '1px solid rgba(253, 230, 138, 0.35)',
+                background: '#ffffff',
+                color: '#225243',
+                border: '1px solid rgba(111, 175, 154, 0.4)',
                 padding: '0.25rem 0.8rem',
                 borderRadius: '9999px',
-                fontSize: '0.76rem',
+                fontSize: '0.74rem',
                 fontWeight: 800,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.45rem'
+                gap: '0.45rem',
+                boxShadow: '0 1px 3px rgba(111, 175, 154, 0.15)'
               }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#d97706', boxShadow: '0 0 8px #d97706' }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6FAF9A', boxShadow: '0 0 6px #6FAF9A' }} />
                 Platform Superuser Control Console
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Administrator: <strong style={{ color: '#f8fafc' }}>{user?.name || user?.username || 'Admin'}</strong> ({user?.studentId || 'Superuser'})
+              <span style={{ fontSize: '0.8rem', color: '#556c63' }}>
+                Administrator: <strong style={{ color: '#0D1110' }}>{user?.name || user?.username || 'Admin'}</strong> ({user?.studentId || 'Superuser'})
               </span>
             </div>
 
-            <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 900, letterSpacing: '-0.025em', color: '#ffffff' }}>
+            <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 900, letterSpacing: '-0.025em', color: '#0D1110' }}>
               System Administration &amp; Document Registry
             </h1>
 
-            <p style={{ margin: 0, fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: '0.88rem', color: '#43574f', lineHeight: 1.5 }}>
               Unrestricted access to all student assignments, collaborative sessions, and cohort records. Administrators have full capability to write in the editor, inspect ML forensics, and manage platform users.
             </p>
           </div>
 
           {/* Quick Action Navigation */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '10px', padding: '0.3rem', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+            <div style={{ display: 'flex', background: '#ffffff', borderRadius: '10px', padding: '0.3rem', border: '1px solid rgba(111, 175, 154, 0.3)', boxShadow: '0 2px 6px rgba(13, 17, 16, 0.03)' }}>
               <button
                 type="button"
                 onClick={() => setActiveTab('documents')}
                 style={{
-                  background: activeTab === 'documents' ? '#ffffff' : 'transparent',
-                  color: activeTab === 'documents' ? '#0f172a' : '#cbd5e1',
+                  background: activeTab === 'documents' ? '#6FAF9A' : 'transparent',
+                  color: activeTab === 'documents' ? '#0D1110' : '#43574f',
                   border: 'none',
                   borderRadius: '7px',
                   padding: '0.5rem 1rem',
                   fontSize: '0.82rem',
                   fontWeight: activeTab === 'documents' ? 800 : 600,
                   cursor: 'pointer',
+                  boxShadow: activeTab === 'documents' ? '0 2px 6px rgba(111, 175, 154, 0.3)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -263,14 +354,15 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={() => setActiveTab('users')}
                 style={{
-                  background: activeTab === 'users' ? '#ffffff' : 'transparent',
-                  color: activeTab === 'users' ? '#0f172a' : '#cbd5e1',
+                  background: activeTab === 'users' ? '#6FAF9A' : 'transparent',
+                  color: activeTab === 'users' ? '#0D1110' : '#43574f',
                   border: 'none',
                   borderRadius: '7px',
                   padding: '0.5rem 1rem',
                   fontSize: '0.82rem',
                   fontWeight: activeTab === 'users' ? 800 : 600,
                   cursor: 'pointer',
+                  boxShadow: activeTab === 'users' ? '0 2px 6px rgba(111, 175, 154, 0.3)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -281,14 +373,15 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={() => setActiveTab('inspector')}
                 style={{
-                  background: activeTab === 'inspector' ? '#a3e635' : 'transparent',
-                  color: activeTab === 'inspector' ? '#121417' : '#cbd5e1',
+                  background: activeTab === 'inspector' ? '#6FAF9A' : 'transparent',
+                  color: activeTab === 'inspector' ? '#0D1110' : '#43574f',
                   border: 'none',
                   borderRadius: '7px',
                   padding: '0.5rem 1rem',
                   fontSize: '0.82rem',
                   fontWeight: activeTab === 'inspector' ? 900 : 600,
                   cursor: 'pointer',
+                  boxShadow: activeTab === 'inspector' ? '0 2px 6px rgba(111, 175, 154, 0.3)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -296,11 +389,41 @@ export default function AdminDashboard() {
               </button>
             </div>
 
+            <button
+              type="button"
+              onClick={handleExportAllPlatformCSV}
+              style={{
+                background: '#ffffff',
+                color: '#0D1110',
+                border: '1px solid rgba(111, 175, 154, 0.4)',
+                borderRadius: '10px',
+                padding: '0.65rem 1.15rem',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(13, 17, 16, 0.03)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseOver={e => e.currentTarget.style.background = '#EFF8F3'}
+              onMouseOut={e => e.currentTarget.style.background = '#ffffff'}
+              title="Download all actual student revisions across all documents as a clean CSV"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download All Documents CSV {stats.totalRevisions ? `(${stats.totalRevisions} Revisions)` : ''}
+            </button>
+
             <Link
               href="/editor"
               style={{
-                background: '#a3e635',
-                color: '#121417',
+                background: '#6FAF9A',
+                color: '#0D1110',
                 border: 'none',
                 borderRadius: '10px',
                 padding: '0.65rem 1.25rem',
@@ -310,9 +433,11 @@ export default function AdminDashboard() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.45rem',
-                boxShadow: '0 4px 14px rgba(163, 230, 53, 0.4)',
+                boxShadow: '0 3px 10px rgba(111, 175, 154, 0.35)',
                 transition: 'all 0.15s ease'
               }}
+              onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+              onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
             >
               Open Document Editor &rarr;
             </Link>
@@ -543,16 +668,17 @@ export default function AdminDashboard() {
                               <Link
                                 href={`/editor?docId=${item._id}`}
                                 style={{
-                                  background: '#a3e635',
-                                  color: '#121417',
+                                  background: '#6FAF9A',
+                                  color: '#0D1110',
                                   textDecoration: 'none',
                                   borderRadius: '6px',
                                   padding: '0.35rem 0.75rem',
                                   fontSize: '0.78rem',
-                                  fontWeight: 900,
+                                  fontWeight: 800,
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '0.3rem'
+                                  gap: '0.3rem',
+                                  boxShadow: '0 2px 6px rgba(111, 175, 154, 0.3)'
                                 }}
                               >
                                 Edit in Editor
@@ -751,13 +877,14 @@ export default function AdminDashboard() {
                   <Link
                     href={`/editor?docId=${selectedDocObj._id}`}
                     style={{
-                      background: '#a3e635',
-                      color: '#121417',
+                      background: '#6FAF9A',
+                      color: '#0D1110',
                       textDecoration: 'none',
                       borderRadius: '8px',
                       padding: '0.55rem 1.15rem',
                       fontSize: '0.82rem',
-                      fontWeight: 900
+                      fontWeight: 800,
+                      boxShadow: '0 2px 8px rgba(111, 175, 154, 0.35)'
                     }}
                   >
                     Edit in Document Editor &rarr;

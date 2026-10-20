@@ -97,6 +97,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('doc_evo_user');
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.clear();
+      } catch (e) {}
+    }
   };
 
   return (
