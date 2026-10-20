@@ -37,9 +37,10 @@ function DashboardComponent() {
   
   // Documents state
   const [availableDocs, setAvailableDocs] = useState<any[]>([]);
+  const [docsLoading, setDocsLoading] = useState<boolean>(true);
   const [selectedDocId, setSelectedDocId] = useState<string>('doc_collaborative_1');
   const [docSearchQuery, setDocSearchQuery] = useState('');
-  const [docFilter, setDocFilter] = useState<'all' | 'led' | 'shared'>('all');
+  const [docFilter, setDocFilter] = useState<'all' | 'led' | 'shared' | 'individual' | 'group'>('all');
 
   // Analytics states for selected doc
   const [timeline, setTimeline] = useState<any[]>([]);
@@ -62,6 +63,7 @@ function DashboardComponent() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocPrompt, setNewDocPrompt] = useState('');
   const [newDocSource, setNewDocSource] = useState('in_built');
+  const [newDocAssignmentType, setNewDocAssignmentType] = useState<'group' | 'individual'>('group');
   const [selectedNewMembers, setSelectedNewMembers] = useState<string[]>([]);
   const [customMemberInput, setCustomMemberInput] = useState<string>('');
   const [createLoading, setCreateLoading] = useState(false);
@@ -106,9 +108,13 @@ function DashboardComponent() {
   const loadDocuments = async () => {
     if (!user) {
       setAvailableDocs([]);
+      setDocsLoading(false);
       return;
     }
     try {
+      if (availableDocs.length === 0) {
+        setDocsLoading(true);
+      }
       let url = API_BASE;
       const params = new URLSearchParams();
       if (user.username) params.append('username', user.username);
@@ -122,6 +128,14 @@ function DashboardComponent() {
       const list = Array.isArray(docs) ? docs : [];
       setAvailableDocs(list);
 
+      // Cache for seamless instant return without flicker
+      if (typeof window !== 'undefined') {
+        try {
+          const userKey = `inkie_docs_${user.studentId || user.username}`;
+          sessionStorage.setItem(userKey, JSON.stringify(list));
+        } catch (e) {}
+      }
+
       if (docIdQuery && list.some((d: any) => d._id === docIdQuery)) {
         setSelectedDocId(docIdQuery);
       } else if (list.length > 0 && !list.some((d: any) => d._id === selectedDocId)) {
@@ -134,17 +148,34 @@ function DashboardComponent() {
       }
     } catch (err) {
       console.error("Failed to fetch documents", err);
+    } finally {
+      setDocsLoading(false);
     }
   };
 
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Check session cache first for instant flicker-free rendering
+      if (typeof window !== 'undefined') {
+        try {
+          const userKey = `inkie_docs_${user.studentId || user.username}`;
+          const cached = sessionStorage.getItem(userKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setAvailableDocs(parsed);
+              setDocsLoading(false);
+            }
+          }
+        } catch (e) {}
+      }
       loadStudents();
       loadDocuments();
     } else {
       setAvailableDocs([]);
       setRegisteredStudents([]);
       setSelectedDocId('');
+      setDocsLoading(false);
     }
   }, [isAuthenticated, user, docIdQuery]);
 
@@ -156,7 +187,14 @@ function DashboardComponent() {
 
       const fetchJson = async (url: string) => {
         try {
-          const res = await fetch(url);
+          const sep = url.includes('?') ? '&' : '?';
+          const res = await fetch(`${url}${sep}_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!res.ok) return null;
           return await res.json();
         } catch (err) {
@@ -259,8 +297,8 @@ function DashboardComponent() {
     }
     setCreateLoading(true);
     try {
-      const parsedCustom = customMemberInput.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
-      const combinedMembers = Array.from(new Set([...selectedNewMembers, ...parsedCustom]));
+      const parsedCustom = newDocAssignmentType === 'individual' ? [] : customMemberInput.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+      const combinedMembers = newDocAssignmentType === 'individual' ? [] : Array.from(new Set([...selectedNewMembers, ...parsedCustom]));
 
       const res = await fetch(`${API_BASE}/create`, {
         method: 'POST',
@@ -271,19 +309,21 @@ function DashboardComponent() {
             ? `<h2>${newDocTitle.trim()}</h2><p>${newDocPrompt.trim()}</p>`
             : undefined,
           owner: user?.username || 'student',
-          ownerName: user?.name || user?.username || 'Student Leader',
+          ownerName: user?.name || user?.username || (newDocAssignmentType === 'individual' ? 'Student Author' : 'Student Leader'),
           studentId: user?.studentId || '',
           source: newDocSource,
+          assignmentType: newDocAssignmentType,
           members: combinedMembers
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create assignment");
-      showToast("Assignment created! Launching editor...", "success", "Assignment Created");
+      showToast(`${newDocAssignmentType === 'individual' ? 'Individual assignment' : 'Group project'} created! Launching editor...`, "success", "Assignment Created");
       setNewDocTitle('');
       setNewDocPrompt('');
       setSelectedNewMembers([]);
       setCustomMemberInput('');
+      setNewDocAssignmentType('group');
       await loadDocuments();
       router.push(`/editor?docId=${data.document._id}`);
     } catch (err: any) {
@@ -316,6 +356,34 @@ function DashboardComponent() {
     }
   };
 
+  const checkIsOwner = (d: any, u: any): boolean => {
+    if (!d || !u) return false;
+    const cleanOwner = (d.owner || '').toLowerCase().trim();
+    const cleanOwnerName = (d.ownerName || '').toLowerCase().trim();
+    const uUsername = (u.username || '').toLowerCase().trim();
+    const uStudentId = (u.studentId || '').toLowerCase().trim();
+    const uEmail = (u.email || '').toLowerCase().trim();
+    const uName = (u.name || '').toLowerCase().trim();
+
+    if (cleanOwner && (cleanOwner === uUsername || cleanOwner === uStudentId || cleanOwner === uEmail)) {
+      return true;
+    }
+    if (cleanOwnerName) {
+      if (uName && cleanOwnerName === uName) return true;
+      if (uStudentId && (cleanOwnerName === uStudentId || cleanOwnerName.includes(`(${uStudentId})`))) return true;
+      if (uUsername && cleanOwnerName === uUsername) return true;
+      const match = cleanOwnerName.match(/^(.+?)\s*\((.+?)\)$/);
+      if (match) {
+        const namePart = match[1].trim();
+        const idParen = match[2].trim();
+        if (uName && namePart === uName) return true;
+        if (uStudentId && idParen === uStudentId) return true;
+        if (uUsername && (namePart === uUsername || idParen === uUsername)) return true;
+      }
+    }
+    return false;
+  };
+
   const selectedDocObj = availableDocs.find((d: any) => d._id === selectedDocId) || availableDocs[0];
   const targetDocForTeam = availableDocs.find((d: any) => d._id === teamTargetDocId) || selectedDocObj;
 
@@ -327,15 +395,12 @@ function DashboardComponent() {
     
     if (!matchesSearch) return false;
 
-    const isOwner = user && (
-      (d.owner && d.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-      (d.owner && d.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
-      (d.owner && user.email && d.owner.toLowerCase() === user.email.toLowerCase()) ||
-      (d.ownerName && user.name && d.ownerName.toLowerCase().includes(user.name.toLowerCase()))
-    );
+    const isOwner = checkIsOwner(d, user);
 
     if (docFilter === 'led') return isOwner;
     if (docFilter === 'shared') return !isOwner;
+    if (docFilter === 'individual') return d.assignmentType === 'individual';
+    if (docFilter === 'group') return d.assignmentType !== 'individual';
     return true;
   });
 
@@ -617,7 +682,9 @@ function DashboardComponent() {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
               }}
             >
-              {availableDocs.length === 0 ? (
+              {docsLoading && availableDocs.length === 0 ? (
+                <option value="">Loading assignments...</option>
+              ) : availableDocs.length === 0 ? (
                 <option value="">No assignments assigned yet</option>
               ) : (
                 availableDocs.map((doc: any) => (
@@ -654,8 +721,8 @@ function DashboardComponent() {
               <button
                 onClick={() => setActiveTab('team')}
                 style={{
-                  background: '#a3e635',
-                  color: '#121417',
+                  background: '#6FAF9A',
+                  color: '#0D1110',
                   border: 'none',
                   borderRadius: '9999px',
                   padding: '0.45rem 1.15rem',
@@ -665,11 +732,11 @@ function DashboardComponent() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.4rem',
-                  boxShadow: '0 2px 6px rgba(163, 230, 53, 0.35)',
+                  boxShadow: '0 2px 8px rgba(111, 175, 154, 0.35)',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
-                onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+                onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+                onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
               >
                 <span>+</span> Add Teammate to Group
               </button>
@@ -703,7 +770,39 @@ function DashboardComponent() {
         </div>
 
         {/* 3. Two Research-Aligned Cards Grid or Empty Welcome State */}
-        {availableDocs.length === 0 ? (
+        {docsLoading && availableDocs.length === 0 ? (
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '16px',
+            padding: '2.5rem 2rem',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '220px',
+            gap: '1rem',
+            color: '#64748b'
+          }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              border: '3px solid rgba(111, 175, 154, 0.25)',
+              borderTopColor: '#6FAF9A',
+              animation: 'spin 0.8s linear infinite'
+            }} />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontWeight: 700, color: '#0f172a', fontSize: '0.95rem' }}>
+                Synchronizing assignments &amp; telemetry...
+              </p>
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                Connecting to collaborative document evolution pipeline
+              </span>
+            </div>
+          </div>
+        ) : availableDocs.length === 0 ? (
           <div style={{
             background: '#ffffff',
             border: '1px solid rgba(0, 0, 0, 0.06)',
@@ -735,7 +834,7 @@ function DashboardComponent() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                Welcome to DocuTrace, {user?.name || user?.username}!
+                Welcome to Inkie, {user?.name || user?.username}!
               </h3>
               <p style={{ margin: '0.4rem auto 0 auto', fontSize: '0.88rem', color: '#64748b', maxWidth: '580px', lineHeight: 1.5 }}>
                 You do not have any assignments or collaborative documents yet. You can create your first document as a group leader, or have your project leader invite your Student ID (<strong>{user?.studentId || 'N/A'}</strong>) to join an active group assignment.
@@ -745,8 +844,8 @@ function DashboardComponent() {
               <button
                 onClick={() => setActiveTab('create')}
                 style={{
-                  background: '#a3e635',
-                  color: '#121417',
+                  background: '#6FAF9A',
+                  color: '#0D1110',
                   border: 'none',
                   borderRadius: '9999px',
                   padding: '0.55rem 1.4rem',
@@ -756,11 +855,11 @@ function DashboardComponent() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.45rem',
-                  boxShadow: '0 2px 8px rgba(163, 230, 53, 0.3)',
+                  boxShadow: '0 2px 8px rgba(111, 175, 154, 0.35)',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
-                onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+                onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+                onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
@@ -798,57 +897,58 @@ function DashboardComponent() {
         ) : (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
-            gap: '1.5rem'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+            gap: '1rem'
           }}>
           {/* Card 1: Document Evolution & Contribution Authenticity (Core Research) */}
           <div style={{
             background: '#ffffff',
-            border: '1px solid rgba(0, 0, 0, 0.06)',
-            borderRadius: '16px',
-            padding: '1.75rem',
-            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            border: '1px solid rgba(111, 175, 154, 0.22)',
+            borderRadius: '14px',
+            padding: '1.15rem 1.35rem',
+            boxShadow: '0 2px 10px rgba(13, 17, 16, 0.03)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            gap: '1.25rem'
+            gap: '0.75rem'
           }}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#0D1110' }}>
                     Document Evolution &amp; Contribution Authenticity
                   </h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.72rem', color: '#43574f' }}>
                     Process-based multi-author drafting telemetry, revision provenance &amp; workload equity
                   </p>
                 </div>
                 <span style={{
                   background: pasteAnomaliesCount === 0 && workloadEquityScore >= 75
-                    ? 'rgba(34, 197, 94, 0.1)'
+                    ? 'rgba(111, 175, 154, 0.18)'
                     : pasteAnomaliesCount > 0
                     ? 'rgba(239, 68, 68, 0.1)'
-                    : 'rgba(245, 158, 11, 0.1)',
+                    : 'rgba(245, 158, 11, 0.12)',
                   color: pasteAnomaliesCount === 0 && workloadEquityScore >= 75
-                    ? '#16a34a'
+                    ? '#225243'
                     : pasteAnomaliesCount > 0
                     ? '#ef4444'
-                    : '#d97706',
-                  border: `1px solid ${pasteAnomaliesCount === 0 && workloadEquityScore >= 75 ? 'rgba(34, 197, 94, 0.25)' : pasteAnomaliesCount > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
-                  padding: '0.2rem 0.65rem',
+                    : '#b45309',
+                  border: `1px solid ${pasteAnomaliesCount === 0 && workloadEquityScore >= 75 ? 'rgba(111, 175, 154, 0.35)' : pasteAnomaliesCount > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+                  padding: '0.15rem 0.55rem',
                   borderRadius: '9999px',
-                  fontSize: '0.74rem',
+                  fontSize: '0.68rem',
                   fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.35rem'
+                  gap: '0.3rem',
+                  whiteSpace: 'nowrap'
                 }}>
                   <span style={{
                     width: '6px',
                     height: '6px',
                     borderRadius: '50%',
                     background: pasteAnomaliesCount === 0 && workloadEquityScore >= 75
-                      ? '#22c55e'
+                      ? '#6FAF9A'
                       : pasteAnomaliesCount > 0
                       ? '#ef4444'
                       : '#f59e0b'
@@ -862,67 +962,68 @@ function DashboardComponent() {
               </div>
 
               {/* Big Score Display */}
-              <div style={{ margin: '1.25rem 0' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
-                  <span style={{ fontSize: '2.5rem', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>
+              <div style={{ margin: '0.65rem 0' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.95rem', fontWeight: 900, color: '#0D1110', lineHeight: 1 }}>
                     {authenticityScore}%
                   </span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#738b81', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                     CONTRIBUTION AUTHENTICITY SCORE
                   </span>
                 </div>
-                <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.4 }}>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.76rem', color: '#43574f', lineHeight: 1.35 }}>
                   Genuine collaborative document evolution verified against iterative revision history and multi-author workload parity.
                 </p>
               </div>
 
               {/* Metric Mini Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 0.5rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Incremental Drafting</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a', marginTop: '0.2rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                <div style={{ background: '#EFF8F3', border: '1px solid rgba(111, 175, 154, 0.22)', borderRadius: '8px', padding: '0.5rem 0.4rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.68rem', color: '#43574f', fontWeight: 600 }}>Incremental Drafting</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0D1110', marginTop: '0.1rem' }}>
                     {incrementalDraftingPercent}%
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.15rem' }}>Iterative rhythm</div>
+                  <div style={{ fontSize: '0.64rem', color: '#738b81' }}>Iterative rhythm</div>
                 </div>
 
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.85rem 0.5rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 600 }}>Workload Parity</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0ea5e9', marginTop: '0.2rem' }}>
+                <div style={{ background: '#EFF8F3', border: '1px solid rgba(111, 175, 154, 0.22)', borderRadius: '8px', padding: '0.5rem 0.4rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.68rem', color: '#43574f', fontWeight: 600 }}>Workload Parity</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#225243', marginTop: '0.1rem' }}>
                     {workloadEquityScore}%
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.15rem' }}>{activeAuthorsCount} co-author(s)</div>
+                  <div style={{ fontSize: '0.64rem', color: '#738b81' }}>{activeAuthorsCount} co-author(s)</div>
                 </div>
 
                 <div style={{
-                  background: batchPastePercent > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(163, 230, 53, 0.12)',
-                  border: `1px solid ${batchPastePercent > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(163, 230, 53, 0.3)'}`,
-                  borderRadius: '10px',
-                  padding: '0.85rem 0.5rem',
+                  background: batchPastePercent > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(111, 175, 154, 0.15)',
+                  border: `1px solid ${batchPastePercent > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(111, 175, 154, 0.3)'}`,
+                  borderRadius: '8px',
+                  padding: '0.5rem 0.4rem',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '0.74rem', color: batchPastePercent > 0 ? '#ef4444' : '#275306', fontWeight: 600 }}>Batch Paste Ratio</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: batchPastePercent > 0 ? '#ef4444' : '#275306', marginTop: '0.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: batchPastePercent > 0 ? '#ef4444' : '#225243', fontWeight: 600 }}>Batch Paste Ratio</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 900, color: batchPastePercent > 0 ? '#ef4444' : '#225243', marginTop: '0.1rem' }}>
                     {batchPastePercent}%
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: batchPastePercent > 0 ? '#ef4444' : '#275306', marginTop: '0.15rem' }}>
+                  <div style={{ fontSize: '0.64rem', color: batchPastePercent > 0 ? '#ef4444' : '#225243' }}>
                     {pasteAnomaliesCount > 0 ? `${pasteAnomaliesCount} spike(s)` : 'Zero bursts'}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons - Compact Sleek Design */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))', gap: '0.45rem', marginTop: '0.65rem' }}>
+            {/* Action Buttons - Compact Sleek Design (Only Open in Editor & Author Highlights) */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
               <button
-                onClick={() => router.push(`/editor?docId=${selectedDocId}`)}
+                onClick={() => router.push(`/editor?docId=${selectedDocId || selectedDocObj?._id || ''}`)}
                 style={{
-                  background: '#a3e635',
-                  color: '#121417',
+                  flex: 1,
+                  background: '#6FAF9A',
+                  color: '#0D1110',
                   border: 'none',
-                  borderRadius: '9999px',
-                  padding: '0.42rem 0.65rem',
-                  fontSize: '0.74rem',
+                  borderRadius: '8px',
+                  padding: '0.45rem 0.85rem',
+                  fontSize: '0.76rem',
                   fontWeight: 800,
                   cursor: 'pointer',
                   textAlign: 'center',
@@ -930,11 +1031,11 @@ function DashboardComponent() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.35rem',
-                  boxShadow: '0 2px 6px rgba(163, 230, 53, 0.25)',
+                  boxShadow: '0 2px 6px rgba(111, 175, 154, 0.3)',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
-                onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+                onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+                onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -946,12 +1047,13 @@ function DashboardComponent() {
               <button
                 onClick={() => setActiveTab('ml_analytics')}
                 style={{
+                  flex: 1,
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  color: '#0f172a',
-                  borderRadius: '9999px',
-                  padding: '0.42rem 0.65rem',
-                  fontSize: '0.74rem',
+                  border: '1px solid rgba(111, 175, 154, 0.35)',
+                  color: '#0D1110',
+                  borderRadius: '8px',
+                  padding: '0.45rem 0.85rem',
+                  fontSize: '0.76rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   textAlign: 'center',
@@ -961,7 +1063,7 @@ function DashboardComponent() {
                   gap: '0.35rem',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
+                onMouseOver={e => e.currentTarget.style.background = '#EFF8F3'}
                 onMouseOut={e => e.currentTarget.style.background = '#ffffff'}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -969,160 +1071,99 @@ function DashboardComponent() {
                 </svg>
                 Author Highlights
               </button>
-
-              <button
-                onClick={handleDownloadJSON}
-                style={{
-                  background: '#121417',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '0.42rem 0.65rem',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#272b30'}
-                onMouseOut={e => e.currentTarget.style.background = '#121417'}
-                title="Download full document evolution telemetry as JSON"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6" />
-                  <polyline points="8 6 2 12 8 18" />
-                </svg>
-                Download JSON
-              </button>
-
-              <button
-                onClick={handleDownloadCSV}
-                style={{
-                  background: '#0284c7',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '0.42rem 0.65rem',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = '#0369a1'}
-                onMouseOut={e => e.currentTarget.style.background = '#0284c7'}
-                title="Download ML training dataset as CSV (clean, flat tabular format for Pandas, PyTorch & Scikit-learn)"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="8" y1="13" x2="16" y2="13" />
-                  <line x1="8" y1="17" x2="16" y2="17" />
-                </svg>
-                Download CSV
-              </button>
             </div>
           </div>
 
           {/* Card 2: Document Evolution Standing */}
           <div style={{
             background: '#ffffff',
-            border: '1px solid rgba(0, 0, 0, 0.06)',
-            borderRadius: '16px',
-            padding: '1.75rem',
-            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+            border: '1px solid rgba(111, 175, 154, 0.22)',
+            borderRadius: '14px',
+            padding: '1.15rem 1.35rem',
+            boxShadow: '0 2px 10px rgba(13, 17, 16, 0.03)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            gap: '1.25rem'
+            gap: '0.75rem'
           }}>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#0D1110' }}>
                     Document Evolution Standing
                   </h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.72rem', color: '#43574f' }}>
                     ML Revision Intent &amp; Significance Quality Analytics
                   </p>
                 </div>
-                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', color: '#738b81', fontWeight: 700, whiteSpace: 'nowrap' }}>
                   Total {totalWords} words &bull; {revisionsCount} revisions
                 </span>
               </div>
 
-              {/* Blue Weighted Revision Progress Box */}
+              {/* Sage Weighted Revision Progress Box */}
               <div style={{
-                background: 'rgba(14, 165, 233, 0.08)',
-                border: '1px solid rgba(14, 165, 233, 0.2)',
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
+                background: 'rgba(111, 175, 154, 0.12)',
+                border: '1px solid rgba(111, 175, 154, 0.28)',
+                borderRadius: '10px',
+                padding: '0.65rem 0.95rem',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '1.25rem'
+                marginBottom: '0.75rem'
               }}>
                 <div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0ea5e9', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#225243', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                     WEIGHTED EVOLUTION SCORE
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: 600, marginTop: '0.15rem' }}>
+                  <div style={{ fontSize: '0.76rem', color: '#0D1110', fontWeight: 600, marginTop: '0.1rem' }}>
                     Composite index across process velocity, co-author equity &amp; ML intent depth
                   </div>
                 </div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#0ea5e9' }}>
+                <div style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0D1110' }}>
                   {weightedCompositeIndex}%
                 </div>
               </div>
 
               {/* Progress Bars Breakdown for Research Dimensions */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 600, color: '#43574f', marginBottom: '0.2rem' }}>
                     <span>Process Evolution &amp; Growth Tracking (35%)</span>
-                    <span style={{ color: '#275306', fontWeight: 700 }}>{processEvolutionScore}%</span>
+                    <span style={{ color: '#225243', fontWeight: 700 }}>{processEvolutionScore}%</span>
                   </div>
-                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{ width: `${processEvolutionScore}%`, height: '100%', background: '#a3e635', borderRadius: '9999px' }} />
+                  <div style={{ width: '100%', height: '5px', background: '#EFF8F3', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: `${processEvolutionScore}%`, height: '100%', background: '#6FAF9A', borderRadius: '9999px' }} />
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 600, color: '#43574f', marginBottom: '0.2rem' }}>
                     <span>Multi-Author Workload Equity (25%)</span>
-                    <span style={{ color: '#0ea5e9', fontWeight: 700 }}>{workloadEquityScore}%</span>
+                    <span style={{ color: '#225243', fontWeight: 700 }}>{workloadEquityScore}%</span>
                   </div>
-                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{ width: `${workloadEquityScore}%`, height: '100%', background: '#0ea5e9', borderRadius: '9999px' }} />
+                  <div style={{ width: '100%', height: '5px', background: '#EFF8F3', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: `${workloadEquityScore}%`, height: '100%', background: '#2a9d8f', borderRadius: '9999px' }} />
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 600, color: '#43574f', marginBottom: '0.2rem' }}>
                     <span>Substantive Intent Classification (25%)</span>
-                    <span style={{ color: '#6366f1', fontWeight: 700 }}>{substantiveIntentPercent}%</span>
+                    <span style={{ color: '#225243', fontWeight: 700 }}>{substantiveIntentPercent}%</span>
                   </div>
-                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{ width: `${substantiveIntentPercent}%`, height: '100%', background: '#6366f1', borderRadius: '9999px' }} />
+                  <div style={{ width: '100%', height: '5px', background: '#EFF8F3', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: `${substantiveIntentPercent}%`, height: '100%', background: '#6FAF9A', borderRadius: '9999px' }} />
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#64748b', marginBottom: '0.3rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 600, color: '#43574f', marginBottom: '0.2rem' }}>
                     <span>Revision Significance Depth (15%)</span>
-                    <span style={{ color: '#0f172a', fontWeight: 700 }}>{significanceRatePercent}%</span>
+                    <span style={{ color: '#0D1110', fontWeight: 700 }}>{significanceRatePercent}%</span>
                   </div>
-                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{ width: `${significanceRatePercent}%`, height: '100%', background: '#121417', borderRadius: '9999px' }} />
+                  <div style={{ width: '100%', height: '5px', background: '#EFF8F3', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div style={{ width: `${significanceRatePercent}%`, height: '100%', background: '#0D1110', borderRadius: '9999px' }} />
                   </div>
                 </div>
               </div>
@@ -1207,7 +1248,7 @@ function DashboardComponent() {
                   }}
                 />
 
-                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '0.2rem' }}>
+                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '0.2rem', flexWrap: 'wrap', gap: '0.2rem' }}>
                   <button
                     onClick={() => setDocFilter('all')}
                     style={{
@@ -1224,6 +1265,36 @@ function DashboardComponent() {
                     All
                   </button>
                   <button
+                    onClick={() => setDocFilter('individual')}
+                    style={{
+                      border: 'none',
+                      background: docFilter === 'individual' ? '#ffffff' : 'transparent',
+                      color: docFilter === 'individual' ? '#0369a1' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Individual
+                  </button>
+                  <button
+                    onClick={() => setDocFilter('group')}
+                    style={{
+                      border: 'none',
+                      background: docFilter === 'group' ? '#ffffff' : 'transparent',
+                      color: docFilter === 'group' ? '#4338ca' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Group Projects
+                  </button>
+                  <button
                     onClick={() => setDocFilter('led')}
                     style={{
                       border: 'none',
@@ -1236,7 +1307,7 @@ function DashboardComponent() {
                       cursor: 'pointer'
                     }}
                   >
-                    My Assignments (Leader)
+                    Led by Me
                   </button>
                   <button
                     onClick={() => setDocFilter('shared')}
@@ -1258,7 +1329,29 @@ function DashboardComponent() {
             </div>
 
             {/* Document Cards Grid */}
-            {filteredDocs.length === 0 ? (
+            {docsLoading && availableDocs.length === 0 ? (
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '3rem 2rem',
+                textAlign: 'center',
+                color: '#64748b'
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: '3px solid #f1f5f9',
+                  borderTopColor: '#0ea5e9',
+                  animation: 'spin 0.8s linear infinite',
+                  margin: '0 auto 0.75rem auto'
+                }} />
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>
+                  Loading your documents &amp; assignments...
+                </div>
+              </div>
+            ) : filteredDocs.length === 0 ? (
               <div style={{
                 background: '#ffffff',
                 border: '1px solid #e2e8f0',
@@ -1276,14 +1369,15 @@ function DashboardComponent() {
                 <button
                   onClick={() => setActiveTab('create')}
                   style={{
-                    background: '#a3e635',
-                    color: '#121417',
+                    background: '#6FAF9A',
+                    color: '#0D1110',
                     border: 'none',
                     padding: '0.5rem 1.25rem',
                     borderRadius: '9999px',
                     fontWeight: 800,
                     fontSize: '0.85rem',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(111, 175, 154, 0.35)'
                   }}
                 >
                   Create Your First Assignment
@@ -1292,12 +1386,7 @@ function DashboardComponent() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
                 {filteredDocs.map((doc: any) => {
-                  const isOwner = user && (
-                    (doc.owner && doc.owner.toLowerCase() === (user.username || '').toLowerCase()) ||
-                    (doc.owner && doc.owner.toLowerCase() === (user.studentId || '').toLowerCase()) ||
-                    (doc.owner && user.email && doc.owner.toLowerCase() === user.email.toLowerCase()) ||
-                    (doc.ownerName && user.name && doc.ownerName.toLowerCase().includes(user.name.toLowerCase()))
-                  );
+                  const isOwner = checkIsOwner(doc, user);
 
                   return (
                     <div
@@ -1316,18 +1405,46 @@ function DashboardComponent() {
                       }}
                     >
                       <div>
-                        {/* Header Badges */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <span style={{
-                            background: doc.source === 'google_docs' ? '#e8f0fe' : doc.source === 'microsoft_365' ? '#deecf9' : 'rgba(163, 230, 53, 0.16)',
-                            color: doc.source === 'google_docs' ? '#1a73e8' : doc.source === 'microsoft_365' ? '#0078d4' : '#275306',
-                            padding: '0.2rem 0.65rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.74rem',
-                            fontWeight: 700
-                          }}>
-                            {doc.source === 'google_docs' ? 'Google Docs' : doc.source === 'microsoft_365' ? 'Microsoft 365' : 'In-Built Editor'}
-                          </span>
+                        {/* Header Badges: Source & Assignment Type prominently displayed above title */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{
+                              background: doc.source === 'google_docs' ? '#e8f0fe' : doc.source === 'microsoft_365' ? '#deecf9' : 'rgba(163, 230, 53, 0.16)',
+                              color: doc.source === 'google_docs' ? '#1a73e8' : doc.source === 'microsoft_365' ? '#0078d4' : '#275306',
+                              padding: '0.2rem 0.65rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.74rem',
+                              fontWeight: 700
+                            }}>
+                              {doc.source === 'google_docs' ? 'Google Docs' : doc.source === 'microsoft_365' ? 'Microsoft 365' : 'In-Built Editor'}
+                            </span>
+
+                            <span style={{
+                              background: doc.assignmentType === 'individual' ? '#e0f2fe' : '#eef2ff',
+                              color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
+                              border: `1px solid ${doc.assignmentType === 'individual' ? '#bae6fd' : '#c7d2fe'}`,
+                              padding: '0.2rem 0.65rem',
+                              borderRadius: '9999px',
+                              fontSize: '0.74rem',
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem'
+                            }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                {doc.assignmentType === 'individual' ? (
+                                  <>
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                  </>
+                                ) : (
+                                  <>
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                  </>
+                                )}
+                              </svg>
+                              {doc.assignmentType === 'individual' ? 'Individual Assignment' : 'Group Collaborative Project'}
+                            </span>
+                          </div>
 
                           <span style={{
                             background: isOwner ? 'rgba(163, 230, 53, 0.16)' : '#f1f5f9',
@@ -1337,7 +1454,9 @@ function DashboardComponent() {
                             fontSize: '0.74rem',
                             fontWeight: 700
                           }}>
-                            {isOwner ? 'Group Leader (You)' : `Leader: ${doc.ownerName || doc.owner || 'System'}`}
+                            {doc.assignmentType === 'individual'
+                              ? (isOwner ? 'Student Author (You)' : `Author: ${doc.ownerName || doc.owner || 'Student'}`)
+                              : (isOwner ? 'Group Leader (You)' : `Leader: ${doc.ownerName || doc.owner || 'System'}`)}
                           </span>
                         </div>
 
@@ -1369,17 +1488,6 @@ function DashboardComponent() {
                             {doc.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}
                           </span>
 
-                          <span style={{
-                            background: doc.assignmentType === 'individual' ? 'rgba(14, 165, 233, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-                            color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
-                            padding: '0.15rem 0.55rem',
-                            borderRadius: '6px',
-                            fontSize: '0.72rem',
-                            fontWeight: 800
-                          }}>
-                            {doc.assignmentType === 'individual' ? 'Individual' : 'Group Project'}
-                          </span>
-
                           {doc.course && (
                             <span style={{ background: '#f1f5f9', color: '#475569', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>
                               {doc.course}
@@ -1409,35 +1517,46 @@ function DashboardComponent() {
                           </div>
                         )}
 
-                        {/* Collaborators */}
-                        <div>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
-                            Group Members ({doc.collaborators?.length || 1}):
-                          </span>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
-                            {(doc.collaborators || [doc.ownerName || 'Author']).slice(0, 4).map((c: string, idx: number) => (
-                              <span
-                                key={idx}
-                                style={{
-                                  background: '#f8fafc',
-                                  border: '1px solid #e2e8f0',
-                                  borderRadius: '6px',
-                                  padding: '0.15rem 0.45rem',
-                                  fontSize: '0.72rem',
-                                  color: '#0f172a',
-                                  fontWeight: 500
-                                }}
-                              >
-                                {c}
-                              </span>
-                            ))}
-                            {(doc.collaborators?.length || 0) > 4 && (
-                              <span style={{ fontSize: '0.72rem', color: '#64748b', alignSelf: 'center' }}>
-                                +{doc.collaborators.length - 4} more
-                              </span>
-                            )}
+                        {/* Collaborators / Individual Author Details */}
+                        {doc.assignmentType === 'individual' ? (
+                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.45rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span style={{ fontSize: '0.74rem', color: '#0369a1', fontWeight: 700 }}>
+                              👤 Individual Assignment &bull;
+                            </span>
+                            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                              Sole Author: <strong style={{ color: '#0f172a' }}>{doc.ownerName || doc.owner}</strong>
+                            </span>
                           </div>
-                        </div>
+                        ) : (
+                          <div>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
+                              Group Members ({doc.collaborators?.length || 1}):
+                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
+                              {(doc.collaborators || [doc.ownerName || 'Author']).slice(0, 4).map((c: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    padding: '0.15rem 0.45rem',
+                                    fontSize: '0.72rem',
+                                    color: '#0f172a',
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  {c}
+                                </span>
+                              ))}
+                              {(doc.collaborators?.length || 0) > 4 && (
+                                <span style={{ fontSize: '0.72rem', color: '#64748b', alignSelf: 'center' }}>
+                                  +{doc.collaborators.length - 4} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Card Action Buttons */}
@@ -1446,8 +1565,8 @@ function DashboardComponent() {
                           <button
                             onClick={() => router.push(`/editor?docId=${doc._id}`)}
                             style={{
-                              background: '#a3e635',
-                              color: '#121417',
+                              background: '#6FAF9A',
+                              color: '#0D1110',
                               border: 'none',
                               borderRadius: '8px',
                               padding: '0.55rem 0.75rem',
@@ -1455,10 +1574,10 @@ function DashboardComponent() {
                               fontWeight: 800,
                               cursor: 'pointer',
                               textAlign: 'center',
-                              boxShadow: '0 2px 6px rgba(163, 230, 53, 0.35)'
+                              boxShadow: '0 2px 6px rgba(111, 175, 154, 0.35)'
                             }}
-                            onMouseOver={e => e.currentTarget.style.background = '#8ee01d'}
-                            onMouseOut={e => e.currentTarget.style.background = '#a3e635'}
+                            onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+                            onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
                           >
                             Open in Editor
                           </button>
@@ -1484,8 +1603,8 @@ function DashboardComponent() {
                           </button>
                         </div>
 
-                        {/* Leader Quick Share / Add Member */}
-                        {(isOwner || isUserLeader) && (
+                        {/* Leader Quick Share / Add Member (Only for Group Projects) */}
+                        {(isOwner || isUserLeader) && doc.assignmentType !== 'individual' && (
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <button
                               onClick={() => {
@@ -1553,7 +1672,7 @@ function DashboardComponent() {
               boxShadow: '0 2px 8px rgba(15, 23, 42, 0.02)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <span style={{ background: '#a3e635', color: '#121417', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
+                <span style={{ background: '#6FAF9A', color: '#0D1110', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
                   LEADER ACTION
                 </span>
                 <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
@@ -1653,15 +1772,15 @@ function DashboardComponent() {
                     disabled={!manualStudentInput.trim() && !selectedStudentForAdd}
                     style={{
                       width: '100%',
-                      background: (manualStudentInput.trim() || selectedStudentForAdd) ? '#a3e635' : '#e2e8f0',
-                      color: (manualStudentInput.trim() || selectedStudentForAdd) ? '#121417' : '#94a3b8',
+                      background: (manualStudentInput.trim() || selectedStudentForAdd) ? '#6FAF9A' : '#e2e8f0',
+                      color: (manualStudentInput.trim() || selectedStudentForAdd) ? '#0D1110' : '#94a3b8',
                       border: 'none',
                       borderRadius: '8px',
                       padding: '0.65rem 1.25rem',
                       fontSize: '0.85rem',
                       fontWeight: 800,
                       cursor: (manualStudentInput.trim() || selectedStudentForAdd) ? 'pointer' : 'not-allowed',
-                      boxShadow: (manualStudentInput.trim() || selectedStudentForAdd) ? '0 2px 8px rgba(163, 230, 53, 0.35)' : 'none',
+                      boxShadow: (manualStudentInput.trim() || selectedStudentForAdd) ? '0 2px 8px rgba(111, 175, 154, 0.35)' : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
@@ -1842,6 +1961,64 @@ function DashboardComponent() {
               </p>
 
               <form onSubmit={handleCreateAssignment} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Assignment Work Type Selector */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.45rem' }}>
+                    Assignment Type *
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewDocAssignmentType('group');
+                      }}
+                      style={{
+                        padding: '0.85rem 1rem',
+                        borderRadius: '10px',
+                        border: newDocAssignmentType === 'group' ? '2px solid #121417' : '1px solid #e2e8f0',
+                        background: newDocAssignmentType === 'group' ? '#f8fafc' : '#ffffff',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.2rem' }}>👥</span>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>Group Collaborative Project</span>
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem' }}>
+                        Multi-author collaborative assignment with teammates & workload equity tracking.
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewDocAssignmentType('individual');
+                        setSelectedNewMembers([]);
+                        setCustomMemberInput('');
+                      }}
+                      style={{
+                        padding: '0.85rem 1rem',
+                        borderRadius: '10px',
+                        border: newDocAssignmentType === 'individual' ? '2px solid #0284c7' : '1px solid #e2e8f0',
+                        background: newDocAssignmentType === 'individual' ? '#f0f9ff' : '#ffffff',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.2rem' }}>👤</span>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: newDocAssignmentType === 'individual' ? '#0369a1' : '#0f172a' }}>Individual Assignment</span>
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem' }}>
+                        Personal coursework authored solely by you. No collaborators required.
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
                     Assignment / Document Title *
@@ -1892,12 +2069,12 @@ function DashboardComponent() {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                      Group Leader
+                      {newDocAssignmentType === 'individual' ? 'Student Author' : 'Group Leader'}
                     </label>
                     <input
                       type="text"
                       disabled
-                      value={user ? `${user.name || user.username} (${user.studentId || 'Leader'})` : 'Guest / System'}
+                      value={user ? `${user.name || user.username} (${user.studentId || 'Student'})` : 'Guest / System'}
                       style={{
                         width: '100%',
                         padding: '0.75rem 0.9rem',
@@ -1935,100 +2112,115 @@ function DashboardComponent() {
                   />
                 </div>
 
-                {/* Team member selection chips */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                    Select Initial Teammates to Invite ({selectedNewMembers.length} selected)
-                  </label>
-                  <div style={{
-                    maxHeight: '160px',
-                    overflowY: 'auto',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '0.75rem',
-                    background: '#f8fafc',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.4rem'
-                  }}>
-                    {registeredStudents.map((st: any) => {
-                      const isSelected = selectedNewMembers.includes(st.username || st.studentId);
-                      return (
-                        <label
-                          key={st._id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            fontSize: '0.82rem',
-                            cursor: 'pointer',
-                            color: isSelected ? '#0f172a' : '#64748b',
-                            fontWeight: isSelected ? 700 : 500
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              const key = st.username || st.studentId;
-                              setSelectedNewMembers(prev =>
-                                prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-                              );
-                            }}
-                          />
-                          <span>{st.name} ({st.studentId}) &bull; {st.email}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Teammates Section: Shown only for Group Projects */}
+                {newDocAssignmentType === 'group' ? (
+                  <>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                        Select Initial Teammates to Invite ({selectedNewMembers.length} selected)
+                      </label>
+                      <div style={{
+                        maxHeight: '160px',
+                        overflowY: 'auto',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                        background: '#f8fafc',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem'
+                      }}>
+                        {registeredStudents.map((st: any) => {
+                          const isSelected = selectedNewMembers.includes(st.username || st.studentId);
+                          return (
+                            <label
+                              key={st._id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                fontSize: '0.82rem',
+                                cursor: 'pointer',
+                                color: isSelected ? '#0f172a' : '#64748b',
+                                fontWeight: isSelected ? 700 : 500
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  const key = st.username || st.studentId;
+                                  setSelectedNewMembers(prev =>
+                                    prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+                                  );
+                                }}
+                              />
+                              <span>{st.name} ({st.studentId}) &bull; {st.email}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-                {/* Direct IT Number / Email input for assignment creation */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                    Or Enter Additional IT Numbers / Emails / Usernames (comma or space separated)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. IT23217522, student@sliit.lk, rashi"
-                    value={customMemberInput}
-                    onChange={e => setCustomMemberInput(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 0.9rem',
-                      borderRadius: '8px',
-                      border: '1.5px solid #e2e8f0',
-                      background: '#f8fafc',
-                      color: '#0f172a',
-                      fontSize: '0.9rem',
-                      outline: 'none'
-                    }}
-                  />
-                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem' }}>
-                    Assigned students can immediately view and edit this assignment upon signing in, even if they register later.
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                        Or Enter Additional IT Numbers / Emails / Usernames (comma or space separated)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. IT23217522, student@sliit.lk, rashi"
+                        value={customMemberInput}
+                        onChange={e => setCustomMemberInput(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 0.9rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #e2e8f0',
+                          background: '#f8fafc',
+                          color: '#0f172a',
+                          fontSize: '0.9rem',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.35rem' }}>
+                        Assigned students can immediately view and edit this assignment upon signing in, even if they register later.
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{
+                    padding: '1rem 1.25rem',
+                    background: '#f0f9ff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '10px',
+                    color: '#0369a1',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.5
+                  }}>
+                    <strong>👤 Individual Assignment Selected:</strong> You are the sole author of this document. No other students will be added or allowed to modify your work.
                   </div>
-                </div>
+                )}
 
                 <button
                   type="submit"
                   disabled={createLoading}
                   style={{
-                    background: '#a3e635',
-                    color: '#121417',
+                    background: '#6FAF9A',
+                    color: '#ffffff',
                     border: 'none',
                     borderRadius: '9999px',
                     padding: '0.85rem',
                     fontSize: '0.95rem',
                     fontWeight: 800,
                     cursor: createLoading ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 12px rgba(163, 230, 53, 0.4)',
+                    boxShadow: '0 4px 12px rgba(111, 175, 154, 0.4)',
                     transition: 'all 0.15s ease'
                   }}
                   onMouseOver={e => {
-                    if (!createLoading) e.currentTarget.style.background = '#8ee01d';
+                    if (!createLoading) e.currentTarget.style.background = '#5d9d88';
                   }}
                   onMouseOut={e => {
-                    if (!createLoading) e.currentTarget.style.background = '#a3e635';
+                    if (!createLoading) e.currentTarget.style.background = '#6FAF9A';
                   }}
                 >
                   {createLoading ? 'Creating Assignment...' : 'Create & Launch in Editor'}
@@ -2170,15 +2362,16 @@ function DashboardComponent() {
                 onClick={runCrossGroupAnalysis}
                 disabled={compareLoading || compareDocIds.length < 2}
                 style={{
-                  background: '#a3e635',
-                  color: '#121417',
+                  background: '#6FAF9A',
+                  color: '#ffffff',
                   border: 'none',
                   borderRadius: '9999px',
                   padding: '0.65rem 1.4rem',
                   fontSize: '0.85rem',
                   fontWeight: 800,
                   cursor: compareLoading || compareDocIds.length < 2 ? 'not-allowed' : 'pointer',
-                  opacity: compareDocIds.length < 2 ? 0.6 : 1
+                  opacity: compareDocIds.length < 2 ? 0.6 : 1,
+                  boxShadow: '0 2px 8px rgba(111, 175, 154, 0.35)'
                 }}
               >
                 {compareLoading ? 'Comparing Cohorts...' : `Benchmark Selected Documents (${compareDocIds.length})`}

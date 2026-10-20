@@ -107,19 +107,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               width: '32px',
               height: '32px',
               borderRadius: '8px',
-              background: '#121417',
-              color: '#a3e635',
+              background: '#0D1110',
+              color: '#6FAF9A',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 900,
               fontSize: '1rem',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 6px rgba(13,17,16,0.1)'
             }}>
-              D
+              I
             </div>
-            <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              Docu<span style={{ color: '#275306' }}>Trace</span>
+            <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0D1110', letterSpacing: '-0.02em' }}>
+              Inkie
             </span>
           </div>
 
@@ -591,12 +591,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               height: '46px',
               borderRadius: '10px',
               border: 'none',
-              background: '#a3e635', // Primary Lime
-              color: '#121417',     // Dark Accent
+              background: '#6FAF9A', // Primary Sage
+              color: '#ffffff',     // White
               fontWeight: 800,
               fontSize: '0.92rem',
               cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 14px rgba(163, 230, 53, 0.4)',
+              boxShadow: '0 4px 14px rgba(111, 175, 154, 0.35)',
               transition: 'all 0.15s ease',
               display: 'flex',
               alignItems: 'center',
@@ -605,10 +605,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               opacity: loading ? 0.75 : 1
             }}
             onMouseOver={(e) => {
-              if (!loading) e.currentTarget.style.background = '#8ee01d';
+              if (!loading) e.currentTarget.style.background = '#5d9d88';
             }}
             onMouseOut={(e) => {
-              if (!loading) e.currentTarget.style.background = '#a3e635';
+              if (!loading) e.currentTarget.style.background = '#6FAF9A';
             }}
           >
             {loading ? (

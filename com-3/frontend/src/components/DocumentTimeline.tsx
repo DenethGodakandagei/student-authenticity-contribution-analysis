@@ -11,12 +11,12 @@ interface TimelineItem {
 }
 
 const AUTHOR_COLORS = [
-  '#a3e635', // Primary Lime
-  '#0ea5e9', // Sky Blue
-  '#8b5cf6', // Violet
-  '#f59e0b', // Amber
-  '#ec4899', // Pink
-  '#10b981', // Emerald
+  '#6FAF9A', // Primary Sage
+  '#2a9d8f', // Deep Seafoam
+  '#3b82f6', // Soft Blue
+  '#e76f51', // Terracotta
+  '#f4a261', // Warm Sand
+  '#264653', // Deep Obsidian
 ];
 
 export default function DocumentTimeline({ data }: { data: TimelineItem[] }) {
@@ -258,10 +258,10 @@ export default function DocumentTimeline({ data }: { data: TimelineItem[] }) {
         >
           <defs>
             <linearGradient id="trackGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#e2e8f0" />
-              <stop offset="30%" stopColor="#a3e635" />
-              <stop offset="80%" stopColor="#0ea5e9" />
-              <stop offset="100%" stopColor="#8b5cf6" />
+              <stop offset="0%" stopColor="#EFF8F3" />
+              <stop offset="30%" stopColor="#6FAF9A" />
+              <stop offset="80%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#264653" />
             </linearGradient>
             <filter id="nodeShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.18" />
@@ -351,7 +351,7 @@ export default function DocumentTimeline({ data }: { data: TimelineItem[] }) {
                       x="0"
                       y="-2"
                       textAnchor="middle"
-                      fill={n.words_added > 0 ? '#a3e635' : '#94a3b8'}
+                      fill={n.words_added > 0 ? '#6FAF9A' : '#789086'}
                       fontSize="9"
                       fontWeight="800"
                       fontFamily="sans-serif"

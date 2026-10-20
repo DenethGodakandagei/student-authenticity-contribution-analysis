@@ -390,7 +390,7 @@ export default function Integrations() {
                       }}
                     />
                     <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>
-                      Ensure link sharing in Google Docs or Word is set to <strong>&quot;Anyone with the link can view&quot;</strong> so DocuTrace can fetch your real document text without authentication errors.
+                      Ensure link sharing in Google Docs or Word is set to <strong>&quot;Anyone with the link can view&quot;</strong> so Inkie can fetch your real document text without authentication errors.
                     </p>
                   </div>
                 ) : (
@@ -590,14 +590,15 @@ export default function Integrations() {
                           onClick={() => router.push(`/editor?docId=${doc._id}`)}
                           style={{
                             flex: 1,
-                            background: '#a3e635',
-                            color: '#121417',
+                            background: '#6FAF9A',
+                            color: '#0D1110',
                             border: 'none',
                             padding: '0.45rem',
                             borderRadius: '6px',
                             fontWeight: 800,
                             fontSize: '0.78rem',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 6px rgba(111, 175, 154, 0.3)'
                           }}
                         >
                           Open in Editor

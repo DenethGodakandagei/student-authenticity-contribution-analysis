@@ -59,24 +59,24 @@ export default function GuestDashboardView({ onSignIn }: GuestDashboardViewProps
         </span>
       </div>
 
-      {/* 2. Hero Presentation Card */}
+      {/* 2. Hero Presentation Card (Light Theme) */}
       <div style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        background: 'linear-gradient(135deg, #EFF8F3 0%, #FFFFFF 100%)',
         borderRadius: '24px',
-        padding: '3.5rem 3rem',
-        color: '#ffffff',
+        padding: '3rem 2.5rem',
+        color: '#0D1110',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         textAlign: 'center',
-        gap: '1.5rem',
-        boxShadow: '0 20px 40px rgba(15, 23, 42, 0.12)',
-        border: '1px solid rgba(255, 255, 255, 0.08)'
+        gap: '1.25rem',
+        boxShadow: '0 8px 30px rgba(13, 17, 16, 0.05)',
+        border: '1px solid rgba(111, 175, 154, 0.35)'
       }}>
         <div style={{
-          background: 'rgba(163, 230, 53, 0.16)',
-          border: '1px solid rgba(163, 230, 53, 0.35)',
-          color: '#bef264',
+          background: '#ffffff',
+          border: '1px solid rgba(111, 175, 154, 0.4)',
+          color: '#225243',
           padding: '0.35rem 0.95rem',
           borderRadius: '9999px',
           fontSize: '0.78rem',
@@ -85,27 +85,29 @@ export default function GuestDashboardView({ onSignIn }: GuestDashboardViewProps
           textTransform: 'uppercase',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '0.5rem'
+          gap: '0.5rem',
+          boxShadow: '0 1px 3px rgba(111, 175, 154, 0.15)'
         }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a3e635', boxShadow: '0 0 10px #a3e635' }} />
-          DocuTrace Academic Repository
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6FAF9A', boxShadow: '0 0 6px #6FAF9A' }} />
+          Inkie Academic Repository
         </div>
 
         <h1 style={{
           margin: 0,
-          fontSize: '2.5rem',
+          fontSize: '2.35rem',
           fontWeight: 900,
           letterSpacing: '-0.03em',
           lineHeight: 1.2,
-          maxWidth: '780px'
+          maxWidth: '780px',
+          color: '#0D1110'
         }}>
           Student Authenticity &amp; Contribution Analysis Platform
         </h1>
 
         <p style={{
           margin: 0,
-          fontSize: '1rem',
-          color: '#cbd5e1',
+          fontSize: '0.96rem',
+          color: '#43574f',
           maxWidth: '650px',
           lineHeight: 1.6
         }}>
@@ -118,19 +120,19 @@ export default function GuestDashboardView({ onSignIn }: GuestDashboardViewProps
             type="button"
             onClick={onSignIn}
             style={{
-              background: '#a3e635',
-              color: '#121417',
+              background: '#6FAF9A',
+              color: '#0D1110',
               border: 'none',
               borderRadius: '9999px',
               padding: '0.85rem 2.25rem',
               fontSize: '0.95rem',
-              fontWeight: 900,
+              fontWeight: 800,
               cursor: 'pointer',
-              boxShadow: '0 4px 18px rgba(163, 230, 53, 0.4)',
+              boxShadow: '0 4px 18px rgba(111, 175, 154, 0.35)',
               transition: 'all 0.15s ease'
             }}
-            onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseOut={e => e.currentTarget.style.transform = 'none'}
+            onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+            onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
           >
             Sign In / Register &rarr;
           </button>

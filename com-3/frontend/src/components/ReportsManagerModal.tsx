@@ -379,6 +379,17 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
                             }}>
                               {sourceBadge}
                             </span>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              background: doc.assignmentType === 'individual' ? '#E0F2FE' : '#EEF2FF',
+                              color: doc.assignmentType === 'individual' ? '#0369A1' : '#4338CA',
+                              border: `1px solid ${doc.assignmentType === 'individual' ? '#BAE6FD' : '#C7D2FE'}`,
+                              padding: '0.15rem 0.55rem',
+                              borderRadius: '12px',
+                              fontWeight: 800
+                            }}>
+                              {doc.assignmentType === 'individual' ? '👤 Individual' : '👥 Group Project'}
+                            </span>
                             <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#1E3A8A', fontWeight: 700 }}>
                               {doc.title || doc._id}
                             </h4>
