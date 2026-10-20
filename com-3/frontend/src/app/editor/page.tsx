@@ -807,6 +807,7 @@ function EditorComponent() {
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
   const [showRuler, setShowRuler] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [showZoomDropdown, setShowZoomDropdown] = useState(false);
   const [userSkinPreference, setUserSkinPreference] = useState<'google' | 'word' | 'default' | null>(null);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocAssignmentType, setNewDocAssignmentType] = useState<'group' | 'individual'>('group');
@@ -945,6 +946,54 @@ function EditorComponent() {
       showToast("Failed to refresh data", "error", "Refresh Error");
     } finally {
       setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  const [isSyncingExternal, setIsSyncingExternal] = useState(false);
+
+  const handleSyncExternal = async () => {
+    if (!selectedDocId || !user || isSyncingExternal) return;
+    setIsSyncingExternal(true);
+    try {
+      const storedToken = typeof window !== 'undefined' ? localStorage.getItem('google_access_token') : null;
+      const res = await fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/sync-external`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: storedToken || undefined,
+          author: user.name || user.username,
+          username: user.username,
+          studentId: user.studentId,
+          role: user.role,
+          email: user.email
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to sync with Google Docs');
+      }
+
+      if (data.updated) {
+        if (editor && !editor.isDestroyed && data.content !== undefined) {
+          editor.commands.setContent(data.content, { emitUpdate: false });
+          setLastText(editor.getText());
+        }
+        fetchMarkupData();
+        fetchDocDetails();
+        showToast(
+          data.message || `Pulled latest edits from Google Docs (+${data.wordsAdded || 0} / -${data.wordsDeleted || 0} words). ML Intent: ${data.predictedIntent || 'Content Addition'}`,
+          'success',
+          'Google Docs Synced'
+        );
+      } else {
+        showToast(data.message || 'Document is already completely up to date with Google Docs.', 'info', 'Google Docs Synced');
+      }
+    } catch (err: any) {
+      console.warn("Sync external failed:", err);
+      showToast(err.message || 'Failed to sync with Google Docs', 'error', 'Sync Failed');
+    } finally {
+      setIsSyncingExternal(false);
     }
   };
 
@@ -1215,10 +1264,66 @@ function EditorComponent() {
         e.preventDefault();
         setShortcutsModalOpen(true);
       }
+      // Ctrl+Shift+G: Sync external Google Docs
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        handleSyncExternal();
+      }
+      // Ctrl + + / Ctrl + = : Zoom In
+      if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd' || e.code === 'Equal')) {
+        e.preventDefault();
+        setZoomLevel(prev => Math.min(200, prev + 10));
+      }
+      // Ctrl + - / Ctrl + _ : Zoom Out
+      if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract' || e.code === 'Minus')) {
+        e.preventDefault();
+        setZoomLevel(prev => Math.max(50, prev - 10));
+      }
+      // Ctrl + 0 : Reset Zoom
+      if ((e.ctrlKey || e.metaKey) && (e.key === '0' || e.code === 'Numpad0' || e.code === 'Digit0')) {
+        e.preventDefault();
+        setZoomLevel(100);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [editor, selectedDocId, docDetails]);
+
+  // Ctrl + Mouse Wheel Zoom on Canvas
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          // Scrolling up = Zoom in
+          setZoomLevel(prev => Math.min(200, prev + 5));
+        } else if (e.deltaY > 0) {
+          // Scrolling down = Zoom out
+          setZoomLevel(prev => Math.max(50, prev - 5));
+        }
+      }
+    };
+
+    const canvasElem = document.getElementById('editor-canvas-container');
+    if (canvasElem) {
+      canvasElem.addEventListener('wheel', handleWheel, { passive: false });
+      return () => canvasElem.removeEventListener('wheel', handleWheel);
+    }
+  }, []);
+
+  // Close Zoom Dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('#zoom-control-widget')) {
+        setShowZoomDropdown(false);
+      }
+    };
+    if (showZoomDropdown) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }
+  }, [showZoomDropdown]);
 
   // Setup Socket Connection with Security Guard
   useEffect(() => {
@@ -2294,6 +2399,8 @@ function EditorComponent() {
         onThemeSkinChange={(skin) => setUserSkinPreference(skin)}
         onRename={handleRenameDocument}
         onSave={handleSave}
+        onSyncExternal={handleSyncExternal}
+        isSyncingExternal={isSyncingExternal}
         onOpenDocModal={() => setOpenDocModalOpen(true)}
         onOpenCreateModal={() => setCreateModalOpen(true)}
         onOpenImportModal={() => setImportModalOpen(true)}

@@ -2519,6 +2519,160 @@ app.post('/api/documents/import-external', async (req, res) => {
   }
 });
 
+// Live External Document Sync API (Pull changes made in Google Docs or Word into Inkie)
+app.post('/api/documents/:id/sync-external', async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const { accessToken, author, username, studentId, role, email, docUrl } = req.body;
+
+    const doc = await Document.findById(documentId);
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found." });
+    }
+
+    // Permission check
+    const isPermitted = hasDocumentAccess(doc, username || author, studentId, role || 'student', email);
+    if (!isPermitted) {
+      return res.status(403).json({ error: "Unauthorized to sync this document." });
+    }
+
+    // Determine target external URL
+    const targetUrl = docUrl || doc.externalId;
+    if (!targetUrl || (!targetUrl.startsWith('http') && !targetUrl.includes('docs.google.com'))) {
+      return res.status(400).json({
+        error: "This document does not have an external Google Docs URL linked to it."
+      });
+    }
+
+    // If docUrl was passed to link/update external URL
+    if (docUrl && doc.externalId !== docUrl) {
+      doc.externalId = docUrl;
+      doc.source = 'google_docs';
+    }
+
+    let fetched = null;
+    if (doc.source === 'google_docs' || targetUrl.includes('docs.google.com')) {
+      fetched = await fetchRealGoogleDoc(targetUrl, accessToken);
+    } else {
+      fetched = await fetchRealUrlContent(targetUrl);
+    }
+
+    if (!fetched || !fetched.html) {
+      return res.status(400).json({
+        error: "Could not fetch content from Google Docs. If the document is private, please authorize with your Google Account or set document sharing to 'Anyone with the link can view'."
+      });
+    }
+
+    let cleanHtml = fetched.html;
+    if (!cleanHtml.startsWith('<') && !cleanHtml.includes('<p>')) {
+      cleanHtml = cleanHtml.split('\n').filter(Boolean).map(p => `<p>${p}</p>`).join('\n');
+    }
+
+    const oldText = stripHtml(doc.content || '').trim();
+    const newText = stripHtml(cleanHtml).trim();
+
+    // Compute diffs
+    const diffs = dmp.diff_main(oldText, newText);
+    dmp.diff_cleanupSemantic(diffs);
+
+    let added = "";
+    let deleted = "";
+    let wordsAdded = 0;
+    let wordsDeleted = 0;
+
+    diffs.forEach(([op, text]) => {
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      if (op === 1) { // Insert
+        added += text + " ";
+        wordsAdded += words;
+      } else if (op === -1) { // Delete
+        deleted += text + " ";
+        wordsDeleted += words;
+      }
+    });
+
+    // Check if there are actual textual changes
+    if (wordsAdded === 0 && wordsDeleted === 0 && oldText === newText) {
+      return res.json({
+        success: true,
+        updated: false,
+        message: "Document is already completely up to date with Google Docs.",
+        content: doc.content,
+        lastSynced: new Date()
+      });
+    }
+
+    const now = new Date();
+
+    // Attribute revision to author
+    let syncerAuthor = author || username || doc.ownerName || 'Google Docs User';
+    if (fetched.revisions && fetched.revisions.length > 0) {
+      const lastMod = fetched.revisions[fetched.revisions.length - 1]?.lastModifyingUser;
+      if (lastMod?.displayName) {
+        syncerAuthor = lastMod.displayName;
+      } else if (lastMod?.emailAddress) {
+        syncerAuthor = lastMod.emailAddress;
+      }
+    }
+
+    // ML Intent Classification
+    const mlRes = await classifyRevisionWithML(oldText, newText, "External Google Docs Sync");
+
+    const newRev = await Revision.create({
+      documentId: doc._id,
+      author: syncerAuthor,
+      anonymizedAuthorId: generateAnonymizedAuthorId(syncerAuthor),
+      timestamp: now,
+      section: "External Google Docs Sync",
+      beforeText: oldText,
+      afterText: newText,
+      addedText: added.trim(),
+      deletedText: deleted.trim(),
+      wordCountAdded: wordsAdded,
+      wordCountDeleted: wordsDeleted,
+      sourcePlatform: doc.source || 'google_docs',
+      syncStatus: 'synced',
+      predictedIntent: mlRes.predicted_intent || (wordsAdded > 50 ? 'Content Addition' : 'Paraphrasing'),
+      predictedSignificance: mlRes.predicted_significance || (wordsAdded > 50 ? 'Major' : 'Minor'),
+      semanticDistance: mlRes.semantic_distance || 0.0,
+      confidence: mlRes.confidence || 0.94,
+      modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
+      explanation: `Pulled live edits from Google Docs (+${wordsAdded}/-${wordsDeleted} words). ML Classified: ${mlRes.predicted_intent || 'Content Addition'} (${mlRes.predicted_significance || 'Revision'})`,
+      features: mlRes.features || {}
+    });
+
+    // Update Document in DB
+    doc.content = cleanHtml;
+    if (fetched.title && fetched.title !== 'Untitled document' && (!doc.title || doc.title.startsWith('Google Doc -'))) {
+      doc.title = fetched.title;
+    }
+    doc.updatedAt = now;
+    doc.syncStatus = 'synced';
+    await doc.save();
+
+    // Broadcast live to all editors viewing this document
+    io.to(doc._id).emit('receive-changes', doc.content);
+    io.to(doc._id).emit('markup-updated', { docId: doc._id });
+
+    return res.json({
+      success: true,
+      updated: true,
+      content: doc.content,
+      title: doc.title,
+      wordsAdded,
+      wordsDeleted,
+      predictedIntent: newRev.predictedIntent,
+      predictedSignificance: newRev.predictedSignificance,
+      syncedAuthor: syncerAuthor,
+      revision: newRev,
+      message: `Successfully synchronized external changes from Google Docs (+${wordsAdded} / -${wordsDeleted} words).`
+    });
+  } catch (err) {
+    console.error("Error in sync-external:", err);
+    return res.status(500).json({ error: err.message || "Failed to sync external document." });
+  }
+});
+
 // Offline Sync API
 app.post('/api/documents/:id/sync-offline', async (req, res) => {
   try {

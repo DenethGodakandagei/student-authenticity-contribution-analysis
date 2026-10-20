@@ -13,8 +13,15 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
   const shortcuts = [
     { section: "File & Document", items: [
       { key: "Ctrl + S", desc: "Save document changes & sync revisions" },
+      { key: "Ctrl + Shift + G", desc: "Pull live edits from Google Docs" },
       { key: "Ctrl + O", desc: "Open document picker / switcher" },
       { key: "Ctrl + P", desc: "Print document / Export to PDF" },
+    ]},
+    { section: "View & Zoom", items: [
+      { key: "Ctrl + + / =", desc: "Zoom in document canvas (+10%)" },
+      { key: "Ctrl + -", desc: "Zoom out document canvas (-10%)" },
+      { key: "Ctrl + 0", desc: "Reset zoom level to 100%" },
+      { key: "Ctrl + Mouse Wheel", desc: "Interactive smooth zoom" },
     ]},
     { section: "Editing & History", items: [
       { key: "Ctrl + Z", desc: "Undo last edit" },

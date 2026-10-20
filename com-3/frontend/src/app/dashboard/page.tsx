@@ -1501,6 +1501,27 @@ function DashboardComponent() {
                               Grade: {doc.grade}
                             </span>
                           )}
+
+                          {(doc.source === 'google_docs' || doc._id?.startsWith('google_docs_') || doc.externalId?.includes('docs.google.com')) && (
+                            <span style={{
+                              background: '#E8F0FE',
+                              color: '#1A73E8',
+                              border: '1px solid #C2E7FF',
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem'
+                            }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#4285F4"/>
+                                <polyline points="14 2 14 8 20 8" fill="#A1C2FA"/>
+                              </svg>
+                              Google Docs Linked
+                            </span>
+                          )}
                         </div>
 
                         {/* Lecturer Feedback (if evaluated) */}

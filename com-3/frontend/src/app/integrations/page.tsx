@@ -46,6 +46,9 @@ export default function Integrations() {
         callback: (tokenResponse: any) => {
           if (tokenResponse?.access_token) {
             setGoogleAccessToken(tokenResponse.access_token);
+            try {
+              localStorage.setItem('google_access_token', tokenResponse.access_token);
+            } catch (e) {}
             fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
               headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
             })
@@ -109,6 +112,10 @@ export default function Integrations() {
   useEffect(() => {
     fetchLinkedDocs();
     fetchStudents();
+    try {
+      const saved = localStorage.getItem('google_access_token');
+      if (saved) setGoogleAccessToken(saved);
+    } catch (e) {}
   }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
