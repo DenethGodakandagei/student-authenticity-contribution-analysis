@@ -984,7 +984,7 @@ function EditorComponent() {
 
   const fetchDocs = () => {
     if (!user) return;
-    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}`;
+    const query = `username=${encodeURIComponent(user.username || '')}&studentId=${encodeURIComponent(user.studentId || '')}&email=${encodeURIComponent(user.email || '')}&role=${encodeURIComponent(user.role || '')}&userOnly=true`;
     fetch(`${getSocketUrl()}/api/documents?${query}`)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1611,6 +1611,7 @@ function EditorComponent() {
       <ReportsManagerModal
         isOpen={reportsModalOpen}
         onClose={() => setReportsModalOpen(false)}
+        initialDocuments={availableDocs}
         onSelectDocument={(id: string) => {
           setSelectedDocId(id);
           setAccessDenied(false);

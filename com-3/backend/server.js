@@ -93,21 +93,25 @@ const DocumentSchema = new mongoose.Schema({
 const Document = mongoose.model('Document', DocumentSchema);
 
 // Permission Checker Helper
-function hasDocumentAccess(doc, username, studentId, role, email, userObj = null) {
+function hasDocumentAccess(doc, username, studentId, role, email, userObj = null, strictUserOnly = false) {
   if (!doc) return false;
-  // System Administrators have full superuser access to all documents without restriction
-  if (role === 'admin' || (username && username.toLowerCase().trim() === 'admin')) {
-    return true;
+
+  // When not in strictUserOnly mode, system roles and public docs bypass checks
+  if (!strictUserOnly) {
+    // System Administrators have full superuser access to all documents without restriction
+    if (role === 'admin' || (username && username.toLowerCase().trim() === 'admin')) {
+      return true;
+    }
+    // Lecturers and evaluators have full supervisory access to all student assignments
+    if (role === 'lecturer' || role === 'teacher' || role === 'evaluator' || (username && username.toLowerCase().trim() === 'sansala')) {
+      return true;
+    }
+    // Once an assignment is submitted, lecturers/evaluators and admins can always access it
+    if (doc.submissionStatus === 'submitted') {
+      if (role === 'lecturer' || role === 'admin') return true;
+    }
+    if (doc.isPublic) return true;
   }
-  // Lecturers and evaluators have full supervisory access to all student assignments
-  if (role === 'lecturer' || role === 'teacher' || role === 'evaluator' || (username && username.toLowerCase().trim() === 'sansala')) {
-    return true;
-  }
-  // Once an assignment is submitted, lecturers/evaluators and admins can always access it
-  if (doc.submissionStatus === 'submitted') {
-    if (role === 'lecturer' || role === 'admin') return true;
-  }
-  if (doc.isPublic) return true;
 
   // Gather all possible identifiers representing this user
   const identifiers = new Set();
@@ -143,7 +147,7 @@ function hasDocumentAccess(doc, username, studentId, role, email, userObj = null
 
   // 1. Check Owner match (exact owner username, exact owner name, or parenthesized student ID)
   for (const id of idList) {
-    if (docOwner === id || docOwnerName === id || docOwnerName.includes(`(${id})`)) {
+    if (docOwner === id || docOwnerName === id || docOwnerName.includes(`(${id})`) || docOwnerName.includes(id)) {
       return true;
     }
     const ownerMatch = docOwnerName.match(/^(.+?)\s*\((.+?)\)$/);
@@ -154,30 +158,29 @@ function hasDocumentAccess(doc, username, studentId, role, email, userObj = null
     }
   }
 
-  // 2. Check Allowed Users array (exact match against stored username, student ID, or email)
+  // 2. Check Allowed Users array (exact match or substring against stored username, student ID, or email)
   const allowed = (doc.allowedUsers || []).map(u => (u || '').toLowerCase().trim()).filter(Boolean);
-  for (const id of idList) {
-    if (allowed.includes(id)) {
-      return true;
+  for (const u of allowed) {
+    for (const id of idList) {
+      if (u === id || u.includes(`(${id})`) || u.includes(id)) {
+        return true;
+      }
     }
   }
 
   // 3. Check Collaborators array (exact match, extracted Name, or extracted ID from "Name (StudentId)")
   const collabs = (doc.collaborators || []).map(c => (c || '').toLowerCase().trim()).filter(Boolean);
   for (const c of collabs) {
-    if (idList.includes(c)) {
-      return true;
+    for (const id of idList) {
+      if (c === id || c.includes(`(${id})`) || c.includes(id)) {
+        return true;
+      }
     }
     const collabMatch = c.match(/^(.+?)\s*\((.+?)\)$/);
     if (collabMatch) {
       const namePart = collabMatch[1].trim();
       const idPart = collabMatch[2].trim();
       if (idList.includes(namePart) || idList.includes(idPart)) {
-        return true;
-      }
-    }
-    for (const id of idList) {
-      if (c.includes(`(${id})`)) {
         return true;
       }
     }
@@ -905,7 +908,8 @@ app.post('/api/documents/:id/grade', async (req, res) => {
 
 app.get('/api/documents', async (req, res) => {
   try {
-    const { username, studentId, role, email } = req.query;
+    const { username, studentId, role, email, userOnly } = req.query;
+    const isStrictUserOnly = userOnly === 'true' || userOnly === true;
 
     // Security Gate: Without logging in, do NOT expose any documents or assignments
     if (!username && !studentId && !role && !email) {
@@ -914,8 +918,8 @@ app.get('/api/documents', async (req, res) => {
 
     const allDocs = await Document.find({}).sort('-updatedAt').lean();
     
-    // System Administrators and Lecturers can see all documents
-    if (role === 'admin' || role === 'lecturer' || (username && (username.toLowerCase().trim() === 'admin' || username.toLowerCase().trim() === 'sansala'))) {
+    // System Administrators and Lecturers can see all documents UNLESS userOnly=true is requested
+    if ((role === 'admin' || role === 'lecturer' || (username && (username.toLowerCase().trim() === 'admin' || username.toLowerCase().trim() === 'sansala'))) && !isStrictUserOnly) {
       return res.json(allDocs);
     }
 
@@ -935,8 +939,8 @@ app.get('/api/documents', async (req, res) => {
       }).lean();
     }
 
-    // Students only see assignments relevant to their enrollment or ownership
-    const filtered = allDocs.filter(doc => hasDocumentAccess(doc, username, studentId, role, email, userObj));
+    // Filter to only assignments relevant to user's ownership or collaboration
+    const filtered = allDocs.filter(doc => hasDocumentAccess(doc, username, studentId, role, email, userObj, isStrictUserOnly));
     res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2415,53 +2419,91 @@ app.post('/api/documents/import-external', async (req, res) => {
       .filter(p => p.length > 5);
 
     const now = new Date();
-    const totalSegments = paragraphs.length > 0 ? Math.min(8, Math.max(paragraphs.length, 1)) : 0;
-    const chunkSize = totalSegments > 0 ? Math.max(1, Math.ceil(paragraphs.length / totalSegments)) : 0;
 
-    for (let i = 0; i < totalSegments; i++) {
-      const slice = paragraphs.slice(i * chunkSize, (i + 1) * chunkSize);
-      const pText = slice.join(' ') || finalTitle;
-      const wordCount = pText.split(/\s+/).filter(Boolean).length;
-      
-      let author = realCollabs[i % realCollabs.length];
-      let revTime = new Date(now.getTime() - (totalSegments - i) * 60000);
-
-      // Use real Google revision if available
-      if (googleRevisions && googleRevisions.length > 0 && i < googleRevisions.length) {
-        const gr = googleRevisions[i];
-        if (gr.lastModifyingUser?.displayName) author = gr.lastModifyingUser.displayName;
-        if (gr.modifiedTime) revTime = new Date(gr.modifiedTime);
-      } else if (docxMetadata && i === 0 && docxMetadata.creator) {
-        author = docxMetadata.creator;
-        if (docxMetadata.created) revTime = docxMetadata.created;
-      } else if (docxMetadata && i === totalSegments - 1 && docxMetadata.lastModifiedBy) {
-        author = docxMetadata.lastModifiedBy;
-        if (docxMetadata.modified) revTime = docxMetadata.modified;
+    // Check if there are authentic distinct external authors from Google Drive or Word XML
+    const externalAuthors = [];
+    if (googleRevisions && googleRevisions.length > 0) {
+      googleRevisions.forEach(r => {
+        const name = r.lastModifyingUser?.displayName || r.lastModifyingUser?.emailAddress;
+        if (name && !externalAuthors.includes(name)) externalAuthors.push(name);
+      });
+    }
+    if (docxMetadata) {
+      if (docxMetadata.creator && !externalAuthors.includes(docxMetadata.creator)) {
+        externalAuthors.push(docxMetadata.creator);
       }
+      if (docxMetadata.lastModifiedBy && !externalAuthors.includes(docxMetadata.lastModifiedBy)) {
+        externalAuthors.push(docxMetadata.lastModifiedBy);
+      }
+    }
 
-      const sectionName = i === 0 ? 'Document Title' : i < 3 ? 'Introduction' : 'Body Section';
-      const mlRes = await classifyRevisionWithML('', pText, sectionName);
+    const hasDistinctExternalAuthors = externalAuthors.length > 1;
+
+    if (hasDistinctExternalAuthors) {
+      // Attribute segments to the actual distinct external authors found in metadata
+      const totalSegments = paragraphs.length > 0 ? Math.min(externalAuthors.length, Math.max(paragraphs.length, 1)) : 0;
+      const chunkSize = totalSegments > 0 ? Math.max(1, Math.ceil(paragraphs.length / totalSegments)) : 0;
+
+      for (let i = 0; i < totalSegments; i++) {
+        const slice = paragraphs.slice(i * chunkSize, (i + 1) * chunkSize);
+        const pText = slice.join(' ') || finalTitle;
+        const wordCount = pText.split(/\s+/).filter(Boolean).length;
+        const author = externalAuthors[i % externalAuthors.length];
+        const revTime = new Date(now.getTime() - (totalSegments - i) * 60000);
+        const sectionName = i === 0 ? 'Document Title & Intro' : 'Body Section';
+        const mlRes = await classifyRevisionWithML('', pText, sectionName);
+
+        await Revision.create({
+          documentId: docId,
+          author,
+          anonymizedAuthorId: generateAnonymizedAuthorId(author),
+          timestamp: revTime,
+          beforeText: '',
+          afterText: pText,
+          addedText: pText,
+          deletedText: '',
+          wordCountAdded: wordCount,
+          wordCountDeleted: 0,
+          section: sectionName,
+          sourcePlatform: source,
+          syncStatus: 'synced',
+          predictedIntent: mlRes.predicted_intent || 'Content Addition',
+          predictedSignificance: mlRes.predicted_significance || (wordCount > 50 ? 'Major' : 'Moderate'),
+          semanticDistance: mlRes.semantic_distance || 0.1,
+          confidence: mlRes.confidence || 0.9,
+          modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
+          explanation: `Imported contribution from external author ${author}.`
+        });
+      }
+    } else {
+      // Single author (the importer / document creator):
+      // 100% of the initial text belongs to the true author!
+      // Invited collaborators remain permitted members, but start with 0 edits until they write in Inkie.
+      const singleAuthor = externalAuthors[0] || formattedOwnerName;
+      const allText = paragraphs.join('\n\n') || realContent.replace(/<[^>]+>/g, ' ').trim() || finalTitle;
+      const totalWords = allText.split(/\s+/).filter(Boolean).length;
+      const mlRes = await classifyRevisionWithML('', allText, 'Initial Document Creation');
 
       await Revision.create({
         documentId: docId,
-        author,
-        anonymizedAuthorId: generateAnonymizedAuthorId(author),
-        timestamp: revTime,
+        author: singleAuthor,
+        anonymizedAuthorId: generateAnonymizedAuthorId(singleAuthor),
+        timestamp: docxMetadata?.created || new Date(),
         beforeText: '',
-        afterText: pText,
-        addedText: pText,
+        afterText: allText,
+        addedText: allText,
         deletedText: '',
-        wordCountAdded: wordCount,
+        wordCountAdded: totalWords,
         wordCountDeleted: 0,
-        section: sectionName,
+        section: 'Initial Document Creation',
         sourcePlatform: source,
         syncStatus: 'synced',
-        predictedIntent: mlRes.predicted_intent || 'Content Addition',
-        predictedSignificance: mlRes.predicted_significance || (wordCount > 50 ? 'Major' : 'Moderate'),
-        semanticDistance: mlRes.semantic_distance || 0.1,
-        confidence: mlRes.confidence || 0.9,
+        predictedIntent: 'Content Addition',
+        predictedSignificance: totalWords > 50 ? 'Major' : 'Moderate',
+        semanticDistance: 0.85,
+        confidence: 0.95,
         modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
-        explanation: `Authentic document import text ingested for ${author}.`
+        explanation: `Initial document content authored and imported by ${singleAuthor}. Collaborators will log their own distinct revisions upon editing.`
       });
     }
 

@@ -4,9 +4,16 @@ import { useAuth } from '../context/AuthContext';
 import { getBackendUrl } from '../utils/apiConfig';
 import { ToastContainer, CustomPromptDialog, CustomConfirmDialog, ToastItem } from './CustomDialog';
 
-export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument, onShareDocument, onDocumentDeleted }: any) {
+export default function ReportsManagerModal({
+  isOpen,
+  onClose,
+  onSelectDocument,
+  onShareDocument,
+  onDocumentDeleted,
+  initialDocuments
+}: any) {
   const { user } = useAuth();
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>(initialDocuments || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -61,7 +68,8 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
       const sId = user.studentId || '';
       const uEmail = user.email || '';
       const uRole = user.role || '';
-      const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&email=${encodeURIComponent(uEmail)}&role=${encodeURIComponent(uRole)}`;
+      // Pass userOnly=true so backend strictly returns documents belonging to the logged-in user
+      const query = `username=${encodeURIComponent(uName)}&studentId=${encodeURIComponent(sId)}&email=${encodeURIComponent(uEmail)}&role=${encodeURIComponent(uRole)}&userOnly=true`;
       const res = await fetch(`${getBackendUrl()}/api/documents?${query}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -75,7 +83,12 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
   };
 
   useEffect(() => {
-    fetchAllReports();
+    if (isOpen) {
+      if (initialDocuments && initialDocuments.length > 0) {
+        setDocuments(initialDocuments);
+      }
+      fetchAllReports();
+    }
   }, [isOpen, user]);
 
   if (!isOpen) return null;
@@ -159,7 +172,42 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
     });
   };
 
-  const filteredDocs = documents.filter(doc => {
+  // Strict validator: Document MUST directly relate to the logged-in user (as owner, allowed user, or collaborator)
+  const isDocRelatedToUser = (doc: any, currentUser: any): boolean => {
+    if (!doc || !currentUser) return false;
+    const uName = (currentUser.username || '').toLowerCase().trim();
+    const sId = (currentUser.studentId || '').toLowerCase().trim();
+    const uEmail = (currentUser.email || '').toLowerCase().trim();
+    const realName = (currentUser.name || '').toLowerCase().trim();
+
+    const ids = [uName, sId, uEmail, realName].filter(Boolean);
+    if (ids.length === 0) return false;
+
+    // 1. Owner
+    const docOwner = (doc.owner || '').toLowerCase().trim();
+    const docOwnerName = (doc.ownerName || '').toLowerCase().trim();
+    if (ids.some(id => docOwner === id || docOwnerName === id || docOwnerName.includes(`(${id})`) || docOwnerName.includes(id))) {
+      return true;
+    }
+
+    // 2. Allowed Users
+    const allowed = (doc.allowedUsers || []).map((u: any) => (u || '').toLowerCase().trim());
+    if (allowed.some((u: string) => ids.some(id => u === id || u.includes(`(${id})`) || u.includes(id)))) {
+      return true;
+    }
+
+    // 3. Collaborators
+    const collabs = (doc.collaborators || []).map((c: any) => (c || '').toLowerCase().trim());
+    if (collabs.some((c: string) => ids.some(id => c === id || c.includes(`(${id})`) || c.includes(id)))) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const userDocs = documents.filter(doc => isDocRelatedToUser(doc, user));
+
+  const filteredDocs = userDocs.filter(doc => {
     const term = searchTerm.toLowerCase();
     const titleMatch = (doc.title || doc._id).toLowerCase().includes(term);
     const ownerMatch = (doc.ownerName || doc.owner || '').toLowerCase().includes(term);
@@ -233,11 +281,11 @@ export default function ReportsManagerModal({ isOpen, onClose, onSelectDocument,
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                 <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.01em', color: '#FFFFFF' }}>
-                  All Created Reports & Documents
+                  My Reports & Group Documents
                 </h2>
               </div>
               <span style={{ fontSize: '0.82rem', color: '#BFDBFE', marginTop: '0.2rem', display: 'block' }}>
-                Secure verification hub: review authorship histories, rename documents, or manage access.
+                Showing documents owned by or shared with you ({user?.name || user?.username || 'You'}).
               </span>
             </div>
             <button
