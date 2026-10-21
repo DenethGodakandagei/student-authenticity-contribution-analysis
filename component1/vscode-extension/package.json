@@ -2,7 +2,7 @@
   "name": "student-contribution-tracker",
   "displayName": "INCODE - Student Contribution Tracker",
   "description": "Automatically tracks coding sessions, file edits, git commits, and keystrokes inside your assigned project repo and syncs contribution analytics to the INCODE platform.",
-  "version": "3.0.1",
+  "version": "3.0.5",
   "publisher": "academic-innovation",
   "engines": {
     "vscode": "^1.74.0"
@@ -68,6 +68,11 @@
         "icon": "$(arrow-swap)"
       },
       {
+        "command": "collabintel.statusBarMenu",
+        "title": "INCODE: Open Status Bar Menu",
+        "icon": "$(menu)"
+      },
+      {
         "command": "telemetry.exportBundle",
         "title": "Experiment: 1-Click Export Local Telemetry Database (.sqlite)",
         "icon": "$(cloud-download)"
@@ -86,8 +91,48 @@
         "command": "collabintel.toggleProvenanceHighlighting",
         "title": "INCODE: Toggle Live Line Provenance Highlighting",
         "icon": "$(paintcan)"
+      },
+      {
+        "command": "collabintel.markLineManual",
+        "title": "INCODE: Mark Selected Line(s) as Manual [MANUAL]",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "collabintel.markLineAi",
+        "title": "INCODE: Mark Selected Line(s) as AI-Generated [AI]",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "collabintel.markLinePasted",
+        "title": "INCODE: Mark Selected Line(s) as Pasted [PASTED]",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "collabintel.chooseLineProvenance",
+        "title": "INCODE: Change Provenance for Current Line...",
+        "icon": "$(list-selection)"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "collabintel.markLineManual",
+          "group": "incode_provenance@1"
+        },
+        {
+          "command": "collabintel.markLineAi",
+          "group": "incode_provenance@2"
+        },
+        {
+          "command": "collabintel.markLinePasted",
+          "group": "incode_provenance@3"
+        },
+        {
+          "command": "collabintel.chooseLineProvenance",
+          "group": "incode_provenance@4"
+        }
+      ]
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -151,7 +196,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "node copy-assets.js",
     "compile": "tsc -p ./ && node copy-assets.js",
     "watch": "tsc -watch -p ./",
     "package": "vsce package"

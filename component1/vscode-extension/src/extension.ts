@@ -659,6 +659,7 @@ export function activate(context: vscode.ExtensionContext) {
     ensureParticipantSession(context).catch(err => {
       console.warn('[CollabIntel] Experimental onboarding notice:', err);
     });
+    updateStatusBar('tracking', broadcastStateToWebviews);
   } else if (!cfg.authToken || !cfg.assignmentId) {
     updateStatusBar('unconfigured', broadcastStateToWebviews);
     vscode.window.showInformationMessage(
@@ -914,7 +915,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
       // B. User Clipboard Paste or Multi-Line / Large insertion burst
       // (Ctrl+V from browser/external window, workspace copy, or multi-line paste)
-      else if (clipboardMatched || isMultiLine || textLen >= 25) {
+      else if (clipboardMatched || isMultiLine) {
         lineProvenance = 'copy_paste';
         pasteCount++;
         charactersPasted += textLen;
@@ -973,6 +974,14 @@ export function activate(context: vscode.ExtensionContext) {
       // Keep lineRecords cleanly sorted by line number
       records.sort((a, b) => a.lineNumber - b.lineNumber);
       fileItem.lineRecords = records;
+
+      // Keep visual editor decorations in perfect sync with telemetry
+      defaultLineProvenanceTracker.markRange(
+        event.document,
+        startLine0,
+        startLine0 + addedLines,
+        lineProvenance
+      );
 
       // Re-evaluate file-level typingProvenance
       const fTotal = fileItem.manualChars + fileItem.pasteChars + fileItem.aiChars;
@@ -1122,6 +1131,10 @@ export function activate(context: vscode.ExtensionContext) {
   bgWatcher.onDidCreate(async uri => {
     if (uri.scheme !== 'file' || !shouldTrackFile(uri)) return;
     const fsPath = uri.fsPath;
+    // Skip files currently open in editor – real-time tracking handles them
+    const normUri2 = normalizeFsPath(fsPath);
+    const isOpenInEditor = vscode.workspace.textDocuments.some(doc => normalizeFsPath(doc.uri.fsPath) === normUri2);
+    if (isOpenInEditor) return;
     try {
       const stats = await fs.promises.stat(fsPath);
       const rel = vscode.workspace.asRelativePath(uri, false).replace(/\\/g, '/');
@@ -1378,6 +1391,38 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand('collabintel.statusBarMenu', async () => {
+      const currentCfg = getConfig();
+      if (currentCfg.operatingMode === 'experimental') {
+        const pId = context.workspaceState.get<string>('telemetry_participant_id') || 'P01';
+        const task = context.workspaceState.get<string>('telemetry_task_condition') === 'TASK_B_AI' ? 'Task B (AI-Assisted)' : 'Task A (Manual)';
+        const pick = await vscode.window.showQuickPick([
+          { label: '$(arrow-swap) Switch Task Condition', description: `Currently active: ${task}`, action: 'switchTask' },
+          { label: '$(account) Change Participant ID', description: `Currently active: ${pId}`, action: 'setupParticipant' },
+          { label: '$(shield) Switch to Real Mode', description: 'Switch to regular coursework tracking', action: 'switchMode' },
+          { label: '$(dashboard) Open Interactive Dashboard', description: 'View live provenance & metrics', action: 'openDashboard' },
+          { label: '$(cloud-download) Export Experiment Data (.sqlite)', description: 'Save study database file', action: 'exportBundle' }
+        ], {
+          title: `INCODE Experimental Mode [Participant ${pId} · ${task}]`,
+          placeHolder: 'Select action'
+        });
+
+        if (pick) {
+          if (pick.action === 'switchTask') await switchTaskCondition(context);
+          else if (pick.action === 'setupParticipant') await reconfigureParticipant(context);
+          else if (pick.action === 'switchMode') await switchOperatingMode(context);
+          else if (pick.action === 'openDashboard') openDashboard('overview');
+          else if (pick.action === 'exportBundle') vscode.commands.executeCommand('collabintel.exportLocalData');
+          refreshStatusBarPendingCount();
+          broadcastStateToWebviews();
+        }
+      } else {
+        openDashboard('overview');
+      }
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand('extension.toggleProvenanceHighlighting', () => {
       const enabled = defaultLineProvenanceTracker.toggleHighlighting();
       broadcastStateToWebviews();
@@ -1387,6 +1432,88 @@ export function activate(context: vscode.ExtensionContext) {
       const enabled = defaultLineProvenanceTracker.toggleHighlighting();
       broadcastStateToWebviews();
       return enabled;
+    })
+  );
+
+  function applyProvenanceToSelection(
+    editor: vscode.TextEditor,
+    prov: 'manual' | 'ai_assisted' | 'copy_paste'
+  ) {
+    const doc = editor.document;
+    if (doc.uri.scheme !== 'file') return;
+    const sel = editor.selection;
+    const start = Math.min(sel.start.line, sel.end.line);
+    const end = Math.max(sel.start.line, sel.end.line);
+
+    // Update in-editor decorations
+    defaultLineProvenanceTracker.markRange(doc, start, end, prov);
+
+    // Update telemetry records
+    const relativePath = vscode.workspace.asRelativePath(doc.uri, false).replace(/\\/g, '/');
+    const fileItem = getOrCreateFileActivity(relativePath, doc.uri);
+    const records = fileItem.lineRecords || [];
+    const timeIso = new Date().toISOString();
+    const isCurrentlyOffline = getStatusState() === 'error';
+
+    for (let l = start; l <= end; l++) {
+      const lText = doc.lineAt(l).text.slice(0, 120);
+      const lineRec: LineProvenanceRecord = {
+        lineNumber: l + 1,
+        lineText: lText,
+        provenance: prov,
+        isOffline: isCurrentlyOffline,
+        timestamp: timeIso
+      };
+      const existIdx = records.findIndex(r => r.lineNumber === l + 1);
+      if (existIdx >= 0) records[existIdx] = lineRec;
+      else records.push(lineRec);
+    }
+    records.sort((a, b) => a.lineNumber - b.lineNumber);
+    fileItem.lineRecords = records;
+
+    // Recalculate file typingProvenance
+    const fTotal = fileItem.manualChars + fileItem.pasteChars + fileItem.aiChars;
+    if (fTotal > 0) {
+      const aiRatio = fileItem.aiChars / fTotal;
+      const pasteRatio = fileItem.pasteChars / fTotal;
+      const manualRatio = fileItem.manualChars / fTotal;
+      if (aiRatio > 0.40) fileItem.typingProvenance = 'ai_assisted';
+      else if (pasteRatio > 0.20) fileItem.typingProvenance = 'copy_paste';
+      else if (manualRatio >= 0.70) fileItem.typingProvenance = 'manual';
+      else fileItem.typingProvenance = 'mixed';
+    }
+
+    broadcastStateToWebviews();
+    triggerDebouncedAutoSync(context, 1000);
+
+    const badge = prov === 'manual' ? '[MANUAL]' : prov === 'ai_assisted' ? '[AI]' : '[PASTED]';
+    vscode.window.showInformationMessage(`Lines ${start + 1}–${end + 1} marked as ${badge}.`);
+  }
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('collabintel.markLineManual', () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) applyProvenanceToSelection(editor, 'manual');
+    }),
+    vscode.commands.registerCommand('collabintel.markLineAi', () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) applyProvenanceToSelection(editor, 'ai_assisted');
+    }),
+    vscode.commands.registerCommand('collabintel.markLinePasted', () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) applyProvenanceToSelection(editor, 'copy_paste');
+    }),
+    vscode.commands.registerCommand('collabintel.chooseLineProvenance', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) return;
+      const choice = await vscode.window.showQuickPick([
+        { label: '✍️ [MANUAL]', description: 'Mark selected lines as manually typed code', value: 'manual' },
+        { label: '🤖 [AI]', description: 'Mark selected lines as AI generated / Copilot assistance', value: 'ai_assisted' },
+        { label: '📋 [PASTED]', description: 'Mark selected lines as pasted from external clipboard', value: 'copy_paste' }
+      ], { placeHolder: 'Select Provenance Status for Selected Line(s)' });
+      if (choice) {
+        applyProvenanceToSelection(editor, choice.value as any);
+      }
     })
   );
 

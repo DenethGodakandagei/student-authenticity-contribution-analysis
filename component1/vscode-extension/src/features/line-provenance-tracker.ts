@@ -5,7 +5,7 @@ import * as path from 'path';
 //  TYPES & INTERFACES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type LineOrigin = 'manual' | 'pasted' | 'mixed';
+export type LineOrigin = 'manual' | 'pasted' | 'ai' | 'mixed';
 
 export interface LineProvenanceRecordState {
   origin: LineOrigin;
@@ -30,9 +30,11 @@ export interface DocumentProvenanceSummary {
   fileName: string;
   totalLines: number;
   manualLineCount: number;
+  aiLineCount: number;
   pastedLineCount: number;
   mixedLineCount: number;
   manualPercentage: number;
+  aiPercentage: number;
   pastedPercentage: number;
   pastedRanges: PastedRangeSummary[];
   isHighlightingEnabled: boolean;
@@ -64,6 +66,7 @@ export class LineProvenanceTracker implements vscode.Disposable {
 
   // Visual Editor Decoration Types
   public pastedLineDecoration: vscode.TextEditorDecorationType;
+  public aiLineDecoration: vscode.TextEditorDecorationType;
   public manualLineDecoration: vscode.TextEditorDecorationType;
   public mixedLineDecoration: vscode.TextEditorDecorationType;
 
@@ -72,7 +75,7 @@ export class LineProvenanceTracker implements vscode.Disposable {
   public readonly onProvenanceChanged: vscode.Event<DocumentProvenanceSummary> = this._onProvenanceChanged.event;
 
   constructor() {
-    // 1. PASTED / AI-BURST Line Decoration (soft red/amber background with badge)
+    // 1. PASTED Line Decoration (soft red background with badge [PASTED])
     this.pastedLineDecoration = vscode.window.createTextEditorDecorationType({
       backgroundColor: 'rgba(239, 68, 68, 0.14)',
       isWholeLine: true,
@@ -80,15 +83,23 @@ export class LineProvenanceTracker implements vscode.Disposable {
       overviewRulerLane: vscode.OverviewRulerLane.Right
     });
 
-    // 2. MANUALLY TYPED Line Decoration (clean subtle soft green background)
-    this.manualLineDecoration = vscode.window.createTextEditorDecorationType({
-      backgroundColor: 'rgba(34, 197, 94, 0.07)',
+    // 2. AI GENERATED Line Decoration (soft purple background with badge [AI])
+    this.aiLineDecoration = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(168, 85, 247, 0.13)',
       isWholeLine: true,
-      overviewRulerColor: 'rgba(34, 197, 94, 0.45)',
+      overviewRulerColor: 'rgba(168, 85, 247, 0.85)',
+      overviewRulerLane: vscode.OverviewRulerLane.Right
+    });
+
+    // 3. MANUALLY TYPED Line Decoration (clean subtle soft green background with badge [MANUAL])
+    this.manualLineDecoration = vscode.window.createTextEditorDecorationType({
+      backgroundColor: 'rgba(34, 197, 94, 0.08)',
+      isWholeLine: true,
+      overviewRulerColor: 'rgba(34, 197, 94, 0.50)',
       overviewRulerLane: vscode.OverviewRulerLane.Left
     });
 
-    // 3. MIXED Line Decoration (soft amber background for manually edited pasted lines)
+    // 4. MIXED Line Decoration (soft amber background with badge [MIXED])
     this.mixedLineDecoration = vscode.window.createTextEditorDecorationType({
       backgroundColor: 'rgba(245, 158, 11, 0.12)',
       isWholeLine: true,
@@ -137,7 +148,11 @@ export class LineProvenanceTracker implements vscode.Disposable {
 
   /**
    * Main Text Document Event Monitoring handler.
-   * Accurately categorizes edits, shifts lines, and debounces visual decoration rendering.
+   * Accurately categorizes edits:
+   * - Enter key / manual keypresses -> [MANUAL]
+   * - AI signatures / code blocks -> [AI]
+   * - Multi-line paste from clipboard -> [PASTED]
+   * - Typing on existing pasted/AI line -> [MIXED]
    */
   public handleDocumentChange(event: vscode.TextDocumentChangeEvent): void {
     const document = event.document;
@@ -179,27 +194,23 @@ export class LineProvenanceTracker implements vscode.Disposable {
       const hasAi = hasAiContentSignatures(text);
 
       const nonEmptyInserted = insertedLines.filter(l => l.trim().length > 0);
-      const isMultiLineCode = !isEnterKey && (nonEmptyInserted.length > 1 || (addedLineCount > 0 && textLen > 2));
+      const isMultiLinePaste = !isEnterKey && nonEmptyInserted.length > 1;
 
-      let isPastedBurst = false;
+      let insertionOrigin: LineOrigin = 'manual';
       if (hasAi) {
-        isPastedBurst = true;
-      } else if (isMultiLineCode) {
-        // Multi-line code injection in a single tick (2, 10, 60+ lines)
-        isPastedBurst = true;
-      } else if (textLen >= 15 && !isTabOrIndent) {
-        // Multi-character injection in a single tick without typing or indentation
-        isPastedBurst = true;
+        insertionOrigin = 'ai';
+      } else if (isMultiLinePaste) {
+        insertionOrigin = 'pasted';
+      } else if (isEnterKey || isSingleKey || isTabOrIndent || isAutoClosePair) {
+        insertionOrigin = 'manual';
       }
 
       // ── Step 1: Handle Line Deletions & Line Number Shifting ───────────────
       if (deletedLineCount > 0) {
-        // Remove tracking for lines strictly inside the deleted range (exclusive of startLine)
         for (let l = startLine + 1; l <= endLine; l++) {
           docMap.delete(l);
         }
 
-        // Shift all lines below endLine upwards
         const shiftedMap = new Map<number, LineProvenanceRecordState>();
         for (const [lineIdx, state] of docMap.entries()) {
           if (lineIdx <= startLine) {
@@ -214,7 +225,6 @@ export class LineProvenanceTracker implements vscode.Disposable {
 
       // ── Step 2: Handle Line Additions & Line Number Shifting ───────────────
       if (addedLineCount > 0) {
-        // Shift all lines after startLine downwards
         const shiftedMap = new Map<number, LineProvenanceRecordState>();
         for (const [lineIdx, state] of docMap.entries()) {
           if (lineIdx <= startLine) {
@@ -230,8 +240,8 @@ export class LineProvenanceTracker implements vscode.Disposable {
       // ── Step 3: Record Provenance on Inserted / Modified Lines ─────────────
       if (textLen > 0) {
         if (isEnterKey) {
-          // Pressing Enter: startLine retains its existing typing/paste origin.
-          // The newly created line (startLine + 1) is created by manual keypress.
+          // Pressing Enter: startLine retains its existing typing/paste/ai origin.
+          // The newly created line (startLine + 1) is created by manual keypress [MANUAL].
           if (!docMap.has(startLine)) {
             docMap.set(startLine, {
               origin: 'manual',
@@ -249,13 +259,18 @@ export class LineProvenanceTracker implements vscode.Disposable {
             const targetLine = startLine + offset;
             const lineSlice = insertedLines[offset] || '';
 
-            // If the paste started with a newline (offset === 0 && lineSlice === ''),
-            // the existing line at startLine was not pasted over!
             if (offset === 0 && lineSlice === '' && addedLineCount > 0 && docMap.has(targetLine)) {
               continue;
             }
 
-            if (isPastedBurst) {
+            if (insertionOrigin === 'ai') {
+              docMap.set(targetLine, {
+                origin: 'ai',
+                timestamp: now,
+                charCount: lineSlice.length,
+                preview: lineSlice.slice(0, 80)
+              });
+            } else if (insertionOrigin === 'pasted') {
               docMap.set(targetLine, {
                 origin: 'pasted',
                 timestamp: now,
@@ -265,8 +280,8 @@ export class LineProvenanceTracker implements vscode.Disposable {
             } else {
               // Manual typing on targetLine
               const existing = docMap.get(targetLine);
-              if (existing && existing.origin === 'pasted') {
-                // User typed manually on a line that was previously pasted
+              if (existing && (existing.origin === 'pasted' || existing.origin === 'ai')) {
+                // User typed manually on a line that was previously pasted or AI
                 docMap.set(targetLine, {
                   origin: 'mixed',
                   timestamp: now,
@@ -324,11 +339,13 @@ export class LineProvenanceTracker implements vscode.Disposable {
 
   /**
    * Apply visual in-editor decorations using VS Code TextEditorDecorationType.
+   * Renders badges [MANUAL], [AI], [PASTED], and [MIXED].
    */
   public applyDecorations(editor: vscode.TextEditor): void {
     if (!this._isHighlightingEnabled) {
       // Clear decorations if highlighting is toggled off
       editor.setDecorations(this.pastedLineDecoration, []);
+      editor.setDecorations(this.aiLineDecoration, []);
       editor.setDecorations(this.manualLineDecoration, []);
       editor.setDecorations(this.mixedLineDecoration, []);
       return;
@@ -339,12 +356,14 @@ export class LineProvenanceTracker implements vscode.Disposable {
     const docMap = this._documentStates.get(uriStr);
     if (!docMap || docMap.size === 0) {
       editor.setDecorations(this.pastedLineDecoration, []);
+      editor.setDecorations(this.aiLineDecoration, []);
       editor.setDecorations(this.manualLineDecoration, []);
       editor.setDecorations(this.mixedLineDecoration, []);
       return;
     }
 
     const pastedOptions: vscode.DecorationOptions[] = [];
+    const aiOptions: vscode.DecorationOptions[] = [];
     const manualOptions: vscode.DecorationOptions[] = [];
     const mixedOptions: vscode.DecorationOptions[] = [];
 
@@ -359,11 +378,33 @@ export class LineProvenanceTracker implements vscode.Disposable {
       const hasContent = lineText.trim().length > 0;
       const formattedTime = new Date(state.timestamp).toLocaleTimeString();
 
-      if (state.origin === 'pasted') {
+      if (state.origin === 'ai') {
         const hover = new vscode.MarkdownString();
         hover.isTrusted = true;
-        hover.appendMarkdown(`### 📋 Pasted / AI Burst Line\n`);
-        hover.appendMarkdown(`- **Origin**: Pasted snippet / External code block\n`);
+        hover.appendMarkdown(`### 🤖 AI Generated Code\n`);
+        hover.appendMarkdown(`- **Status**: \`[AI]\`\n`);
+        hover.appendMarkdown(`- **Origin**: AI Assistant / Generated code block\n`);
+        hover.appendMarkdown(`- **Line**: ${line + 1}\n`);
+        hover.appendMarkdown(`- **Captured**: ${formattedTime}\n`);
+
+        aiOptions.push({
+          range: lineRange,
+          hoverMessage: hover,
+          renderOptions: hasContent ? {
+            after: {
+              contentText: '  [AI]',
+              color: 'rgba(168, 85, 247, 0.95)',
+              fontStyle: 'italic',
+              fontWeight: '600'
+            }
+          } : undefined
+        });
+      } else if (state.origin === 'pasted') {
+        const hover = new vscode.MarkdownString();
+        hover.isTrusted = true;
+        hover.appendMarkdown(`### 📋 Pasted Code\n`);
+        hover.appendMarkdown(`- **Status**: \`[PASTED]\`\n`);
+        hover.appendMarkdown(`- **Origin**: Clipboard paste / External snippet\n`);
         hover.appendMarkdown(`- **Line**: ${line + 1}\n`);
         hover.appendMarkdown(`- **Captured**: ${formattedTime}\n`);
 
@@ -372,8 +413,8 @@ export class LineProvenanceTracker implements vscode.Disposable {
           hoverMessage: hover,
           renderOptions: hasContent ? {
             after: {
-              contentText: '  [PASTED / AI]',
-              color: 'rgba(239, 68, 68, 0.70)',
+              contentText: '  [PASTED]',
+              color: 'rgba(239, 68, 68, 0.90)',
               fontStyle: 'italic',
               fontWeight: '600'
             }
@@ -382,8 +423,9 @@ export class LineProvenanceTracker implements vscode.Disposable {
       } else if (state.origin === 'mixed') {
         const hover = new vscode.MarkdownString();
         hover.isTrusted = true;
-        hover.appendMarkdown(`### 🔶 Mixed Origin Line\n`);
-        hover.appendMarkdown(`- **Origin**: Pasted code modified by manual typing\n`);
+        hover.appendMarkdown(`### 🔶 Mixed Origin Code\n`);
+        hover.appendMarkdown(`- **Status**: \`[MIXED]\`\n`);
+        hover.appendMarkdown(`- **Origin**: Pasted / AI code modified by manual typing\n`);
         hover.appendMarkdown(`- **Line**: ${line + 1}\n`);
         hover.appendMarkdown(`- **Last Edit**: ${formattedTime}\n`);
 
@@ -393,7 +435,7 @@ export class LineProvenanceTracker implements vscode.Disposable {
           renderOptions: hasContent ? {
             after: {
               contentText: '  [MIXED]',
-              color: 'rgba(245, 158, 11, 0.75)',
+              color: 'rgba(245, 158, 11, 0.85)',
               fontStyle: 'italic',
               fontWeight: '600'
             }
@@ -402,7 +444,8 @@ export class LineProvenanceTracker implements vscode.Disposable {
       } else if (state.origin === 'manual') {
         const hover = new vscode.MarkdownString();
         hover.isTrusted = true;
-        hover.appendMarkdown(`### ✍ Verified Organic Typing\n`);
+        hover.appendMarkdown(`### ✍️ Organic Manual Code\n`);
+        hover.appendMarkdown(`- **Status**: \`[MANUAL]\`\n`);
         hover.appendMarkdown(`- **Origin**: Manually typed keystrokes\n`);
         hover.appendMarkdown(`- **Line**: ${line + 1}\n`);
         hover.appendMarkdown(`- **Timestamp**: ${formattedTime}\n`);
@@ -412,10 +455,10 @@ export class LineProvenanceTracker implements vscode.Disposable {
           hoverMessage: hover,
           renderOptions: hasContent ? {
             after: {
-              contentText: '  [TYPED]',
-              color: 'rgba(34, 197, 94, 0.60)',
+              contentText: '  [MANUAL]',
+              color: 'rgba(34, 197, 94, 0.85)',
               fontStyle: 'italic',
-              fontWeight: '500'
+              fontWeight: '600'
             }
           } : undefined
         });
@@ -423,6 +466,7 @@ export class LineProvenanceTracker implements vscode.Disposable {
     }
 
     editor.setDecorations(this.pastedLineDecoration, pastedOptions);
+    editor.setDecorations(this.aiLineDecoration, aiOptions);
     editor.setDecorations(this.manualLineDecoration, manualOptions);
     editor.setDecorations(this.mixedLineDecoration, mixedOptions);
   }
@@ -458,12 +502,15 @@ export class LineProvenanceTracker implements vscode.Disposable {
     const totalLines = Math.max(1, document.lineCount);
 
     let manualCount = 0;
+    let aiCount = 0;
     let pastedCount = 0;
     let mixedCount = 0;
 
     for (let l = 0; l < document.lineCount; l++) {
       const st = docMap.get(l);
-      if (st?.origin === 'pasted') {
+      if (st?.origin === 'ai') {
+        aiCount++;
+      } else if (st?.origin === 'pasted') {
         pastedCount++;
       } else if (st?.origin === 'mixed') {
         mixedCount++;
@@ -474,6 +521,7 @@ export class LineProvenanceTracker implements vscode.Disposable {
 
     const pastedRanges = this.computePastedRanges(document, docMap);
     const manualPercentage = totalLines > 0 ? Math.round((manualCount / totalLines) * 100) : 100;
+    const aiPercentage = totalLines > 0 ? Math.round((aiCount / totalLines) * 100) : 0;
     const pastedPercentage = totalLines > 0 ? Math.round(((pastedCount + mixedCount) / totalLines) * 100) : 0;
 
     const activeEditor = vscode.window.activeTextEditor;
@@ -486,9 +534,11 @@ export class LineProvenanceTracker implements vscode.Disposable {
       fileName: path.basename(document.uri.fsPath),
       totalLines: document.lineCount,
       manualLineCount: manualCount,
+      aiLineCount: aiCount,
       pastedLineCount: pastedCount,
       mixedLineCount: mixedCount,
       manualPercentage,
+      aiPercentage,
       pastedPercentage,
       pastedRanges,
       isHighlightingEnabled: this._isHighlightingEnabled,
@@ -560,6 +610,44 @@ export class LineProvenanceTracker implements vscode.Disposable {
   }
 
   /**
+   * Explicitly marks a range of lines as manual, ai_assisted, copy_paste, or mixed.
+   */
+  public markRange(
+    document: vscode.TextDocument,
+    startLine: number,
+    endLine: number,
+    provenance: 'copy_paste' | 'ai_assisted' | 'manual' | 'mixed'
+  ): void {
+    const uriStr = document.uri.toString();
+    let docMap = this._documentStates.get(uriStr);
+    if (!docMap) {
+      docMap = new Map<number, LineProvenanceRecordState>();
+      this._documentStates.set(uriStr, docMap);
+    }
+    const now = Date.now();
+    for (let l = startLine; l <= endLine && l < document.lineCount; l++) {
+      const lineText = document.lineAt(l).text;
+      const origin: LineOrigin =
+        provenance === 'ai_assisted' ? 'ai' :
+        provenance === 'manual' ? 'manual' :
+        provenance === 'mixed' ? 'mixed' : 'pasted';
+
+      docMap.set(l, {
+        origin,
+        timestamp: now,
+        charCount: lineText.length,
+        preview: lineText.slice(0, 80)
+      });
+    }
+
+    const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uriStr);
+    if (editor) {
+      this.scheduleDecorations(editor, 50);
+    }
+    this.emitSummary(document);
+  }
+
+  /**
    * Get direct line record array for syncing with FileActivityItem.
    */
   public getLineRecordsForFile(document: vscode.TextDocument): {
@@ -588,6 +676,7 @@ export class LineProvenanceTracker implements vscode.Disposable {
       const cleanText = document.lineAt(l).text.replace(/\r$/, '');
       const prov: 'manual' | 'ai_assisted' | 'copy_paste' =
         s.origin === 'manual' ? 'manual' :
+        s.origin === 'ai' ? 'ai_assisted' :
         s.origin === 'mixed' ? 'copy_paste' :
         hasAiContentSignatures(cleanText) ? 'ai_assisted' : 'copy_paste';
 
@@ -616,6 +705,7 @@ export class LineProvenanceTracker implements vscode.Disposable {
     this._documentStates.clear();
 
     this.pastedLineDecoration.dispose();
+    this.aiLineDecoration.dispose();
     this.manualLineDecoration.dispose();
     this.mixedLineDecoration.dispose();
     this._onProvenanceChanged.dispose();

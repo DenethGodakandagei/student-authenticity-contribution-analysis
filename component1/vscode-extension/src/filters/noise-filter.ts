@@ -137,7 +137,10 @@ export function isInsideWorkspace(uri: vscode.Uri): boolean {
  */
 export function shouldTrackFile(uri: vscode.Uri): boolean {
   if (uri.scheme !== 'file') return false;
-  if (!isInsideWorkspace(uri)) return false;
+  const folders = vscode.workspace.workspaceFolders;
+  if (folders && folders.length > 0) {
+    if (!isInsideWorkspace(uri)) return false;
+  }
 
   // Normalize path for consistent matching
   const normalized = normalizeFsPath(uri.fsPath);

@@ -44,13 +44,20 @@ function getSafePendingCount() {
     }
 }
 exports.getSafePendingCount = getSafePendingCount;
+let extContext = null;
 /**
  * Format status bar text reflecting active operating mode.
  */
 function formatStatusBarText(status, pendingCount) {
     const cfg = (0, settings_1.getConfig)();
     const isExp = cfg.operatingMode === 'experimental';
-    const prefix = isExp ? '$(beaker) INCODE [Exp]' : '$(shield) INCODE';
+    if (isExp) {
+        const pId = extContext?.workspaceState?.get('telemetry_participant_id') || 'P01';
+        const task = extContext?.workspaceState?.get('telemetry_task_condition') === 'TASK_B_AI' ? 'Task B (AI)' : 'Task A (Manual)';
+        const pendingBadge = pendingCount > 0 ? ` (${pendingCount})` : '';
+        return `$(beaker) INCODE [${pId}: ${task}]${pendingBadge}`;
+    }
+    const prefix = '$(shield) INCODE';
     switch (status) {
         case 'synced':
             return `${prefix}: Synced`;
@@ -65,8 +72,9 @@ exports.formatStatusBarText = formatStatusBarText;
  * Create and register the status bar item.
  */
 function createStatusBar(context) {
+    extContext = context;
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    statusBarItem.command = 'collabintel.openDashboard';
+    statusBarItem.command = 'collabintel.statusBarMenu';
     context.subscriptions.push(statusBarItem);
     return statusBarItem;
 }

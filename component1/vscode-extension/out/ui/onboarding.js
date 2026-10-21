@@ -35,7 +35,7 @@ function validateParticipantId(value) {
         return 'Participant ID is required (e.g., P01 to P20)';
     }
     if (!/^P(0[1-9]|1[0-9]|20)$/.test(trimmed)) {
-        return 'Format must be P01 - P20';
+        return 'Format must be P01 - P20 (e.g. P01, P02... P20)';
     }
     return null;
 }
@@ -43,51 +43,47 @@ exports.validateParticipantId = validateParticipantId;
 /**
  * Ensure participant ID and task condition are initialized in workspaceState.
  * If in Real Mode, skips prompts completely.
- * If in Experimental Mode, triggers modal prompts if not already configured.
+ * If in Experimental Mode, prompts if not configured or allows verification.
  */
-async function ensureParticipantSession(context) {
-    const cfg = (0, settings_1.getConfig)();
-    if (cfg.operatingMode === 'real') {
-        // Real Academic Coursework Mode: Transparent background tracking, no experimental prompts.
-        return {
-            participantId: 'REAL_STUDENT',
-            taskCondition: 'TASK_A_MANUAL'
-        };
-    }
+async function ensureParticipantSession(context, forcePrompt = false) {
     let participantId = context.workspaceState.get('telemetry_participant_id');
     let taskCondition = context.workspaceState.get('telemetry_task_condition');
-    if (!participantId) {
+    if (!participantId || forcePrompt) {
         const input = await vscode.window.showInputBox({
-            title: 'Participant ID (P01-P20)',
-            prompt: 'Enter assigned participant code',
+            title: 'Participant ID (P01–P20)',
+            prompt: 'Enter assigned research participant code',
             placeHolder: 'P01',
+            value: participantId || 'P01',
             ignoreFocusOut: true,
             validateInput: validateParticipantId
         });
-        participantId = (input || 'P01').trim().toUpperCase();
+        participantId = (input || participantId || 'P01').trim().toUpperCase();
         await context.workspaceState.update('telemetry_participant_id', participantId);
     }
-    if (!taskCondition) {
+    if (!taskCondition || forcePrompt) {
         const selected = await vscode.window.showQuickPick([
             {
-                label: 'Task A (Manual)',
-                description: 'Human manual coding (Label 0)',
+                label: '$(edit) Task A (Manual Human Coding)',
+                description: 'Type code organically without AI assistance — Ground Truth Label 0',
+                picked: taskCondition !== 'TASK_B_AI',
                 value: 'TASK_A_MANUAL'
             },
             {
-                label: 'Task B (AI-Assisted)',
-                description: 'LLM generated / pasted (Label 1)',
+                label: '$(sparkle) Task B (AI-Assisted Coding)',
+                description: 'Use AI LLM / ChatGPT / Claude / Copilot — Ground Truth Label 1',
+                picked: taskCondition === 'TASK_B_AI',
                 value: 'TASK_B_AI'
             }
         ], {
-            title: 'Task Mode Selection',
-            placeHolder: 'Select active task condition',
+            title: `Task Condition for Participant ${participantId}`,
+            placeHolder: 'Select active experimental task condition',
             ignoreFocusOut: true
         });
-        taskCondition = selected ? selected.value : 'TASK_A_MANUAL';
+        taskCondition = selected ? selected.value : (taskCondition || 'TASK_A_MANUAL');
         await context.workspaceState.update('telemetry_task_condition', taskCondition);
     }
-    vscode.window.showInformationMessage(`INCODE: Experiment active for ${participantId} [${taskCondition === 'TASK_A_MANUAL' ? 'Task A (Manual)' : 'Task B (AI-Assisted)'}]`);
+    const taskLabel = taskCondition === 'TASK_A_MANUAL' ? 'Task A (Manual)' : 'Task B (AI-Assisted)';
+    vscode.window.showInformationMessage(`INCODE Experimental Mode ACTIVE: Participant ${participantId} [${taskLabel}]`);
     return { participantId, taskCondition };
 }
 exports.ensureParticipantSession = ensureParticipantSession;
@@ -99,28 +95,27 @@ async function switchTaskCondition(context) {
     const participantId = context.workspaceState.get('telemetry_participant_id') || 'P01';
     const selected = await vscode.window.showQuickPick([
         {
-            label: '$(edit) Task A (Manual)',
-            description: 'Genuine human coding (No AI allowed) — Label 0',
+            label: '$(edit) Task A (Manual Human Coding)',
+            description: 'Genuine human coding (No AI allowed) — Ground Truth Label 0',
             picked: current === 'TASK_A_MANUAL',
             value: 'TASK_A_MANUAL'
         },
         {
-            label: '$(sparkle) Task B (AI-Assisted)',
-            description: 'Web LLM / Copy-Paste — Label 1',
+            label: '$(sparkle) Task B (AI-Assisted Coding)',
+            description: 'Web LLM / Copy-Paste / Copilot — Ground Truth Label 1',
             picked: current === 'TASK_B_AI',
             value: 'TASK_B_AI'
         }
     ], {
-        title: `Switch Experimental Task Condition (Current: ${current})`,
-        placeHolder: 'Select the new task mode you are about to start',
+        title: `Switch Experimental Task Condition (Current: ${current === 'TASK_A_MANUAL' ? 'Task A' : 'Task B'})`,
+        placeHolder: 'Select active task condition',
         ignoreFocusOut: true
     });
-    if (selected && selected.value !== current) {
-        await context.workspaceState.update('telemetry_task_condition', selected.value);
-        vscode.window.showInformationMessage(`Switched to ${selected.value === 'TASK_A_MANUAL' ? 'Task A (Manual)' : 'Task B (AI-Assisted)'} for ${participantId}`);
-        return selected.value;
-    }
-    return current;
+    const newCondition = selected ? selected.value : current;
+    await context.workspaceState.update('telemetry_task_condition', newCondition);
+    const taskLabel = newCondition === 'TASK_A_MANUAL' ? 'Task A (Manual)' : 'Task B (AI-Assisted)';
+    vscode.window.showInformationMessage(`INCODE: Switched to ${taskLabel} for Participant ${participantId}.`);
+    return newCondition;
 }
 exports.switchTaskCondition = switchTaskCondition;
 /**
@@ -129,18 +124,16 @@ exports.switchTaskCondition = switchTaskCondition;
 async function reconfigureParticipant(context) {
     const currentId = context.workspaceState.get('telemetry_participant_id') || 'P01';
     const input = await vscode.window.showInputBox({
-        title: 'Update Participant ID',
-        prompt: 'Enter assigned Participant Code (P01 to P20)',
+        title: 'Participant Setup (P01–P20)',
+        prompt: 'Enter assigned Participant Code (e.g. P01 to P20)',
         value: currentId,
         ignoreFocusOut: true,
         validateInput: validateParticipantId
     });
-    if (input) {
-        await context.workspaceState.update('telemetry_participant_id', input.trim().toUpperCase());
-    }
+    const chosenId = (input || currentId).trim().toUpperCase();
+    await context.workspaceState.update('telemetry_participant_id', chosenId);
     const updatedCondition = await switchTaskCondition(context);
-    const updatedId = context.workspaceState.get('telemetry_participant_id') || 'P01';
-    return { participantId: updatedId, taskCondition: updatedCondition };
+    return { participantId: chosenId, taskCondition: updatedCondition };
 }
 exports.reconfigureParticipant = reconfigureParticipant;
 /**
@@ -161,30 +154,29 @@ async function switchOperatingMode(context, onModeChanged) {
     const selected = await vscode.window.showQuickPick([
         {
             label: '$(shield) Real Mode',
-            description: 'Coursework tracking for assignments',
+            description: 'Coursework assignment tracking with student credentials',
             picked: currentMode === 'real',
             value: 'real'
         },
         {
             label: '$(beaker) Experimental Mode',
-            description: 'Research study with Task A/B tagging',
+            description: 'Research study pilot with Task A (Manual) & Task B (AI) ground truth tagging',
             picked: currentMode === 'experimental',
             value: 'experimental'
         }
     ], {
-        title: `Operating Mode (Current: ${currentMode === 'real' ? 'Real' : 'Experimental'})`,
-        placeHolder: 'Select mode',
+        title: `Operating Mode (Current: ${currentMode === 'real' ? 'Real Mode' : 'Experimental Mode'})`,
+        placeHolder: 'Select INCODE operating mode',
         ignoreFocusOut: true
     });
-    if (selected && selected.value !== currentMode) {
+    if (selected) {
         const workspaceConfig = vscode.workspace.getConfiguration('collabintel');
         await workspaceConfig.update('operatingMode', selected.value, vscode.ConfigurationTarget.Global);
         if (selected.value === 'experimental') {
-            vscode.window.showInformationMessage('Switched to Experimental Mode.');
-            await ensureParticipantSession(context);
+            await reconfigureParticipant(context);
         }
         else {
-            vscode.window.showInformationMessage('Switched to Real Mode.');
+            vscode.window.showInformationMessage('INCODE: Switched to Real Mode (Coursework Tracking).');
         }
         if (onModeChanged) {
             onModeChanged(selected.value);

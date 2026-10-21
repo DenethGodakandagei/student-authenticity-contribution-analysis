@@ -289,10 +289,30 @@ export default function StudentDashboard() {
             const fIso = new Date(fEndMs).toISOString();
             const fChars = f.size || (f.content ? f.content.length : Math.round((f.lineCount || 1) * 35));
 
+            // Detect repeated / duplicate code blocks across the file
+            const duplicateLineIndices = new Set<number>();
+            const seenBlockSignatures = new Map<string, number>();
+            const BLOCK_SIZE = 2;
+
+            for (let i = 0; i <= rawLines.length - BLOCK_SIZE; i++) {
+              const slice = rawLines.slice(i, i + BLOCK_SIZE).map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+              if (slice.length === BLOCK_SIZE) {
+                const sig = slice.join(':::');
+                if (seenBlockSignatures.has(sig)) {
+                  for (let k = 0; k < BLOCK_SIZE; k++) {
+                    duplicateLineIndices.add(i + k);
+                  }
+                } else {
+                  seenBlockSignatures.set(sig, i);
+                }
+              }
+            }
+
             const lineRecords = rawLines.slice(0, 300).map((lineText: string, idx: number) => {
               const prevTrimmed = (rawLines[idx - 1] || '').trim();
               const nextTrimmed = (rawLines[idx + 1] || '').trim();
-              const pType = classifyLineProvenance(lineText, undefined, { prevTrimmed, nextTrimmed });
+              const isDuplicateBlock = duplicateLineIndices.has(idx);
+              const pType = classifyLineProvenance(lineText, undefined, { prevTrimmed, nextTrimmed, isDuplicateBlock });
               const prov: 'manual' | 'copy_paste' | 'ai_assisted' =
                 pType === 'typed' ? 'manual' : pType === 'pasted' ? 'copy_paste' : 'ai_assisted';
               return {

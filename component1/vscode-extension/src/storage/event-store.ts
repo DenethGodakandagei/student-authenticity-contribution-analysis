@@ -214,40 +214,53 @@ export function pruneOldRecords(): number {
  * @returns QueueStatus object with counts, timestamps, size, and chain validity
  */
 export function getQueueStatus(globalStoragePath: string): QueueStatus {
-  const db = getDatabase();
+  try {
+    const db = getDatabase();
 
-  const total = db.prepare(
-    'SELECT COUNT(*) as c FROM telemetry_events'
-  ).get() as { c: number };
+    const total = db.prepare(
+      'SELECT COUNT(*) as c FROM telemetry_events'
+    ).get() as { c?: number } | undefined;
 
-  const pending = db.prepare(
-    'SELECT COUNT(*) as c FROM telemetry_events WHERE sync_status = 0'
-  ).get() as { c: number };
+    const pending = db.prepare(
+      'SELECT COUNT(*) as c FROM telemetry_events WHERE sync_status = 0'
+    ).get() as { c?: number } | undefined;
 
-  const synced = db.prepare(
-    'SELECT COUNT(*) as c FROM telemetry_events WHERE sync_status = 1'
-  ).get() as { c: number };
+    const synced = db.prepare(
+      'SELECT COUNT(*) as c FROM telemetry_events WHERE sync_status = 1'
+    ).get() as { c?: number } | undefined;
 
-  const oldestPending = db.prepare(
-    'SELECT MIN(timestamp) as ts FROM telemetry_events WHERE sync_status = 0'
-  ).get() as { ts: number | null };
+    const oldestPending = db.prepare(
+      'SELECT MIN(timestamp) as ts FROM telemetry_events WHERE sync_status = 0'
+    ).get() as { ts?: number | null } | undefined;
 
-  const newestPending = db.prepare(
-    'SELECT MAX(timestamp) as ts FROM telemetry_events WHERE sync_status = 0'
-  ).get() as { ts: number | null };
+    const newestPending = db.prepare(
+      'SELECT MAX(timestamp) as ts FROM telemetry_events WHERE sync_status = 0'
+    ).get() as { ts?: number | null } | undefined;
 
-  // Verify chain on a sample (last 50 rows for performance)
-  const chainResult = verifyChain(50);
+    // Verify chain on a sample (last 50 rows for performance)
+    const chainResult = verifyChain(50);
 
-  return {
-    totalEvents: total.c,
-    pendingCount: pending.c,
-    syncedCount: synced.c,
-    oldestPendingTimestamp: oldestPending.ts,
-    newestPendingTimestamp: newestPending.ts,
-    storageBytes: getDatabaseSizeBytes(globalStoragePath),
-    hashChainValid: chainResult.valid
-  };
+    return {
+      totalEvents: total?.c || 0,
+      pendingCount: pending?.c || 0,
+      syncedCount: synced?.c || 0,
+      oldestPendingTimestamp: oldestPending?.ts || null,
+      newestPendingTimestamp: newestPending?.ts || null,
+      storageBytes: getDatabaseSizeBytes(globalStoragePath),
+      hashChainValid: chainResult.valid
+    };
+  } catch (err) {
+    console.warn('[CollabIntel] Error computing queue status:', err);
+    return {
+      totalEvents: 0,
+      pendingCount: 0,
+      syncedCount: 0,
+      oldestPendingTimestamp: null,
+      newestPendingTimestamp: null,
+      storageBytes: 0,
+      hashChainValid: true
+    };
+  }
 }
 
 /**
@@ -255,9 +268,13 @@ export function getQueueStatus(globalStoragePath: string): QueueStatus {
  * Lightweight query for status bar display.
  */
 export function getPendingCount(): number {
-  const db = getDatabase();
-  const row = db.prepare(
-    'SELECT COUNT(*) as c FROM telemetry_events WHERE sync_status = 0'
-  ).get() as { c: number };
-  return row.c;
+  try {
+    const db = getDatabase();
+    const row = db.prepare(
+      'SELECT COUNT(*) as c FROM telemetry_events WHERE sync_status = 0'
+    ).get() as { c?: number } | undefined;
+    return row?.c || 0;
+  } catch {
+    return 0;
+  }
 }
