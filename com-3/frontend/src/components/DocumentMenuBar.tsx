@@ -38,6 +38,11 @@ interface DocumentMenuBarProps {
   onOpenSpellCheck?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  pageLayoutMode?: 'paginated' | 'pageless';
+  onTogglePageLayout?: (mode: 'paginated' | 'pageless') => void;
+  onInsertPageBreak?: () => void;
+  onSubmitAssignment?: () => void;
+  submissionStatus?: string;
 }
 
 export default function DocumentMenuBar({
@@ -75,7 +80,12 @@ export default function DocumentMenuBar({
   onOpenVersionHistory,
   onOpenSpellCheck,
   onRefresh,
-  isRefreshing = false
+  isRefreshing = false,
+  pageLayoutMode = 'paginated',
+  onTogglePageLayout,
+  onInsertPageBreak,
+  onSubmitAssignment,
+  submissionStatus
 }: DocumentMenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [wordActiveTab, setWordActiveTab] = useState<'Home' | 'Insert' | 'Layout' | 'Review' | 'View'>('Home');
@@ -170,9 +180,14 @@ export default function DocumentMenuBar({
       { divider: true, label: "" },
       { label: themeSkin === 'google' ? "✓ Google Docs Mode" : "Switch to Google Docs Mode", action: () => onThemeSkinChange('google') },
       { label: themeSkin === 'word' ? "✓ MS Word 365 Mode" : "Switch to MS Word 365 Mode", action: () => onThemeSkinChange('word') },
-      { label: themeSkin === 'default' ? "✓ Inkie Standard Mode" : "Switch to Inkie Standard Mode", action: () => onThemeSkinChange('default') }
+      { label: themeSkin === 'default' ? "✓ Inkie Standard Mode" : "Switch to Inkie Standard Mode", action: () => onThemeSkinChange('default') },
+      { divider: true, label: "" },
+      { label: pageLayoutMode === 'paginated' ? "✓ Paginated View (Pages)" : "Switch to Paginated View (Pages)", action: () => onTogglePageLayout && onTogglePageLayout('paginated') },
+      { label: pageLayoutMode === 'pageless' ? "✓ Pageless View (Continuous)" : "Switch to Pageless View (Continuous)", action: () => onTogglePageLayout && onTogglePageLayout('pageless') }
     ],
     Insert: [
+      { label: "📄 Page Break (Split Page)", action: onInsertPageBreak, shortcut: "Ctrl+Enter" },
+      { divider: true, label: "" },
       { label: "🖼️ Insert Image URL...", action: onPromptImage },
       { label: "🔗 Insert Hyperlink...", action: onPromptLink },
       { label: "📊 Insert Table (3x3)", action: insertTable },
@@ -608,6 +623,75 @@ export default function DocumentMenuBar({
                 <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
               </svg>
               <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          )}
+
+          {/* Save Button */}
+          {onSave && (
+            <button
+              type="button"
+              onClick={onSave}
+              title="Save Document (Ctrl+S)"
+              style={{
+                background: '#6FAF9A',
+                color: '#0D1110',
+                border: 'none',
+                padding: '0.34rem 0.75rem',
+                borderRadius: isGoogle ? '20px' : '6px',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                boxShadow: '0 1px 3px rgba(111, 175, 154, 0.4)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
+              onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              <span>Save</span>
+            </button>
+          )}
+
+          {/* Submit Button */}
+          {onSubmitAssignment && (
+            <button
+              type="button"
+              onClick={onSubmitAssignment}
+              title="Save and submit completed assignment to lecturer"
+              style={{
+                background: submissionStatus === 'submitted' ? (isWord ? 'rgba(255,255,255,0.2)' : 'rgba(111, 175, 154, 0.2)') : (isWord ? '#ffffff' : '#0D1110'),
+                color: submissionStatus === 'submitted' ? (isWord ? '#ffffff' : '#225243') : (isWord ? '#005a9e' : '#FFFFFF'),
+                border: submissionStatus === 'submitted' ? '1px solid #6FAF9A' : 'none',
+                padding: '0.34rem 0.8rem',
+                borderRadius: isGoogle ? '20px' : '6px',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                boxShadow: '0 1px 3px rgba(13, 17, 16, 0.25)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {submissionStatus === 'submitted' ? (
+                  <polyline points="20 6 9 17 4 12" />
+                ) : (
+                  <>
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </>
+                )}
+              </svg>
+              <span>{submissionStatus === 'submitted' ? 'Submitted' : 'Submit'}</span>
             </button>
           )}
 

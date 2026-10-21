@@ -361,6 +361,127 @@ body {
   outline-offset: -14px !important;
 }
 
+/* Paginated Pages Mode (Multi-page document view) */
+.editor-container.paginated-view .editor-content-wrapper {
+  padding: 1.5rem 1rem 4rem 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.editor-container.paginated-view .ProseMirror {
+  background: white;
+  width: 21cm;
+  min-height: 29.7cm;
+  padding: 2.54cm;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  position: relative;
+}
+
+/* Page Break Divider in Paginated Mode */
+.editor-container.paginated-view .page-break-indicator {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: calc(100% + 5.08cm);
+  margin-left: -2.54cm;
+  margin-right: -2.54cm;
+  margin-top: 3.5rem;
+  margin-bottom: 3.5rem;
+  height: 38px;
+  background: #e2e8f0;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: inset 0 4px 6px -1px rgba(0, 0, 0, 0.08), inset 0 -4px 6px -1px rgba(0, 0, 0, 0.08);
+  user-select: none;
+  cursor: pointer;
+  page-break-after: always;
+  break-after: page;
+}
+
+.editor-container.paginated-view .page-break-indicator .page-break-label {
+  background: #ffffff;
+  color: #334155;
+  border: 1.5px solid #94a3b8;
+  border-radius: 20px;
+  padding: 3px 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  transition: all 0.15s ease;
+  pointer-events: none;
+}
+
+.editor-container.paginated-view .page-break-indicator:hover .page-break-label {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+/* Pageless (Continuous Flow) Mode */
+.editor-container.pageless-view .editor-content-wrapper {
+  padding: 1rem 1.5rem 3rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.editor-container.pageless-view .ProseMirror {
+  background: white;
+  width: 100%;
+  max-width: 900px;
+  min-height: 80vh;
+  padding: 2.5rem 3rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.editor-container.pageless-view .page-break-indicator {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  margin: 2rem 0;
+  border-top: 2px dashed #94a3b8;
+  padding-top: 4px;
+  user-select: none;
+  cursor: pointer;
+}
+
+.editor-container.pageless-view .page-break-indicator .page-break-label {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Print Handling for Page Breaks */
+@media print {
+  .page-break-indicator {
+    display: block !important;
+    page-break-before: always !important;
+    break-before: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    visibility: hidden !important;
+  }
+  .page-break-indicator .page-break-label {
+    display: none !important;
+  }
+}
+
 /* Google Docs & MS Word Specific Editor Background Skins */
 
 /* Google Docs Mode */
