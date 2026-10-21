@@ -232,7 +232,7 @@ export default function LoginForm() {
                 />
               </svg>
             </span>
-            Signed in — taking you to your workspace…
+            Successfully Signed In !
           </p>
         )}
 
@@ -248,8 +248,7 @@ export default function LoginForm() {
         delayMs={480}
       >
         <p className="auth-legal">
-          Teaching sessions are part of a university research project and are
-          analysed in anonymised form.
+          Teach to Nova and get your conceptual clarity enhanced.
         </p>
       </AuthFooter>
     </>

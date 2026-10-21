@@ -14,21 +14,10 @@ import {
   subscribeAuth,
 } from '../utils/api';
 
-const HOME_LINK = {
-  href: '/dashboard',
-  label: 'Dashboard',
-  className: 'auth-nav__link auth-nav__link--home',
-} as const;
-
-const AUTH_LINKS = [
-  { href: '/login', label: 'Sign in', className: 'auth-nav__link' },
-  { href: '/register', label: 'Create account', className: 'auth-nav__link' },
-] as const;
-
 /**
- * Top navigation bar shared by every screen. Logo sits on the left. When a user
- * is signed in the Sign in / Create account links are replaced with their name
- * and a Logout button.
+ * Top navigation bar shared across all screens.
+ * - When not logged in: displays "Dashboard" and "Sign in".
+ * - When logged in: displays "Profile" and "Logout".
  */
 export default function AuthNav() {
   const pathname = usePathname();
@@ -37,15 +26,13 @@ export default function AuthNav() {
   const userRaw = useSyncExternalStore(subscribeAuth, getStoredUserRaw, getServerAuthSnapshot);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  let userName = '';
-  let roleBadge = '';
+  let isLecturer = false;
   if (userRaw) {
     try {
-      const parsed = JSON.parse(userRaw) as { name?: string; role?: string };
-      userName = parsed.name ?? '';
-      roleBadge = parsed.role === 'lecturer' ? 'Lecturer' : 'Student';
+      const parsed = JSON.parse(userRaw) as { role?: string };
+      isLecturer = parsed.role === 'lecturer';
     } catch {
-      userName = '';
+      isLecturer = false;
     }
   }
 
@@ -56,6 +43,8 @@ export default function AuthNav() {
     router.push('/login');
   };
 
+  const dashboardHref = isLecturer ? '/lecturer' : '/dashboard';
+
   return (
     <nav className="auth-nav a-up" style={delay(20)} aria-label="Primary">
       <div className="auth-nav__left">
@@ -65,33 +54,16 @@ export default function AuthNav() {
       </div>
 
       <div className="auth-nav__links">
-        <Link
-          href={HOME_LINK.href}
-          className={HOME_LINK.className}
-          aria-current={pathname === HOME_LINK.href ? 'page' : undefined}
-        >
-          {HOME_LINK.label}
-        </Link>
-
         {token ? (
           <>
             <Link
-              href="/sessions/new"
-              className="auth-nav__link auth-nav__link--action"
-              aria-current={pathname === '/sessions/new' ? 'page' : undefined}
+              href="/profile"
+              className="auth-nav__link"
+              aria-current={pathname === '/profile' ? 'page' : undefined}
             >
-              + New session
+              Profile
             </Link>
-            {userName && (
-              <span className="auth-nav__user">
-                <span className="auth-nav__user-name">{userName}</span>
-                {roleBadge && (
-                  <span className="auth-nav__role-badge" aria-label={`Role: ${roleBadge}`}>
-                    {roleBadge}
-                  </span>
-                )}
-              </span>
-            )}
+
             <button
               type="button"
               className="auth-nav__link auth-nav__logout-btn"
@@ -102,16 +74,23 @@ export default function AuthNav() {
             </button>
           </>
         ) : (
-          AUTH_LINKS.map((link) => (
+          <>
             <Link
-              key={link.href}
-              href={link.href}
-              className={`${link.className} ${link.href === '/register' ? 'auth-nav__link--cta' : ''}`}
-              aria-current={pathname === link.href ? 'page' : undefined}
+              href={dashboardHref}
+              className="auth-nav__link auth-nav__link--home"
+              aria-current={pathname === dashboardHref ? 'page' : undefined}
             >
-              {link.label}
+              Dashboard
             </Link>
-          ))
+
+            <Link
+              href="/register"
+              className="auth-nav__link auth-nav__link--cta"
+              aria-current={pathname === '/register' || pathname === '/login' ? 'page' : undefined}
+            >
+              Sign in
+            </Link>
+          </>
         )}
       </div>
     </nav>

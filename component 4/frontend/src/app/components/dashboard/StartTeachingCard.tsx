@@ -21,7 +21,11 @@ function apiError(data: unknown, fallback: string): string {
   return (data as ApiError | undefined)?.detail ?? fallback;
 }
 
-export default function StartTeachingCard() {
+interface StartTeachingCardProps {
+  onTeachNow?: () => void;
+}
+
+export default function StartTeachingCard({ onTeachNow }: StartTeachingCardProps = {}) {
   const router = useRouter();
   const [materials, setMaterials] = useState<MaterialSummary[]>([]);
   const [selectedKbId, setSelectedKbId] = useState('demo');
@@ -112,18 +116,27 @@ export default function StartTeachingCard() {
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
+        {onTeachNow && (
+          <button
+            type="button"
+            className="dash-btn"
+            onClick={onTeachNow}
+          >
+            Teach Now
+          </button>
+        )}
         <button
           type="button"
-          className="dash-btn"
+          className="dash-btn dash-btn--sm"
           onClick={() => void handleStart()}
           disabled={starting || selected?.state !== 'ready'}
           aria-busy={starting || undefined}
         >
           {starting && <span className="dash-btn__spinner" aria-hidden="true" />}
-          {starting ? 'Starting…' : 'Start session'}
+          {starting ? 'Starting…' : 'Start with ready KB'}
         </button>
         <Link href="/sessions/new" className="dash-btn dash-btn--sm">
-          More creation options
+          More options
         </Link>
       </div>
     </section>

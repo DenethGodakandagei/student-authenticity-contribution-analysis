@@ -158,10 +158,10 @@ export default function LecturerPage() {
   const handleUpload = async (file?: File) => {
     if (!file || uploading) return;
 
-    const allowed = ['.pdf', '.docx', '.txt'];
+    const allowed = ['.pdf', '.docx', '.pptx', '.txt'];
     const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
     if (!allowed.includes(ext)) {
-      setUploadError('Only .pdf, .docx, and .txt files are supported.');
+      setUploadError('Only .pdf, .pptx, .docx, and .txt files are supported.');
       return;
     }
 
@@ -350,7 +350,7 @@ export default function LecturerPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept=".pdf,.docx,.pptx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
               className="sr-only"
               onChange={(e) => {
                 void handleUpload(e.target.files?.[0]);
@@ -374,7 +374,7 @@ export default function LecturerPage() {
             </svg>
             <p className="dash-material-drop__title">Drop course material file here</p>
             <p className="dash-material-drop__hint">
-              Supports <strong>PDF</strong>, <strong>DOCX (Word)</strong>, or <strong>TXT</strong>.
+              Supports <strong>PDF</strong>, <strong>PPTX (PowerPoint)</strong>, <strong>DOCX (Word)</strong>, or <strong>TXT</strong>.
               Nova extracts concepts and creates isolated misconceptions.
             </p>
             <button

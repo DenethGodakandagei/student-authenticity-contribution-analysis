@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthButton from './AuthButton';
 import AuthFooter from './AuthFooter';
-import Checkbox from './Checkbox';
 import FormField from './FormField';
 import PasswordField from './PasswordField';
 import RoleSelector from './RoleSelector';
@@ -39,7 +38,6 @@ interface RegisterErrors {
   lecturerCode?: string;
   password?: string;
   confirm?: string;
-  consent?: string;
 }
 
 function validate(values: {
@@ -48,7 +46,6 @@ function validate(values: {
   email: string;
   password: string;
   confirm: string;
-  consent: boolean;
   lecturerCode: string;
 }): RegisterErrors {
   const errors: RegisterErrors = {};
@@ -75,13 +72,8 @@ function validate(values: {
   if (!values.confirm) errors.confirm = 'Repeat your password.';
   else if (values.confirm !== values.password) errors.confirm = 'Passwords do not match.';
 
-  if (!values.consent) errors.consent = 'Consent is required to register.';
-
   return errors;
 }
-
-const CONSENT_TEXT =
-  'I agree to the teaching-session data being used for this NOVA App.';
 
 function AlertIcon() {
   return (
@@ -103,7 +95,6 @@ export default function RegisterForm() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [lecturerCode, setLecturerCode] = useState('');
-  const [consent, setConsent] = useState(false);
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -124,7 +115,7 @@ export default function RegisterForm() {
 
   useEffect(() => () => void (timerRef.current && window.clearTimeout(timerRef.current)), []);
 
-  const errors = validate({ role, name, email, password, confirm, consent, lecturerCode });
+  const errors = validate({ role, name, email, password, confirm, lecturerCode });
   const errorFor = (key: keyof RegisterErrors) =>
     submitted || touched[key] ? errors[key] : undefined;
 
@@ -147,7 +138,6 @@ export default function RegisterForm() {
       ['lecturerCode', 'reg-lecturer-code'],
       ['password', 'reg-password'],
       ['confirm', 'reg-confirm'],
-      ['consent', 'reg-consent'],
     ];
     const first = order.find(([key]) => current[key]);
     if (first) document.getElementById(first[1])?.focus();
@@ -159,7 +149,7 @@ export default function RegisterForm() {
 
     setSubmitted(true);
     setServerError('');
-    const current = validate({ role, name, email, password, confirm, consent, lecturerCode });
+    const current = validate({ role, name, email, password, confirm, lecturerCode });
     if (Object.values(current).some(Boolean)) {
       focusFirstError(current);
       return;
@@ -177,7 +167,7 @@ export default function RegisterForm() {
       role: chosenRole,
       identifier: '',
       lecturer_code: chosenRole === 'lecturer' ? lecturerCode.trim() : undefined,
-      consent,
+      consent: true,
     });
     setBusy(false);
 
@@ -196,7 +186,7 @@ export default function RegisterForm() {
   };
 
   const roleError = submitted ? errors.role : undefined;
-  const alertMessage = serverError || (submitted && errors.consent ? errors.consent : '');
+  const alertMessage = serverError;
 
   return (
     <>
@@ -291,7 +281,6 @@ export default function RegisterForm() {
             onBlur={() => setTouched((t) => ({ ...t, password: true }))}
             autoComplete="new-password"
             error={errorFor('password')}
-            hint="At least 8 characters."
             delayMs={310}
           />
 
@@ -311,10 +300,6 @@ export default function RegisterForm() {
         </div>
 
         <div className="a-up" style={{ ...delay(450), display: 'grid', gap: '0.75rem' }}>
-          <Checkbox id="reg-consent" checked={consent} onChange={setConsent}>
-            {CONSENT_TEXT}
-          </Checkbox>
-
           <p className="auth-legal">
             By creating an account you agree to our{' '}
             <span className="auth-legal__links">

@@ -1,0 +1,89 @@
+{
+  "session_id": "52f858bf-f0a1-423d-9267-729d9be3e999",
+  "topic": "Object Oriented Programming",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "demo",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [],
+  "misconceptions": [
+    {
+      "id": "m1",
+      "wrong_concept": "I think that a class is a specific instance of an object, and an object is just a blueprint of a class.",
+      "correct_concept": "An Object is a specific instance of the data type (class).",
+      "reason": "Students may confuse the concept of a class as a blueprint with the idea that a class is a specific instance. This misconception arises from a misunderstanding of the relationship between a class and an object.",
+      "concept": "class and object",
+      "source_pages": [
+        9
+      ],
+      "source_quote": "\u2022 An Object is a specific instance of the data type (class)",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "m3",
+      "wrong_concept": "I think that the constructor is used to destroy the object when it is declared.",
+      "correct_concept": "The constructor is used to initialize the object when it is declared.",
+      "reason": "Students may misunderstand the purpose of the constructor and think it has the opposite effect.",
+      "concept": "constructor",
+      "source_pages": [
+        34
+      ],
+      "source_quote": "The constructor is used to initialize the object when it is declared.",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "m1",
+          "concept": "class and object",
+          "question": "What is an object in the context of Object Oriented Programming?",
+          "options": [
+            "A specific instance of an object",
+            "A blueprint of a class",
+            "A collection of methods and variables",
+            "A type of inheritance"
+          ],
+          "correct_index": 0,
+          "explanation": "According to the lecture, an Object is a specific instance of the data type (class). This is why the correct option is 'A specific instance of an object'."
+        },
+        {
+          "id": "m3",
+          "concept": "constructor",
+          "question": "What is the purpose of a constructor in Object Oriented Programming?",
+          "options": [
+            "To destroy the object when it is declared",
+            "To initialize the object when it is declared",
+            "To inherit properties from a parent class",
+            "To override methods from a parent class"
+          ],
+          "correct_index": 1,
+          "explanation": "As stated in the lecture, the constructor is used to initialize the object when it is declared. This is why the correct option is 'To initialize the object when it is declared'."
+        }
+      ],
+      "answers": [],
+      "score": null,
+      "submitted_at": null
+    }
+  },
+  "created_at": "2026-10-21T16:03:58.578749",
+  "updated_at": "2026-10-21T16:05:04.119259"
+}

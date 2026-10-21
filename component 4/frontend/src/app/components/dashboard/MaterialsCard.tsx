@@ -132,12 +132,14 @@ export default function MaterialsCard() {
 
   const uploadFile = async (file: File | undefined) => {
     if (!file || uploading) return;
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Please choose a PDF file.');
+    const allowed = ['.pdf', '.docx', '.pptx', '.txt'];
+    const hasAllowedExt = allowed.some((ext) => file.name.toLowerCase().endsWith(ext));
+    if (!hasAllowedExt) {
+      setError('Please choose a valid file (.pdf, .docx, .pptx, or .txt).');
       return;
     }
     if (file.size === 0) {
-      setError('That PDF is empty.');
+      setError('The selected file is empty.');
       return;
     }
 
@@ -227,7 +229,7 @@ export default function MaterialsCard() {
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept=".pdf,.docx,.pptx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
           className="sr-only"
           onChange={(event) => {
             void uploadFile(event.target.files?.[0]);
@@ -235,7 +237,7 @@ export default function MaterialsCard() {
           }}
         />
         <p className="dash-material-drop__title">Drop a file here</p>
-        <p className="dash-material-drop__hint">PDF, DOCX, or TXT · your file stays private</p>
+        <p className="dash-material-drop__hint">PDF, PPTX, DOCX, or TXT · your file stays private</p>
         <button
           type="button"
           className="dash-btn dash-btn--sm"

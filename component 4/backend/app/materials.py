@@ -229,9 +229,9 @@ async def upload_material(
     """Accepts a PDF, DOCX, or TXT file, stores it, and starts background knowledge-base creation."""
     original_name = os.path.basename((file.filename or "").replace("\\", "/"))
     ext = os.path.splitext(original_name)[1].lower()
-    allowed_exts = {".pdf", ".docx", ".txt", ".text"}
+    allowed_exts = {".pdf", ".docx", ".pptx", ".txt", ".text"}
     if ext not in allowed_exts:
-        raise HTTPException(status_code=400, detail="Only PDF, DOCX, and TXT files are allowed.")
+        raise HTTPException(status_code=400, detail="Only PDF, DOCX, PPTX, and TXT files are allowed.")
 
     if ext == ".pdf":
         header = await file.read(5)

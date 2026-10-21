@@ -10,6 +10,7 @@ import SessionsList from '../components/dashboard/SessionsList';
 import MaterialsCard from '../components/dashboard/MaterialsCard';
 import HowItWorksCard from '../components/dashboard/HowItWorksCard';
 import QuizzesList from '../components/dashboard/QuizzesList';
+import UploadMaterialModal from '../components/dashboard/UploadMaterialModal';
 import {
   apiRequest,
   getAccessToken,
@@ -29,6 +30,7 @@ export default function DashboardPage() {
 
   const [sessions, setSessions] = useState<SessionListItem[] | null>(null);
   const [sessionsError, setSessionsError] = useState('');
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   let userName = '';
   if (userRaw) {
@@ -74,10 +76,10 @@ export default function DashboardPage() {
       <main className="dash-container">
         <GreetingCard userName={userName} />
 
-        <NovaAvatarCard userName={userName} />
+        <NovaAvatarCard userName={userName} onTeachNow={() => setShowUploadModal(true)} />
 
         <div className="dash-grid">
-          <StartTeachingCard />
+          <StartTeachingCard onTeachNow={() => setShowUploadModal(true)} />
           <HowItWorksCard />
         </div>
 
@@ -87,6 +89,11 @@ export default function DashboardPage() {
 
         <SessionsList sessions={sessions} error={sessionsError} />
       </main>
+
+      <UploadMaterialModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+      />
     </div>
   );
 }

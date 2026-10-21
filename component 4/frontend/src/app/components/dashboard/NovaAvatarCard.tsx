@@ -8,12 +8,14 @@ interface NovaAvatarCardProps {
   misconceptionsBefore?: number;
   misconceptionsAfter?: number;
   userName?: string;
+  onTeachNow?: () => void;
 }
 
 export default function NovaAvatarCard({
   misconceptionsBefore = 2,
   misconceptionsAfter = 0,
   userName = '',
+  onTeachNow,
 }: NovaAvatarCardProps) {
   const [viewState, setViewState] = useState<'before' | 'after'>('after');
 
@@ -54,9 +56,19 @@ export default function NovaAvatarCard({
           </div>
 
           <div className="nova-avatar-card__actions">
-            <Link href="/sessions/new" className="nova-avatar-card__btn-primary">
-              Teach Nova now
-            </Link>
+            {onTeachNow ? (
+              <button
+                type="button"
+                onClick={onTeachNow}
+                className="nova-avatar-card__btn-primary"
+              >
+                Teach Now
+              </button>
+            ) : (
+              <Link href="/sessions/new" className="nova-avatar-card__btn-primary">
+                Teach Now
+              </Link>
+            )}
             <span className="nova-avatar-card__hint">
               {isAfter
                 ? 'Great progress! Nova is confident in taught concepts.'

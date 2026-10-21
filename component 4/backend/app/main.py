@@ -362,32 +362,27 @@ def read_root():
 
 @app.post("/upload-material")
 async def upload_material(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
-    # Validation 1: Check file extension
-    if not file.filename.lower().endswith(".pdf"):
+    filename = file.filename or "material.pdf"
+    ext = os.path.splitext(filename)[1].lower()
+    allowed_exts = {".pdf", ".docx", ".pptx", ".txt", ".text"}
+    if ext not in allowed_exts:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file format. Only PDF files are allowed."
+            detail="Invalid file format. Only PDF, DOCX, PPTX, and TXT files are allowed."
         )
 
-    # Validation 2: Check content/mime type if available
-    if file.content_type and file.content_type != "application/pdf":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file content type is not application/pdf."
-        )
-
-    saved_filepath = os.path.join(UPLOAD_DIR, file.filename)
+    saved_filepath = os.path.join(UPLOAD_DIR, filename)
 
     try:
         # Save file to uploads folder
         with open(saved_filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # 1. Process PDF using pdf_processor (Extract text & chunks)
-        pdf_result = process_pdf(saved_filepath)
-
-        # Join generated text chunks (or preview text) for Atlas input
-        full_extracted_text = "\n".join(pdf_result["chunks"]) if pdf_result["chunks"] else pdf_result["preview_text"]
+        from app.ingest import extract_pages
+        extracted_pages = extract_pages(saved_filepath)
+        page_count = len(extracted_pages)
+        full_extracted_text = "\n\n".join(p["text"] for p in extracted_pages if p.get("text"))
+        num_chunks = max(1, len(full_extracted_text) // 500)
 
         # 2. Send extracted lecture text to Atlas Misconception Generator
         misconception_result = generate_student_misconceptions(full_extracted_text)
@@ -400,10 +395,10 @@ async def upload_material(file: UploadFile = File(...), user: dict = Depends(get
 
         # 4. Return updated JSON structure
         return {
-            "filename": file.filename,
+            "filename": filename,
             "session_id": nova.state.session_id,
-            "number_of_pages": pdf_result["num_pages"],
-            "number_of_chunks": pdf_result["num_chunks"],
+            "number_of_pages": page_count,
+            "number_of_chunks": num_chunks,
             "detected_topic": misconception_result.get("topic", "General Topic"),
             "learning_objectives": misconception_result.get("learning_objectives", []),
             "generated_misconceptions": misconception_result.get("misconceptions", []),
