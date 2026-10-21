@@ -15,7 +15,7 @@ import { FontFamily } from '@tiptap/extension-font-family';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
-import { Extension } from '@tiptap/core';
+import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
 import ShareModal from '../../components/ShareModal';
@@ -75,6 +75,53 @@ const FontSize = Extension.create({
       },
     };
   },
+});
+
+// Custom Tiptap PageBreak Extension (Creates distinct multi-page boundaries)
+const PageBreak = Node.create({
+  name: 'pageBreak',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+
+  parseHTML() {
+    return [
+      { tag: 'div[data-page-break]' },
+      { tag: 'div.page-break-indicator' },
+      { tag: 'hr.page-break' }
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'div',
+      mergeAttributes(HTMLAttributes, {
+        'data-page-break': 'true',
+        class: 'page-break-indicator'
+      }),
+      ['span', { class: 'page-break-label' }, '📄 PAGE BREAK']
+    ];
+  },
+
+  addCommands(): any {
+    return {
+      setPageBreak: () => ({ chain }: any) => {
+        return chain()
+          .insertContent([
+            { type: this.name },
+            { type: 'paragraph' }
+          ])
+          .run();
+      }
+    };
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      'Mod-Enter': () => (this.editor.commands as any).setPageBreak()
+    };
+  }
 });
 
 const getSocketUrl = () => getBackendUrl();
@@ -162,7 +209,22 @@ const clearPendingEdit = async (docId: string) => {
   }
 };
 
-const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink, onSubmitAssignment, submissionStatus, onOpenSpellCheck }: any) => {
+const MenuBar = ({
+  editor,
+  isOffline,
+  syncStatus,
+  toggleOffline,
+  onSave,
+  onSaveAndRename,
+  onPromptImage,
+  onPromptLink,
+  onSubmitAssignment,
+  submissionStatus,
+  onOpenSpellCheck,
+  pageLayoutMode = 'paginated',
+  onTogglePageLayout,
+  onInsertPageBreak
+}: any) => {
   if (!editor) return null;
 
   const addImage = () => {
@@ -692,6 +754,65 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
           </svg>
         </button>
 
+        {/* 14. Split Page / Page Break Button (Ctrl+Enter) */}
+        <button
+          type="button"
+          onClick={() => {
+            if (onInsertPageBreak) {
+              onInsertPageBreak();
+            } else if (editor) {
+              (editor.commands as any).setPageBreak();
+            }
+          }}
+          className="toolbar-btn"
+          title="Split Page / Insert Page Break (Ctrl+Enter)"
+          style={{
+            height: '28px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            padding: '0 0.55rem',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: '#225243',
+            background: '#EFF8F3',
+            border: '1px solid rgba(111, 175, 154, 0.45)',
+            borderRadius: '5px'
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="2" y1="13" x2="22" y2="13" strokeDasharray="3 3" />
+          </svg>
+          <span>Split Page</span>
+        </button>
+
+        {/* 15. View Mode Switcher: Paginated Pages vs Pageless */}
+        {onTogglePageLayout && (
+          <button
+            type="button"
+            onClick={() => onTogglePageLayout(pageLayoutMode === 'paginated' ? 'pageless' : 'paginated')}
+            className="toolbar-btn"
+            title={pageLayoutMode === 'paginated' ? "Switch to Continuous Pageless View" : "Switch to Paginated Multi-Page View"}
+            style={{
+              height: '28px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              padding: '0 0.5rem',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              color: pageLayoutMode === 'paginated' ? '#225243' : '#475569',
+              background: pageLayoutMode === 'paginated' ? '#EFF8F3' : '#F1F5F9',
+              border: `1px solid ${pageLayoutMode === 'paginated' ? 'rgba(111, 175, 154, 0.45)' : '#CBD5E1'}`,
+              borderRadius: '5px'
+            }}
+          >
+            <span>{pageLayoutMode === 'paginated' ? '📄 Pages' : '📜 Pageless'}</span>
+          </button>
+        )}
+
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
         <div style={{
@@ -733,68 +854,6 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
         >
           {isOffline ? 'Sync Online' : 'Offline'}
         </button>
-
-        <button
-          onClick={onSave}
-          className="toolbar-btn"
-          title="Save Document (Ctrl+S)"
-          style={{
-            height: '28px',
-            padding: '0 0.65rem',
-            background: '#6FAF9A',
-            border: 'none',
-            color: '#0D1110',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            boxShadow: '0 1px 4px rgba(111, 175, 154, 0.35)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.3rem'
-          }}
-          onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
-          onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            <polyline points="17 21 17 13 7 13 7 21" />
-            <polyline points="7 3 7 8 15 8" />
-          </svg>
-          <span>Save</span>
-        </button>
-
-        {onSubmitAssignment && (
-          <button
-            onClick={onSubmitAssignment}
-            className="toolbar-btn"
-            title="Save and submit completed assignment to lecturer"
-            style={{
-              height: '28px',
-              padding: '0 0.75rem',
-              background: submissionStatus === 'submitted' ? 'rgba(111, 175, 154, 0.2)' : '#0D1110',
-              border: submissionStatus === 'submitted' ? '1px solid #6FAF9A' : 'none',
-              color: submissionStatus === 'submitted' ? '#225243' : '#FFFFFF',
-              fontWeight: 800,
-              fontSize: '0.76rem',
-              boxShadow: '0 1px 4px rgba(13, 17, 16, 0.2)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              cursor: 'pointer'
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              {submissionStatus === 'submitted' ? (
-                <polyline points="20 6 9 17 4 12" />
-              ) : (
-                <>
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </>
-              )}
-            </svg>
-            <span>{submissionStatus === 'submitted' ? 'Submitted' : 'Submit'}</span>
-          </button>
-        )}
       </div>
     </div>
   );
@@ -836,6 +895,7 @@ function EditorComponent() {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showZoomDropdown, setShowZoomDropdown] = useState(false);
   const [userSkinPreference, setUserSkinPreference] = useState<'google' | 'word' | 'default' | null>(null);
+  const [pageLayoutMode, setPageLayoutMode] = useState<'paginated' | 'pageless'>('paginated');
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocAssignmentType, setNewDocAssignmentType] = useState<'group' | 'individual'>('group');
   const [registeredUsersForCreate, setRegisteredUsersForCreate] = useState<any[]>([]);
@@ -1266,7 +1326,8 @@ function EditorComponent() {
       FontFamily,
       Color,
       Highlight,
-      FontSize
+      FontSize,
+      PageBreak
     ],
     content: '<p></p>',
     editorProps: {
@@ -2315,6 +2376,16 @@ function EditorComponent() {
   const liveDocWordCount = editorWordCount > 0 ? editorWordCount : (markupData?.totalWords || 0);
   const wordCount = liveDocWordCount;
 
+  // Real-time Page Break Count and Estimated Pages
+  const pageBreakCount = React.useMemo(() => {
+    if (!editor) return 0;
+    const html = editor.getHTML();
+    const matches = html.match(/data-page-break/g);
+    return matches ? matches.length : 0;
+  }, [editor, lastText]);
+
+  const totalPages = Math.max(1, pageBreakCount > 0 ? pageBreakCount + 1 : (liveDocWordCount > 500 ? Math.ceil(liveDocWordCount / 450) : 1));
+
   // Real-time live document word division calculation (Unconditional Hook Execution)
   // Ensures typing ONLY increases the active author's count and percentages sum to exactly 100%
   const computedAuthors = React.useMemo(() => {
@@ -2672,7 +2743,7 @@ function EditorComponent() {
   }
 
   return (
-    <div className={`editor-container ${currentSkin === 'google' ? 'google-docs-mode' : currentSkin === 'word' ? 'ms-word-mode' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className={`editor-container ${currentSkin === 'google' ? 'google-docs-mode' : currentSkin === 'word' ? 'ms-word-mode' : ''} ${pageLayoutMode === 'paginated' ? 'paginated-view' : 'pageless-view'}`} style={{ display: 'flex', flexDirection: 'column' }}>
 
       {/* Unified Document Top Header & MenuBar (Google Docs, Word 365, and Inkie skins) */}
       <DocumentMenuBar
@@ -2756,6 +2827,13 @@ function EditorComponent() {
         onToggleHeatmap={() => setReportsModalOpen(true)}
         syncStatus={syncStatus}
         onOpenSpellCheck={() => setSpellCheckModalOpen(true)}
+        onRefresh={handleManualRefresh}
+        isRefreshing={isRefreshing}
+        pageLayoutMode={pageLayoutMode}
+        onTogglePageLayout={setPageLayoutMode}
+        onInsertPageBreak={() => (editor?.commands as any).setPageBreak()}
+        onSubmitAssignment={handleSubmitAssignment}
+        submissionStatus={docDetails?.submissionStatus}
       />
 
       {/* Floating Find & Replace Bar (Ctrl+F) */}
@@ -2776,6 +2854,9 @@ function EditorComponent() {
         onSubmitAssignment={handleSubmitAssignment}
         submissionStatus={docDetails?.submissionStatus}
         onOpenSpellCheck={() => setSpellCheckModalOpen(true)}
+        pageLayoutMode={pageLayoutMode}
+        onTogglePageLayout={setPageLayoutMode}
+        onInsertPageBreak={() => (editor?.commands as any).setPageBreak()}
         onPromptImage={() => {
           setPromptDialog({
             isOpen: true,
@@ -2931,21 +3012,58 @@ function EditorComponent() {
             <h3 style={{ margin: 0, color: '#0D1110', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800 }}>
               Collaborators
             </h3>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              background: '#EFF8F3',
-              border: '1px solid rgba(111, 175, 154, 0.35)',
-              color: '#225243',
-              padding: '0.15rem 0.55rem',
-              borderRadius: '12px',
-              fontSize: '0.72rem',
-              fontWeight: 700
-            }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-              {computedAuthors.length} active
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                title="Click to refresh collaborator word counts and contributions"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  background: '#EFF8F3',
+                  border: '1px solid rgba(111, 175, 154, 0.45)',
+                  color: '#225243',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: isRefreshing ? 'wait' : 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ animation: isRefreshing ? 'spin 0.8s linear infinite' : 'none' }}
+                >
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
+                </svg>
+                <span>{isRefreshing ? 'Updating...' : 'Refresh'}</span>
+              </button>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                background: '#EFF8F3',
+                border: '1px solid rgba(111, 175, 154, 0.35)',
+                color: '#225243',
+                padding: '0.15rem 0.55rem',
+                borderRadius: '12px',
+                fontSize: '0.72rem',
+                fontWeight: 700
+              }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                {computedAuthors.length} active
+              </span>
+            </div>
           </div>
 
           <div style={{
@@ -3048,7 +3166,30 @@ function EditorComponent() {
         boxShadow: '0 -1px 3px rgba(0, 0, 0, 0.03)'
       }}>
         <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-          <span>Page 1 of 1</span>
+          <button
+            type="button"
+            onClick={() => setPageLayoutMode(prev => prev === 'paginated' ? 'pageless' : 'paginated')}
+            title="Click to toggle between Paginated Pages and Continuous Pageless view"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.1rem 0.35rem',
+              borderRadius: '4px'
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <line x1="8" y1="6" x2="16" y2="6" />
+              <line x1="8" y1="10" x2="16" y2="10" />
+            </svg>
+            <span>Page 1 of {totalPages} ({pageLayoutMode === 'paginated' ? 'Paginated' : 'Pageless'})</span>
+          </button>
           <span style={{ fontWeight: 700, color: isMSWord ? '#FFFFFF' : '#0D1110' }}>
             {liveDocWordCount} words
           </span>
