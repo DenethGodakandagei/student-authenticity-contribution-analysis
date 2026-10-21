@@ -35,6 +35,7 @@ interface DocumentMenuBarProps {
   onSyncExternal?: () => void;
   isSyncingExternal?: boolean;
   onOpenVersionHistory?: () => void;
+  onOpenSpellCheck?: () => void;
 }
 
 export default function DocumentMenuBar({
@@ -69,7 +70,8 @@ export default function DocumentMenuBar({
   syncStatus,
   onSyncExternal,
   isSyncingExternal = false,
-  onOpenVersionHistory
+  onOpenVersionHistory,
+  onOpenSpellCheck
 }: DocumentMenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [wordActiveTab, setWordActiveTab] = useState<'Home' | 'Insert' | 'Layout' | 'Review' | 'View'>('Home');
@@ -181,6 +183,9 @@ export default function DocumentMenuBar({
       { label: "Clear Formatting", action: () => editor?.chain().focus().unsetAllMarks().clearNodes().run() }
     ],
     Tools: [
+      ...(onOpenSpellCheck ? [
+        { label: "🔤 Spelling & Grammar Check", action: onOpenSpellCheck, shortcut: "F7" }
+      ] : []),
       { label: "⏱️ See Version History & Diffs", action: onOpenVersionHistory, shortcut: "Ctrl+Alt+Shift+H" },
       { label: "📊 Word Count & Reading Time", action: onOpenDetailsModal, shortcut: "Ctrl+Shift+C" },
       { label: isHighlightMode ? "✓ Hide Author Highlights" : "👥 Show Author Highlights", action: onToggleAuthorHighlights },
@@ -698,7 +703,12 @@ export default function DocumentMenuBar({
             <button
               key={tab}
               type="button"
-              onClick={() => setWordActiveTab(tab)}
+              onClick={() => {
+                setWordActiveTab(tab);
+                if (tab === 'Review' && onOpenSpellCheck) {
+                  onOpenSpellCheck();
+                }
+              }}
               style={{
                 background: wordActiveTab === tab ? '#ffffff' : 'transparent',
                 color: wordActiveTab === tab ? '#005a9e' : '#ffffff',
@@ -711,7 +721,7 @@ export default function DocumentMenuBar({
                 transition: 'all 0.1s ease'
               }}
             >
-              {tab}
+              {tab === 'Review' ? 'Review (ABC✓)' : tab}
             </button>
           ))}
         </div>

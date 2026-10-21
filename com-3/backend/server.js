@@ -92,6 +92,28 @@ const DocumentSchema = new mongoose.Schema({
 });
 const Document = mongoose.model('Document', DocumentSchema);
 
+// Student Author Identity Normalization Helpers
+function parseAuthorTokens(str) {
+  if (!str || typeof str !== 'string') return { id: '', tokens: [] };
+  const idMatch = str.match(/\b([a-zA-Z]{2,}\d{5,8}|\d{7,10}|seu\/[a-zA-Z0-9\/]+)\b/i);
+  const id = idMatch ? idMatch[1].toLowerCase() : '';
+  const clean = str.toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9]/g, ' ');
+  const tokens = clean.split(/\s+/).filter(w => w.length >= 3 && !w.match(/\d/));
+  return { id, tokens };
+}
+
+function isSameStudent(a, b) {
+  if (!a || !b) return false;
+  if (a.toLowerCase().trim() === b.toLowerCase().trim()) return true;
+  const pA = parseAuthorTokens(a);
+  const pB = parseAuthorTokens(b);
+  if (pA.id && pB.id) {
+    return pA.id === pB.id;
+  }
+  const shared = pA.tokens.filter(t => pB.tokens.includes(t));
+  return shared.length > 0;
+}
+
 // Permission Checker Helper
 function hasDocumentAccess(doc, username, studentId, role, email, userObj = null, strictUserOnly = false) {
   if (!doc) return false;
@@ -575,24 +597,16 @@ io.on('connection', (socket) => {
 
       if (author) {
         const authorTrimmed = author.trim();
-        const authorBase = authorTrimmed.includes('(') ? authorTrimmed.split('(')[0].trim().toLowerCase() : authorTrimmed.toLowerCase();
 
         doc.collaborators = (doc.collaborators || []).filter(c => {
           if (!c) return false;
-          const cTrimmed = c.trim();
-          const cBase = cTrimmed.includes('(') ? cTrimmed.split('(')[0].trim().toLowerCase() : cTrimmed.toLowerCase();
-          return cTrimmed === authorTrimmed || cBase !== authorBase;
+          return !isSameStudent(c, authorTrimmed);
         });
 
-        if (!doc.collaborators.includes(authorTrimmed)) {
-          doc.collaborators.push(authorTrimmed);
-        }
+        doc.collaborators.push(authorTrimmed);
 
-        if (doc.ownerName) {
-          const ownerBase = doc.ownerName.includes('(') ? doc.ownerName.split('(')[0].trim().toLowerCase() : doc.ownerName.trim().toLowerCase();
-          if (ownerBase === authorBase && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
-            doc.ownerName = authorTrimmed;
-          }
+        if (doc.ownerName && isSameStudent(doc.ownerName, authorTrimmed) && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
+          doc.ownerName = authorTrimmed;
         }
       }
 
@@ -1505,31 +1519,16 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
       rawAuthors.push(fallback);
     }
 
-    const parseAuthor = (str) => {
-      if (!str) return { base: '', id: '' };
-      const match = str.match(/^(.*?)\s*\((.*?)\)$/);
-      if (match) {
-        return { base: match[1].trim().toLowerCase(), id: match[2].trim().toLowerCase() };
-      }
-      return { base: str.trim().toLowerCase(), id: '' };
-    };
-
     const detailedAuthors = Array.from(new Set(rawAuthors.filter(a => a.includes('(') && a.includes(')'))));
 
     const canonicalMap = {};
     rawAuthors.forEach(raw => {
-      const parsed = parseAuthor(raw);
-      const match = detailedAuthors.find(det => {
-        const detParsed = parseAuthor(det);
-        if (parsed.id && detParsed.id === parsed.id) return true;
-        if (!parsed.id && parsed.base && detParsed.base === parsed.base) return true;
-        return false;
-      });
-
+      // Find matching detailed author with student ID
+      const match = detailedAuthors.find(det => isSameStudent(raw, det));
       if (match) {
         canonicalMap[raw] = match;
       } else {
-        const existing = Object.values(canonicalMap).find(c => c.toLowerCase() === raw.toLowerCase());
+        const existing = Object.values(canonicalMap).find(c => isSameStudent(raw, c));
         canonicalMap[raw] = existing || raw;
       }
     });
@@ -1598,36 +1597,42 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
         let bestScore = 0;
         let blockTimestamp = doc.updatedAt || doc.createdAt;
 
-        // Score candidate authors by word token overlap in addedText revisions
-        for (const a of authorList) {
-          const corpus = (authorAddedCorpus[a] || '').toLowerCase();
-          let matchCount = 0;
-          for (const w of segWords) {
-            if (corpus.includes(w)) matchCount++;
+        // If sole author, assign directly without ambiguity
+        if (authorList.length === 1) {
+          blockAuthor = authorList[0];
+        } else {
+          // Score candidate authors by word token overlap in addedText revisions
+          for (const a of authorList) {
+            const corpus = (authorAddedCorpus[a] || '').toLowerCase();
+            let matchCount = 0;
+            for (const w of segWords) {
+              if (corpus.includes(w)) matchCount++;
+            }
+            if (matchCount > bestScore) {
+              bestScore = matchCount;
+              blockAuthor = a;
+            }
           }
-          if (matchCount > bestScore) {
-            bestScore = matchCount;
-            blockAuthor = a;
-          }
-        }
 
-        // Substring / Sub-phrase match fallback
-        if (!blockAuthor || bestScore === 0) {
-          const matchingRev = revisions.find(r => !isForbidden(r.author) && r.addedText && (
-            plainText.toLowerCase().includes(r.addedText.toLowerCase().substring(0, 12)) ||
-            (r.addedText.length > 5 && plainText.toLowerCase().includes(r.addedText.toLowerCase().trim()))
-          ));
-          if (matchingRev) {
-            blockAuthor = canonicalMap[matchingRev.author] || matchingRev.author;
-            blockTimestamp = matchingRev.timestamp;
-          } else {
-            const validRevs = revisions.filter(r => !isForbidden(r.author));
-            if (validRevs.length > 0) {
-              const revForBlock = validRevs[currentSegmentIndex % validRevs.length];
-              blockAuthor = canonicalMap[revForBlock.author] || revForBlock.author;
-              blockTimestamp = revForBlock.timestamp;
+          // Substring / Sub-phrase match fallback
+          if (!blockAuthor || bestScore === 0) {
+            const matchingRev = revisions.find(r => !isForbidden(r.author) && r.addedText && (
+              plainText.toLowerCase().includes(r.addedText.toLowerCase().substring(0, 12)) ||
+              (r.addedText.length > 5 && plainText.toLowerCase().includes(r.addedText.toLowerCase().trim()))
+            ));
+            if (matchingRev) {
+              blockAuthor = canonicalMap[matchingRev.author] || matchingRev.author;
+              blockTimestamp = matchingRev.timestamp;
             } else {
-              blockAuthor = authorList[0] || 'Student Author';
+              const validRevs = revisions.filter(r => !isForbidden(r.author));
+              if (validRevs.length > 0) {
+                // Attribution fallback: attribute to latest revision author, never round-robin modulo
+                const latestRev = validRevs[validRevs.length - 1];
+                blockAuthor = canonicalMap[latestRev.author] || latestRev.author;
+                blockTimestamp = latestRev.timestamp;
+              } else {
+                blockAuthor = authorList[0] || 'Student Author';
+              }
             }
           }
         }
@@ -1657,13 +1662,15 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
     });
 
     // Build Transparent Author Summary (Live Document Contribution + Revision Telemetry)
+    let totalPct = 0;
     const authorSummary = authorList.map((author, index) => {
       const liveWords = liveAuthorWords[author] || 0;
       const stats = authorRevStats[author] || {};
       const grossWordsAdded = stats.grossWordsAdded || 0;
       const grossWordsDeleted = stats.grossWordsDeleted || 0;
       const revisionCount = stats.revisionCount || 0;
-      const percentage = actualDocWords > 0 ? Math.min(100, Math.round((liveWords / actualDocWords) * 100)) : 0;
+      const percentage = actualDocWords > 0 ? Math.round((liveWords / actualDocWords) * 100) : 0;
+      totalPct += percentage;
       const palette = authorColorMap[author] || PALETTES[index % PALETTES.length];
 
       return {
@@ -1677,6 +1684,15 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
         ...palette
       };
     });
+
+    // Ensure sum of percentages equals exactly 100% when document has words
+    if (actualDocWords > 0 && authorSummary.length > 0) {
+      const diff = 100 - totalPct;
+      if (diff !== 0) {
+        const topAuthor = authorSummary.reduce((max, a) => a.liveWords > max.liveWords ? a : max, authorSummary[0]);
+        topAuthor.percentage = Math.max(0, topAuthor.percentage + diff);
+      }
+    }
 
     // Sort: authors with live words first (descending), followed by authors with historical revisions
     authorSummary.sort((a, b) => (b.liveWords - a.liveWords) || (b.grossWordsAdded - a.grossWordsAdded));
@@ -2358,23 +2374,32 @@ app.post('/api/documents/import-external', async (req, res) => {
     const realCollabs = [formattedOwnerName];
     const initialAllowed = [cleanOwner, cleanStudentId].filter(Boolean);
 
+    // Helper to add external author uniquely without duplicating the same student
+    const addUniqueCollab = (rawName) => {
+      if (!rawName || typeof rawName !== 'string') return;
+      const clean = rawName.trim();
+      if (!clean) return;
+      if (isSameStudent(clean, formattedOwnerName)) {
+        if (!realCollabs.includes(formattedOwnerName)) realCollabs.push(formattedOwnerName);
+        return;
+      }
+      const existing = realCollabs.find(c => isSameStudent(clean, c));
+      if (!existing) {
+        realCollabs.push(clean);
+      }
+    };
+
     // Add Word metadata authors
     if (docxMetadata) {
-      if (docxMetadata.creator && !realCollabs.includes(docxMetadata.creator)) {
-        realCollabs.push(docxMetadata.creator);
-      }
-      if (docxMetadata.lastModifiedBy && !realCollabs.includes(docxMetadata.lastModifiedBy)) {
-        realCollabs.push(docxMetadata.lastModifiedBy);
-      }
+      if (docxMetadata.creator) addUniqueCollab(docxMetadata.creator);
+      if (docxMetadata.lastModifiedBy) addUniqueCollab(docxMetadata.lastModifiedBy);
     }
 
     // Add Google Drive revisions authors
     if (googleRevisions && googleRevisions.length > 0) {
       googleRevisions.forEach(r => {
         const name = r.lastModifyingUser?.displayName || r.lastModifyingUser?.emailAddress;
-        if (name && typeof name === 'string' && !realCollabs.includes(name)) {
-          realCollabs.push(name);
-        }
+        if (name) addUniqueCollab(name);
       });
     }
 
@@ -2382,7 +2407,7 @@ app.post('/api/documents/import-external', async (req, res) => {
       reqCollaborators.forEach(c => {
         if (c && typeof c === 'string') {
           const cleanC = c.trim();
-          if (!realCollabs.includes(cleanC)) realCollabs.push(cleanC);
+          addUniqueCollab(cleanC);
           if (!initialAllowed.includes(cleanC.toLowerCase())) initialAllowed.push(cleanC.toLowerCase());
         }
       });
@@ -2422,19 +2447,29 @@ app.post('/api/documents/import-external', async (req, res) => {
 
     // Check if there are authentic distinct external authors from Google Drive or Word XML
     const externalAuthors = [];
+    const addExternalAuthor = (rawName) => {
+      if (!rawName || typeof rawName !== 'string') return;
+      const clean = rawName.trim();
+      if (!clean) return;
+      if (isSameStudent(clean, formattedOwnerName)) {
+        if (!externalAuthors.includes(formattedOwnerName)) externalAuthors.push(formattedOwnerName);
+        return;
+      }
+      const existing = externalAuthors.find(a => isSameStudent(clean, a));
+      if (!existing) {
+        externalAuthors.push(clean);
+      }
+    };
+
     if (googleRevisions && googleRevisions.length > 0) {
       googleRevisions.forEach(r => {
         const name = r.lastModifyingUser?.displayName || r.lastModifyingUser?.emailAddress;
-        if (name && !externalAuthors.includes(name)) externalAuthors.push(name);
+        if (name) addExternalAuthor(name);
       });
     }
     if (docxMetadata) {
-      if (docxMetadata.creator && !externalAuthors.includes(docxMetadata.creator)) {
-        externalAuthors.push(docxMetadata.creator);
-      }
-      if (docxMetadata.lastModifiedBy && !externalAuthors.includes(docxMetadata.lastModifiedBy)) {
-        externalAuthors.push(docxMetadata.lastModifiedBy);
-      }
+      if (docxMetadata.creator) addExternalAuthor(docxMetadata.creator);
+      if (docxMetadata.lastModifiedBy) addExternalAuthor(docxMetadata.lastModifiedBy);
     }
 
     const hasDistinctExternalAuthors = externalAuthors.length > 1;
@@ -2613,6 +2648,9 @@ app.post('/api/documents/:id/sync-external', async (req, res) => {
       } else if (lastMod?.emailAddress) {
         syncerAuthor = lastMod.emailAddress;
       }
+    }
+    if (doc.ownerName && isSameStudent(syncerAuthor, doc.ownerName)) {
+      syncerAuthor = doc.ownerName;
     }
 
     // ML Intent Classification

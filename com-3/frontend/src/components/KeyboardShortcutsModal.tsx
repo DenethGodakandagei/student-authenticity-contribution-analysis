@@ -29,6 +29,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
       { key: "Ctrl + Y / Ctrl + Shift + Z", desc: "Redo last edit" },
       { key: "Ctrl + A", desc: "Select entire document text" },
       { key: "Ctrl + F", desc: "Find and replace text" },
+      { key: "F7", desc: "Spelling & Grammar check and correction suggestions" },
     ]},
     { section: "Formatting", items: [
       { key: "Ctrl + B", desc: "Toggle bold" },

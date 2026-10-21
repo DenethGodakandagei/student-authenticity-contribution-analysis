@@ -1032,11 +1032,45 @@ export default function Integrations() {
                                       color: '#0f172a',
                                       whiteSpace: 'nowrap',
                                       overflow: 'hidden',
-                                      textOverflow: 'ellipsis'
+                                      textOverflow: 'ellipsis',
+                                      flex: 1
                                     }}
                                   >
                                     {doc.name || 'Untitled document'}
                                   </span>
+
+                                  <a
+                                    href={doc.webViewLink || docUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Open original document in Google Docs (new tab)"
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#64748b',
+                                      padding: '0.2rem',
+                                      borderRadius: '4px',
+                                      textDecoration: 'none',
+                                      flexShrink: 0,
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.color = '#1a73e8';
+                                      e.currentTarget.style.background = '#e8f0fe';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.color = '#64748b';
+                                      e.currentTarget.style.background = 'transparent';
+                                    }}
+                                  >
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                      <polyline points="15 3 21 3 21 9" />
+                                      <line x1="10" y1="14" x2="21" y2="3" />
+                                    </svg>
+                                  </a>
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b' }}>
@@ -1392,21 +1426,58 @@ export default function Integrations() {
                         </span>
                       </div>
 
-                      {/* Title */}
-                      <div
-                        title={doc.title || doc._id}
-                        style={{
-                          fontWeight: 700,
-                          fontSize: '0.85rem',
-                          color: '#0f172a',
-                          lineHeight: 1.25,
-                          marginBottom: '0.2rem',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {doc.title || doc._id}
+                      {/* Title & External Link */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.2rem' }}>
+                        <div
+                          title={doc.title || doc._id}
+                          style={{
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            color: '#0f172a',
+                            lineHeight: 1.25,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            flex: 1
+                          }}
+                        >
+                          {doc.title || doc._id}
+                        </div>
+
+                        {((doc.docUrl && String(doc.docUrl).startsWith('http')) || (isGoogle && doc.externalId?.includes('docs.google.com'))) && (
+                          <a
+                            href={doc.docUrl || (doc.externalId?.includes('docs.google.com') ? doc.externalId : `https://docs.google.com/document/d/${doc.externalId}/edit`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open original document in external provider (new tab)"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#64748b',
+                              padding: '0.15rem',
+                              borderRadius: '4px',
+                              textDecoration: 'none',
+                              flexShrink: 0,
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = '#1a73e8';
+                              e.currentTarget.style.background = '#e8f0fe';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = '#64748b';
+                              e.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                              <polyline points="15 3 21 3 21 9" />
+                              <line x1="10" y1="14" x2="21" y2="3" />
+                            </svg>
+                          </a>
+                        )}
                       </div>
 
                       {/* Collaborators */}
