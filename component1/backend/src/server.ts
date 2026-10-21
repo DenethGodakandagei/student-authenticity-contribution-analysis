@@ -23,7 +23,8 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors({
   origin: '*', // Allows Next.js frontend to communicate seamlessly
-  credentials: true
+  credentials: true,
+  exposedHeaders: ['Content-Disposition']
 }));
 app.use(express.json());
 

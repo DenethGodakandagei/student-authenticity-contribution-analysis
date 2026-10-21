@@ -1,0 +1,96 @@
+{
+  "model_name": "XGBoost (Tuned)",
+  "features": [
+    "duration_minutes",
+    "keystrokes",
+    "lines_added",
+    "lines_removed",
+    "net_lines",
+    "code_churn_ratio",
+    "paste_count",
+    "characters_pasted",
+    "typing_speed_cpm",
+    "keystroke_efficiency_keff",
+    "paste_ratio",
+    "is_offline",
+    "files_edited_count"
+  ],
+  "benchmark_summary": {
+    "XGBoost (Tuned)": {
+      "roc_auc": [
+        1.0,
+        0.0
+      ],
+      "balanced_accuracy": [
+        0.9792,
+        0.0295
+      ],
+      "accuracy": [
+        0.9792,
+        0.0295
+      ],
+      "f1_score": [
+        0.9804,
+        0.0277
+      ]
+    },
+    "Random Forest (Tuned)": {
+      "roc_auc": [
+        1.0,
+        0.0
+      ],
+      "balanced_accuracy": [
+        1.0,
+        0.0
+      ],
+      "accuracy": [
+        1.0,
+        0.0
+      ],
+      "f1_score": [
+        1.0,
+        0.0
+      ]
+    },
+    "Gradient Boosting": {
+      "roc_auc": [
+        1.0,
+        0.0
+      ],
+      "balanced_accuracy": [
+        1.0,
+        0.0
+      ],
+      "accuracy": [
+        1.0,
+        0.0
+      ],
+      "f1_score": [
+        1.0,
+        0.0
+      ]
+    },
+    "Logistic Regression Baseline": {
+      "roc_auc": [
+        1.0,
+        0.0
+      ],
+      "balanced_accuracy": [
+        1.0,
+        0.0
+      ],
+      "accuracy": [
+        1.0,
+        0.0
+      ],
+      "f1_score": [
+        1.0,
+        0.0
+      ]
+    }
+  },
+  "calibrated_thresholds": {
+    "low_risk_threshold": 30.0,
+    "high_risk_threshold": 70.0
+  }
+}

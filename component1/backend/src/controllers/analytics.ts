@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AnalyticsReport, Team, Assignment, User, GitActivity, VSCodeSession } from '../models';
+import { AnalyticsReport, Team, Assignment, User, GitActivity, VSCodeSession, TelemetryEvent } from '../models';
 import { calculateAssignmentAnalytics } from '../lib/scoring';
 import * as mockDb from '../models/mockStore';
 
@@ -309,18 +309,178 @@ export const triggerManualEvaluation = async (req: any, res: Response): Promise<
 
 export const exportTelemetryCsv = async (req: any, res: Response): Promise<void> => {
   try {
+    const datasetType = (req.query.type as string) || (req.query.datasetType as string) || 'ml';
+    const excludeMock = req.query.excludeMock !== 'false';
+    const filterStudentId = (req.query.studentId as string) || (req.query.filterStudent === 'true' && req.user?.id ? req.user.id : undefined);
+    const filterAssignmentId = req.query.assignmentId as string | undefined;
+
+    const mockEmails = ['alex.rivera@student.edu', 'chloe.chen@student.edu', 'marcus.vance@student.edu', 'emma.watson@student.edu'];
+
+    // =========================================================================
+    // CASE 1: RAW TELEMETRY EVENTS FROM LIVE MONGODB ATLAS DATABASE
+    // =========================================================================
+    if (datasetType === 'raw_events' || datasetType === 'events') {
+      let events: any[] = [];
+      if (mockDb.isDbConnected()) {
+        const query: any = {};
+        if (filterStudentId) {
+          query.student_id = filterStudentId;
+        }
+        events = await TelemetryEvent.find(query).sort({ timestamp: -1 }).lean();
+      }
+
+      // Pre-fetch user map if student_ids are 24-character ObjectIds
+      const userIds = Array.from(new Set(
+        events
+          .map(e => String(e.student_id || ''))
+          .filter(id => id && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id))
+      ));
+
+      let userMap: Record<string, { name: string; email: string }> = {};
+      if (userIds.length > 0) {
+        try {
+          const users = await User.find({ _id: { $in: userIds } }).select('name email').lean();
+          users.forEach((u: any) => {
+            userMap[String(u._id)] = { name: u.name, email: u.email };
+          });
+        } catch (_) {}
+      }
+
+      const headers = [
+        'event_uuid',
+        'session_id',
+        'student_id',
+        'participant_id',
+        'student_name',
+        'student_email',
+        'task_id',
+        'repo_id',
+        'branch',
+        'commit_sha',
+        'event_type',
+        'category',
+        'file_path',
+        'timestamp_epoch',
+        'timestamp_iso',
+        'char_count',
+        'line_count_delta',
+        'line_count',
+        'operating_mode',
+        'task_condition',
+        'condition_label',
+        'authenticity_label',
+        'sync_status',
+        'row_hash',
+        'previous_hash',
+        'synced_at'
+      ];
+
+      const csvLines = [headers.join(',')];
+
+      events.forEach((e: any) => {
+        let payload: any = {};
+        try {
+          payload = typeof e.payload_json === 'string' ? JSON.parse(e.payload_json || '{}') : (e.payload_json || {});
+        } catch (_) {
+          payload = {};
+        }
+
+        const uInfo = userMap[String(e.student_id)];
+        const studentName = uInfo?.name || (e.student_id === 'P01' || e.student_id === 'P20' ? `Participant ${e.student_id}` : e.student_id || 'Student');
+        const studentEmail = uInfo?.email || '';
+        const participantId = payload.participantId || (e.student_id && (e.student_id.startsWith('P') || e.student_id.length <= 4) ? e.student_id : '');
+        const taskCondition = payload.taskCondition || e.task_id || '';
+
+        let conditionLabel = payload.conditionLabel;
+        if (conditionLabel === undefined || conditionLabel === null) {
+          conditionLabel = taskCondition.includes('AI') ? 1 : 0;
+        }
+
+        // Authenticity label: 0 = manual genuine, 1 = AI-assisted / external paste
+        let authenticityLabel = conditionLabel;
+        if (e.event_type === 'PASTE_BURST' && (payload.charCount || 0) > 80) {
+          authenticityLabel = 1;
+        }
+
+        const charCount = payload.charCount !== undefined ? payload.charCount : '';
+        const lineCountDelta = payload.lineCountDelta !== undefined ? payload.lineCountDelta : '';
+        const lineCount = payload.lineCount !== undefined ? payload.lineCount : '';
+        const operatingMode = payload.operatingMode || 'normal';
+
+        const row = [
+          `"${(e.event_uuid || '').replace(/"/g, '""')}"`,
+          `"${(e.session_id || '').replace(/"/g, '""')}"`,
+          `"${(e.student_id || '').replace(/"/g, '""')}"`,
+          `"${(participantId || '').replace(/"/g, '""')}"`,
+          `"${studentName.replace(/"/g, '""')}"`,
+          `"${studentEmail.replace(/"/g, '""')}"`,
+          `"${(e.task_id || '').replace(/"/g, '""')}"`,
+          `"${(e.repo_id || '').replace(/"/g, '""')}"`,
+          `"${(e.branch || '').replace(/"/g, '""')}"`,
+          `"${(e.commit_sha || '').replace(/"/g, '""')}"`,
+          `"${(e.event_type || '').replace(/"/g, '""')}"`,
+          `"${(e.category || '').replace(/"/g, '""')}"`,
+          `"${(e.file_path || '').replace(/"/g, '""')}"`,
+          e.timestamp || '',
+          e.timestamp ? new Date(e.timestamp).toISOString() : (e.created_at || ''),
+          charCount,
+          lineCountDelta,
+          lineCount,
+          `"${operatingMode}"`,
+          `"${taskCondition}"`,
+          conditionLabel,
+          authenticityLabel,
+          e.sync_status !== undefined ? e.sync_status : 1,
+          `"${(e.row_hash || '').replace(/"/g, '""')}"`,
+          `"${(e.previous_hash || '').replace(/"/g, '""')}"`,
+          e.syncedAt ? new Date(e.syncedAt).toISOString() : ''
+        ];
+        csvLines.push(row.join(','));
+      });
+
+      const csvContent = csvLines.join('\n');
+      const filename = filterStudentId
+        ? `my_raw_telemetry_events_${filterStudentId}.csv`
+        : 'real_database_raw_telemetry_events.csv';
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.status(200).send(csvContent);
+      return;
+    }
+
+    // =========================================================================
+    // CASE 2: REAL MACHINE LEARNING TRAINING DATASET / SLIDING WINDOWS
+    // =========================================================================
     let sessions: any[] = [];
     if (!mockDb.isDbConnected()) {
       sessions = mockDb.mockVscodeSessions;
     } else {
-      sessions = await VSCodeSession.find({})
+      const query: any = {};
+      if (filterStudentId) {
+        query.student = filterStudentId;
+      }
+      if (filterAssignmentId) {
+        query.assignment = filterAssignmentId;
+      }
+
+      sessions = await VSCodeSession.find(query)
         .populate('student', 'name email')
         .populate('assignment', 'title')
         .populate('team', 'name')
-        .sort({ sessionStart: 1 });
+        .sort({ sessionStart: -1 }) // NEWEST REAL DATABASE ENTRIES FIRST
+        .lean();
+
+      // Exclude seed mock accounts if requested (default true)
+      if (excludeMock) {
+        sessions = sessions.filter(s => {
+          const email = s.student?.email || '';
+          return !mockEmails.includes(email);
+        });
+      }
     }
 
-    const mode = (req.query.mode as string) || 'sliding';
+    const mode = (req.query.mode as string) || (datasetType === 'sliding' ? 'sliding' : 'session');
     const windowMinutes = Math.max(1, parseInt(req.query.window as string, 10) || 5);
     const slideMinutes = Math.max(1, parseInt(req.query.slide as string, 10) || 1);
 
@@ -330,7 +490,7 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
           'window_id', 'session_id', 'student_id', 'student_name', 'student_email', 'team_name',
           'assignment_title', 'window_start_iso', 'window_end_iso', 'window_duration_minutes',
           'slide_stride_minutes', 'keystrokes', 'lines_added', 'lines_removed', 'net_lines',
-          'paste_count', 'characters_pasted', 'manual_chars', 'paste_chars', 'ai_chars',
+          'code_churn_ratio', 'paste_count', 'characters_pasted', 'manual_chars', 'paste_chars', 'ai_chars',
           'manual_percent', 'paste_percent', 'ai_percent', 'typing_speed_cpm',
           'keystroke_efficiency_keff', 'paste_ratio', 'is_offline', 'files_edited_count',
           'primary_file', 'coding_style', 'authenticity_label'
@@ -347,6 +507,15 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
 
     const csvLines = [headers.join(',')];
 
+    const formatCsv = (val: any): string => {
+      if (val === null || val === undefined) return '';
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
     sessions.forEach(s => {
       const studentName = s.student?.name || 'Student';
       const studentEmail = s.student?.email || '';
@@ -361,6 +530,7 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
       const added = s.linesAdded || 0;
       const removed = s.linesRemoved || 0;
       const netLines = added - removed;
+      const codeChurnRatio = (added + removed) > 0 ? (removed / (added + removed)).toFixed(4) : '0.0000';
       const pasteCount = s.pasteCount || 0;
       const charsPasted = s.charactersPasted || 0;
 
@@ -398,16 +568,16 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
       const label = (aiPct > 50 || pastePct > 40 || (charsPasted > 200 && keys < 30)) ? 1 : 0;
 
       if (!isSliding) {
-        // Output session row
+        // Output session row matching component1/ml_model/dataset.csv exactly (32 columns)
         const row = [
-          s._id,
-          studentId,
-          `"${studentName.replace(/"/g, '""')}"`,
-          studentEmail,
-          teamId,
-          `"${teamName.replace(/"/g, '""')}"`,
-          assignmentId,
-          `"${assignmentTitle.replace(/"/g, '""')}"`,
+          formatCsv(s._id),
+          formatCsv(studentId),
+          formatCsv(studentName),
+          formatCsv(studentEmail),
+          formatCsv(teamId),
+          formatCsv(teamName),
+          formatCsv(assignmentId),
+          formatCsv(assignmentTitle),
           s.sessionStart ? new Date(s.sessionStart).toISOString() : '',
           s.sessionEnd ? new Date(s.sessionEnd).toISOString() : '',
           durMin,
@@ -428,9 +598,9 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
           pasteRatio,
           s.isOffline ? 1 : 0,
           (s.filesEdited || []).length,
-          `"${filesList}"`,
-          `"${primaryFile}"`,
-          `"${style}"`,
+          formatCsv(filesList),
+          formatCsv(primaryFile),
+          formatCsv(style),
           label
         ];
         csvLines.push(row.join(','));
@@ -455,6 +625,7 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
           const wAdded = Math.round(added * fraction);
           const wRemoved = Math.round(removed * fraction);
           const wNet = wAdded - wRemoved;
+          const wChurnRatio = (wAdded + wRemoved) > 0 ? (wRemoved / (wAdded + wRemoved)).toFixed(4) : codeChurnRatio;
           const wPasteCount = Math.round(pasteCount * fraction);
           const wCharsPasted = Math.round(charsPasted * fraction);
           const wManual = Math.round(manualChars * fraction);
@@ -486,6 +657,7 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
             wAdded,
             wRemoved,
             wNet,
+            wChurnRatio,
             wPasteCount,
             wCharsPasted,
             wManual,
@@ -513,9 +685,14 @@ export const exportTelemetryCsv = async (req: any, res: Response): Promise<void>
     });
 
     const csvContent = csvLines.join('\n');
-    const filename = isSliding
-      ? `telemetry_dataset_w${windowMinutes}m_s${slideMinutes}m.csv`
-      : 'telemetry_dataset_session.csv';
+    let filename = isSliding
+      ? `real_database_ml_telemetry_dataset_w${windowMinutes}m_s${slideMinutes}m.csv`
+      : 'dataset.csv';
+
+    if (filterStudentId) {
+      filename = `my_workspace_telemetry_dataset_${isSliding ? 'sliding' : 'sessions'}.csv`;
+    }
+
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.status(200).send(csvContent);
