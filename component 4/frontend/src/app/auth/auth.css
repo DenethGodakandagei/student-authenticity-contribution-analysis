@@ -63,7 +63,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
   min-height: 100dvh;
-  padding-top: var(--nova-nav-h);
   color: var(--nova-ink);
   font-family:
     "Inter", var(--font-geist-sans, system-ui), system-ui, sans-serif;

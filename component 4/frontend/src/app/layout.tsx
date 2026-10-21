@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Teach Nova",
+  title: "Nova Student Agent",
   description: "Teach an AI student Nova and help her correct her misconceptions.",
 };
 
@@ -27,7 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <AuthNav />
-        {children}
+        <div className="flex-1 mt-[calc(var(--nova-nav-h)+50px)]">
+          {children}
+        </div>
       </body>
     </html>
   );

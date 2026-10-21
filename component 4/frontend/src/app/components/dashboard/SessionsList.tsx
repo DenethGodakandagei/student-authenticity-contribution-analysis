@@ -61,7 +61,7 @@ export default function SessionsList({ sessions, error }: SessionsListProps) {
         <Skeleton />
       ) : sessions.length === 0 ? (
         <p className="dash-empty">
-          No sessions yet — start teaching Nova above and your sessions will appear
+          No sessions yet - start teaching Nova above and your sessions will appear
           here.
         </p>
       ) : (

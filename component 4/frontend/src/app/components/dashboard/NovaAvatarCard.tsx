@@ -26,11 +26,10 @@ export default function NovaAvatarCard({
         {/* Left Side: Information & Start Actions */}
         <div className="nova-avatar-card__content">
           <div className="nova-avatar-card__badge">
-            <span className="nova-avatar-card__badge-dot" />
-            AI Student Model
+            LEARNING BY TEACHING
           </div>
           <h2 className="nova-avatar-card__title">
-            Meet Nova, your AI student
+            Homework where learning is the point.
           </h2>
           <p className="nova-avatar-card__desc">
             Nova learns directly through your explanations. Notice how her misconceptions clear up as you guide her through each topic.

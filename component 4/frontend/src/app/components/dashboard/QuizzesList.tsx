@@ -75,7 +75,7 @@ export default function QuizzesList() {
         <Skeleton />
       ) : quizzes.length === 0 ? (
         <p className="dash-empty">
-          No quizzes yet — open a ready PDF material above and choose Start quiz.
+          No quizzes yet - open a ready PDF material above and choose Start quiz.
         </p>
       ) : (
         <ul className="dash-sessions__list">

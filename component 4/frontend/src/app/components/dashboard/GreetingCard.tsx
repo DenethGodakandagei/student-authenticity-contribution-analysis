@@ -3,11 +3,13 @@ export default function GreetingCard({ userName }: { userName: string }) {
   return (
     <section className="dash-card">
       <h1 className="dash-greeting__title">
-        Welcome back{userName ? `, ${userName}` : ''}
+        Welcome {userName ? `, ${userName}` : ''}
       </h1>
       <p className="dash-greeting__text">
-        You teach Nova in your own words — the gaps she reveals are the gaps in your
-        own understanding.
+        Students teach Nova, an AI student with wrong 
+        ideas about your course material. He only learns what 
+        they explain. When he sits his exam, everyone sees which 
+        ideas got through and which didn't.
       </p>
     </section>
   );
