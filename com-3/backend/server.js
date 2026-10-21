@@ -22,6 +22,14 @@ const io = new Server(server, {
 
 const dmp = new DiffMatchPatch();
 
+// Global Node Process Resilience Handlers
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]:', reason);
+});
+
 // Password Hashing Helper
 function hashPassword(password) {
   const salt = 'doc_evo_salt_2026';
@@ -37,7 +45,7 @@ const UserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['student', 'group_leader', 'lecturer', 'admin'], default: 'student' },
   createdAt: { type: Date, default: Date.now }
-});
+}, { versionKey: false });
 const User = mongoose.model('User', UserSchema);
 
 // MongoDB Setup & Admin Seeding
@@ -89,8 +97,30 @@ const DocumentSchema = new mongoose.Schema({
   vivaRequired: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { versionKey: false });
 const Document = mongoose.model('Document', DocumentSchema);
+
+// Student Author Identity Normalization Helpers
+function parseAuthorTokens(str) {
+  if (!str || typeof str !== 'string') return { id: '', tokens: [] };
+  const idMatch = str.match(/\b([a-zA-Z]{2,}\d{5,8}|\d{7,10}|seu\/[a-zA-Z0-9\/]+)\b/i);
+  const id = idMatch ? idMatch[1].toLowerCase() : '';
+  const clean = str.toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9]/g, ' ');
+  const tokens = clean.split(/\s+/).filter(w => w.length >= 3 && !w.match(/\d/));
+  return { id, tokens };
+}
+
+function isSameStudent(a, b) {
+  if (!a || !b) return false;
+  if (a.toLowerCase().trim() === b.toLowerCase().trim()) return true;
+  const pA = parseAuthorTokens(a);
+  const pB = parseAuthorTokens(b);
+  if (pA.id && pB.id) {
+    return pA.id === pB.id;
+  }
+  const shared = pA.tokens.filter(t => pB.tokens.includes(t));
+  return shared.length > 0;
+}
 
 // Permission Checker Helper
 function hasDocumentAccess(doc, username, studentId, role, email, userObj = null, strictUserOnly = false) {
@@ -228,7 +258,7 @@ const RevisionSchema = new mongoose.Schema({
   features: { type: mongoose.Schema.Types.Mixed, default: {} },
   isBulkInsertion: { type: Boolean, default: false },
   anomalyFlag: { type: String, default: null } // e.g. 'High-Volume Paste Event Detected'
-});
+}, { versionKey: false });
 const Revision = mongoose.model('Revision', RevisionSchema);
 
 // Anonymization Helper (Privacy-Preserving Author Telemetry)
@@ -428,187 +458,231 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send-changes', async (payload) => {
-    if (!payload || typeof payload !== 'object') return;
-    const { documentId, content, author, studentId, username, email, role } = payload;
-    if (!documentId) return;
+    try {
+      if (!payload || typeof payload !== 'object') return;
+      const { documentId, content, author, studentId, username, email, role } = payload;
+      if (!documentId) return;
 
-    const doc = await Document.findOne({ _id: documentId });
-    if (!doc) return;
+      const doc = await Document.findOne({ _id: documentId });
+      if (!doc) return;
 
-    const rooms = Array.from(socket.rooms || []);
-    const alreadyAuthorized = rooms.includes(documentId) || (socket.data?.allowedDocs && socket.data.allowedDocs.has(documentId));
+      const rooms = Array.from(socket.rooms || []);
+      const alreadyAuthorized = rooms.includes(documentId) || (socket.data?.allowedDocs && socket.data.allowedDocs.has(documentId));
 
-    if (!alreadyAuthorized) {
-      let userObj = socket.data?.user?.userObj || null;
-      if (!userObj) {
-        try {
-          const queryConds = [];
-          const sId = studentId || socket.data?.user?.studentId;
-          const uName = username || socket.data?.user?.username;
-          const uEmail = email || socket.data?.user?.email;
-          if (sId) {
-            queryConds.push({ studentId: new RegExp('^' + sId.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-            queryConds.push({ username: sId.toLowerCase().trim() });
-          }
-          if (uName) {
-            queryConds.push({ username: new RegExp('^' + uName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-          }
-          if (uEmail) {
-            queryConds.push({ email: new RegExp('^' + uEmail.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-          }
-          if (author && typeof author === 'string') {
-            const m = author.match(/^(.+?)\s*\((.+?)\)$/);
-            if (m) {
-              queryConds.push({ name: new RegExp('^' + m[1].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-              queryConds.push({ studentId: new RegExp('^' + m[2].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+      if (!alreadyAuthorized) {
+        let userObj = socket.data?.user?.userObj || null;
+        if (!userObj) {
+          try {
+            const queryConds = [];
+            const sId = studentId || socket.data?.user?.studentId;
+            const uName = username || socket.data?.user?.username;
+            const uEmail = email || socket.data?.user?.email;
+            if (sId) {
+              queryConds.push({ studentId: new RegExp('^' + sId.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+              queryConds.push({ username: sId.toLowerCase().trim() });
             }
-          }
-          if (queryConds.length > 0) {
-            userObj = await User.findOne({ $or: queryConds }).lean();
-          }
-        } catch (e) {}
-      }
-
-      const isPermitted = hasDocumentAccess(doc, username || socket.data?.user?.username || author, studentId || socket.data?.user?.studentId, role || socket.data?.user?.role || 'student', email || socket.data?.user?.email, userObj);
-      if (isPermitted) {
-        socket.data.allowedDocs = socket.data.allowedDocs || new Set();
-        socket.data.allowedDocs.add(documentId);
-        socket.join(documentId);
-      } else {
-        console.warn(`[send-changes] Unauthorized change attempt dropped for doc: ${documentId}`);
-        return;
-      }
-    } else if (!rooms.includes(documentId)) {
-      socket.join(documentId);
-    }
-
-    if (doc) {
-      // Broadcast changes to peers only after verification
-      socket.broadcast.to(documentId).emit('receive-changes', content);
-
-      const oldText = stripHtml(doc.content);
-      const newText = stripHtml(content);
-
-      const diffs = dmp.diff_main(oldText, newText);
-      dmp.diff_cleanupSemantic(diffs);
-
-      let added = "";
-      let deleted = "";
-      let wordsAdded = 0;
-      let wordsDeleted = 0;
-
-      diffs.forEach(([op, text]) => {
-        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-        if (op === 1) { // Insert
-          added += text + " ";
-          wordsAdded += words;
-        } else if (op === -1) { // Delete
-          deleted += text + " ";
-          wordsDeleted += words;
+            if (uName) {
+              queryConds.push({ username: new RegExp('^' + uName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+            }
+            if (uEmail) {
+              queryConds.push({ email: new RegExp('^' + uEmail.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+            }
+            if (author && typeof author === 'string') {
+              const m = author.match(/^(.+?)\s*\((.+?)\)$/);
+              if (m) {
+                queryConds.push({ name: new RegExp('^' + m[1].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+                queryConds.push({ studentId: new RegExp('^' + m[2].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+              }
+            }
+            if (queryConds.length > 0) {
+              userObj = await User.findOne({ $or: queryConds }).lean();
+            }
+          } catch (e) {}
         }
-      });
 
-      if (wordsAdded > 0 || wordsDeleted > 0) {
-        // Strict Security Guard 3: Bulk Paste / Insertion Anomaly Detection
-        const now = new Date();
-        const timeSinceLastEditSec = doc.updatedAt ? Math.max(1, (now.getTime() - new Date(doc.updatedAt).getTime()) / 1000) : 5;
-        const isBulk = wordsAdded >= 80 && (wordsAdded / timeSinceLastEditSec) > 15;
-        const anomaly = isBulk ? 'High-Volume Paste Event Detected' : null;
-
-        // Check if there is a consecutive micro-edit revision by the same author within 20s
-        const recentRev = await Revision.findOne({
-          documentId,
-          author: author || "Anonymous"
-        }).sort({ timestamp: -1 });
-
-        const isConsecutiveMicro = recentRev &&
-          (now.getTime() - new Date(recentRev.timestamp).getTime() < 20000) &&
-          !isBulk;
-
-        if (isConsecutiveMicro) {
-          // Consolidate into the active typing revision session
-          recentRev.afterText = newText;
-          if (added.trim()) {
-            recentRev.addedText = (recentRev.addedText ? (recentRev.addedText + " " + added.trim()) : added.trim()).trim();
-          }
-          if (deleted.trim()) {
-            recentRev.deletedText = (recentRev.deletedText ? (recentRev.deletedText + " " + deleted.trim()) : deleted.trim()).trim();
-          }
-          recentRev.wordCountAdded += wordsAdded;
-          recentRev.wordCountDeleted += wordsDeleted;
-          recentRev.timestamp = now;
-          await recentRev.save();
+        const isPermitted = hasDocumentAccess(doc, username || socket.data?.user?.username || author, studentId || socket.data?.user?.studentId, role || socket.data?.user?.role || 'student', email || socket.data?.user?.email, userObj);
+        if (isPermitted) {
+          socket.data.allowedDocs = socket.data.allowedDocs || new Set();
+          socket.data.allowedDocs.add(documentId);
+          socket.join(documentId);
         } else {
-          // Run ML Classification on Before/After Pair
-          const mlRes = await classifyRevisionWithML(oldText, newText, "General");
-
-          const explanationText = isBulk
-            ? `[Heuristic Flag] High-volume bulk insertion: +${wordsAdded} words in ${Math.round(timeSinceLastEditSec)}s. Flagged for reviewer inspection; does not constitute automated proof of misconduct.`
-            : (mlRes.explanation || '');
-
-          await Revision.create({
-            documentId,
-            author: author || "Anonymous",
-            anonymizedAuthorId: generateAnonymizedAuthorId(author),
-            timestamp: new Date(),
-            section: "General",
-            beforeText: oldText,
-            afterText: newText,
-            addedText: added.trim(),
-            deletedText: deleted.trim(),
-            wordCountAdded: wordsAdded,
-            wordCountDeleted: wordsDeleted,
-            sourcePlatform: doc.source || 'in_built',
-            syncStatus: 'synced',
-            predictedIntent: isBulk ? 'Content Addition' : (mlRes.predicted_intent || 'Unclassified'),
-            predictedSignificance: isBulk ? 'Major' : (mlRes.predicted_significance || 'Unclassified'),
-            semanticDistance: mlRes.semantic_distance || 0.0,
-            confidence: mlRes.confidence || 0.0,
-            modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
-            explanation: explanationText,
-            features: mlRes.features || {},
-            isBulkInsertion: isBulk,
-            anomalyFlag: anomaly
-          });
+          console.warn(`[send-changes] Unauthorized change attempt dropped for doc: ${documentId}`);
+          return;
         }
+      } else if (!rooms.includes(documentId)) {
+        socket.join(documentId);
       }
 
-      if (author) {
-        const authorTrimmed = author.trim();
-        const authorBase = authorTrimmed.includes('(') ? authorTrimmed.split('(')[0].trim().toLowerCase() : authorTrimmed.toLowerCase();
+      if (doc) {
+        // Broadcast changes to peers only after verification
+        socket.broadcast.to(documentId).emit('receive-changes', content);
 
-        doc.collaborators = (doc.collaborators || []).filter(c => {
-          if (!c) return false;
-          const cTrimmed = c.trim();
-          const cBase = cTrimmed.includes('(') ? cTrimmed.split('(')[0].trim().toLowerCase() : cTrimmed.toLowerCase();
-          return cTrimmed === authorTrimmed || cBase !== authorBase;
+        const oldText = stripHtml(doc.content || '');
+        const newText = stripHtml(content || '');
+
+        const diffs = dmp.diff_main(oldText, newText);
+        dmp.diff_cleanupSemantic(diffs);
+
+        let added = "";
+        let deleted = "";
+        let wordsAdded = 0;
+        let wordsDeleted = 0;
+
+        diffs.forEach(([op, text]) => {
+          const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+          if (op === 1) { // Insert
+            added += text + " ";
+            wordsAdded += words;
+          } else if (op === -1) { // Delete
+            deleted += text + " ";
+            wordsDeleted += words;
+          }
         });
 
-        if (!doc.collaborators.includes(authorTrimmed)) {
-          doc.collaborators.push(authorTrimmed);
-        }
+        if (wordsAdded > 0 || wordsDeleted > 0) {
+          // Strict Security Guard 3: Bulk Paste / Insertion Anomaly Detection
+          const now = new Date();
+          const timeSinceLastEditSec = doc.updatedAt ? Math.max(1, (now.getTime() - new Date(doc.updatedAt).getTime()) / 1000) : 5;
+          const isBulk = wordsAdded >= 80 && (wordsAdded / timeSinceLastEditSec) > 15;
+          const anomaly = isBulk ? 'High-Volume Paste Event Detected' : null;
 
-        if (doc.ownerName) {
-          const ownerBase = doc.ownerName.includes('(') ? doc.ownerName.split('(')[0].trim().toLowerCase() : doc.ownerName.trim().toLowerCase();
-          if (ownerBase === authorBase && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
-            doc.ownerName = authorTrimmed;
+          // Check if there is a consecutive micro-edit revision by the same author within 20s
+          const recentRev = await Revision.findOne({
+            documentId,
+            author: author || "Anonymous"
+          }).sort({ timestamp: -1 });
+
+          const isConsecutiveMicro = recentRev &&
+            (now.getTime() - new Date(recentRev.timestamp).getTime() < 20000) &&
+            !isBulk;
+
+          if (isConsecutiveMicro) {
+            // Consolidate into the active typing revision session
+            const updAdded = (recentRev.addedText ? (recentRev.addedText + " " + added.trim()) : added.trim()).trim();
+            const updDeleted = (recentRev.deletedText ? (recentRev.deletedText + " " + deleted.trim()) : deleted.trim()).trim();
+            await Revision.updateOne(
+              { _id: recentRev._id },
+              {
+                $set: {
+                  afterText: newText,
+                  addedText: updAdded,
+                  deletedText: updDeleted,
+                  wordCountAdded: (recentRev.wordCountAdded || 0) + wordsAdded,
+                  wordCountDeleted: (recentRev.wordCountDeleted || 0) + wordsDeleted,
+                  timestamp: now
+                }
+              }
+            );
+          } else {
+            // Run ML Classification on Before/After Pair
+            let mlRes = { predicted_intent: 'Unclassified', predicted_significance: 'Unclassified', semantic_distance: 0.0, confidence: 0.0, model_version: 'v1.0-rules-ml-ensemble', explanation: '', features: {} };
+            try {
+              mlRes = await classifyRevisionWithML(oldText, newText, "General");
+            } catch (mlErr) {
+              console.warn('[classifyRevisionWithML fallback]:', mlErr.message);
+            }
+
+            const explanationText = isBulk
+              ? `[Heuristic Flag] High-volume bulk insertion: +${wordsAdded} words in ${Math.round(timeSinceLastEditSec)}s. Flagged for reviewer inspection; does not constitute automated proof of misconduct.`
+              : (mlRes.explanation || '');
+
+            await Revision.create({
+              documentId,
+              author: author || "Anonymous",
+              anonymizedAuthorId: generateAnonymizedAuthorId(author),
+              timestamp: new Date(),
+              section: "General",
+              beforeText: oldText,
+              afterText: newText,
+              addedText: added.trim(),
+              deletedText: deleted.trim(),
+              wordCountAdded: wordsAdded,
+              wordCountDeleted: wordsDeleted,
+              sourcePlatform: doc.source || 'in_built',
+              syncStatus: 'synced',
+              predictedIntent: isBulk ? 'Content Addition' : (mlRes.predicted_intent || 'Unclassified'),
+              predictedSignificance: isBulk ? 'Major' : (mlRes.predicted_significance || 'Unclassified'),
+              semanticDistance: mlRes.semantic_distance || 0.0,
+              confidence: mlRes.confidence || 0.0,
+              modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
+              explanation: explanationText,
+              features: mlRes.features || {},
+              isBulkInsertion: isBulk,
+              anomalyFlag: anomaly
+            });
           }
         }
-      }
 
-      doc.content = content;
-      doc.updatedAt = Date.now();
-      await doc.save();
+        const updateData = {
+          content: content,
+          updatedAt: Date.now()
+        };
 
-      if (wordsAdded > 0 || wordsDeleted > 0) {
-        io.to(documentId).emit('markup-updated');
+        if (author) {
+          const authorTrimmed = author.trim();
+
+          const collabs = (doc.collaborators || []).filter(c => {
+            if (!c) return false;
+            return !isSameStudent(c, authorTrimmed);
+          });
+
+          collabs.push(authorTrimmed);
+          updateData.collaborators = collabs;
+
+          if (doc.ownerName && isSameStudent(doc.ownerName, authorTrimmed) && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
+            updateData.ownerName = authorTrimmed;
+          }
+        }
+
+        await Document.updateOne({ _id: documentId }, { $set: updateData });
+
+        if (wordsAdded > 0 || wordsDeleted > 0) {
+          io.to(documentId).emit('markup-updated');
+        }
       }
+    } catch (socketErr) {
+      console.error('[send-changes error]:', socketErr);
     }
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
+});
+
+// REST Fallback Document Auto-Save Endpoint
+app.post('/api/documents/:id/save', async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const { content, author } = req.body;
+    if (!documentId) return res.status(400).json({ error: 'documentId is required' });
+
+    const doc = await Document.findOne({ _id: documentId });
+    if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+    const updateData = {
+      content: content || '',
+      updatedAt: Date.now()
+    };
+
+    if (author) {
+      const authorTrimmed = author.trim();
+      const collabs = (doc.collaborators || []).filter(c => !isSameStudent(c, authorTrimmed));
+      collabs.push(authorTrimmed);
+      updateData.collaborators = collabs;
+      if (doc.ownerName && isSameStudent(doc.ownerName, authorTrimmed) && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
+        updateData.ownerName = authorTrimmed;
+      }
+    }
+
+    await Document.updateOne({ _id: documentId }, { $set: updateData });
+    io.to(documentId).emit('markup-updated');
+
+    return res.json({ success: true, message: 'Document saved successfully' });
+  } catch (err) {
+    console.error('Error saving document via REST:', err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // Authentication APIs
@@ -1505,31 +1579,16 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
       rawAuthors.push(fallback);
     }
 
-    const parseAuthor = (str) => {
-      if (!str) return { base: '', id: '' };
-      const match = str.match(/^(.*?)\s*\((.*?)\)$/);
-      if (match) {
-        return { base: match[1].trim().toLowerCase(), id: match[2].trim().toLowerCase() };
-      }
-      return { base: str.trim().toLowerCase(), id: '' };
-    };
-
     const detailedAuthors = Array.from(new Set(rawAuthors.filter(a => a.includes('(') && a.includes(')'))));
 
     const canonicalMap = {};
     rawAuthors.forEach(raw => {
-      const parsed = parseAuthor(raw);
-      const match = detailedAuthors.find(det => {
-        const detParsed = parseAuthor(det);
-        if (parsed.id && detParsed.id === parsed.id) return true;
-        if (!parsed.id && parsed.base && detParsed.base === parsed.base) return true;
-        return false;
-      });
-
+      // Find matching detailed author with student ID
+      const match = detailedAuthors.find(det => isSameStudent(raw, det));
       if (match) {
         canonicalMap[raw] = match;
       } else {
-        const existing = Object.values(canonicalMap).find(c => c.toLowerCase() === raw.toLowerCase());
+        const existing = Object.values(canonicalMap).find(c => isSameStudent(raw, c));
         canonicalMap[raw] = existing || raw;
       }
     });
@@ -1598,36 +1657,42 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
         let bestScore = 0;
         let blockTimestamp = doc.updatedAt || doc.createdAt;
 
-        // Score candidate authors by word token overlap in addedText revisions
-        for (const a of authorList) {
-          const corpus = (authorAddedCorpus[a] || '').toLowerCase();
-          let matchCount = 0;
-          for (const w of segWords) {
-            if (corpus.includes(w)) matchCount++;
+        // If sole author, assign directly without ambiguity
+        if (authorList.length === 1) {
+          blockAuthor = authorList[0];
+        } else {
+          // Score candidate authors by word token overlap in addedText revisions
+          for (const a of authorList) {
+            const corpus = (authorAddedCorpus[a] || '').toLowerCase();
+            let matchCount = 0;
+            for (const w of segWords) {
+              if (corpus.includes(w)) matchCount++;
+            }
+            if (matchCount > bestScore) {
+              bestScore = matchCount;
+              blockAuthor = a;
+            }
           }
-          if (matchCount > bestScore) {
-            bestScore = matchCount;
-            blockAuthor = a;
-          }
-        }
 
-        // Substring / Sub-phrase match fallback
-        if (!blockAuthor || bestScore === 0) {
-          const matchingRev = revisions.find(r => !isForbidden(r.author) && r.addedText && (
-            plainText.toLowerCase().includes(r.addedText.toLowerCase().substring(0, 12)) ||
-            (r.addedText.length > 5 && plainText.toLowerCase().includes(r.addedText.toLowerCase().trim()))
-          ));
-          if (matchingRev) {
-            blockAuthor = canonicalMap[matchingRev.author] || matchingRev.author;
-            blockTimestamp = matchingRev.timestamp;
-          } else {
-            const validRevs = revisions.filter(r => !isForbidden(r.author));
-            if (validRevs.length > 0) {
-              const revForBlock = validRevs[currentSegmentIndex % validRevs.length];
-              blockAuthor = canonicalMap[revForBlock.author] || revForBlock.author;
-              blockTimestamp = revForBlock.timestamp;
+          // Substring / Sub-phrase match fallback
+          if (!blockAuthor || bestScore === 0) {
+            const matchingRev = revisions.find(r => !isForbidden(r.author) && r.addedText && (
+              plainText.toLowerCase().includes(r.addedText.toLowerCase().substring(0, 12)) ||
+              (r.addedText.length > 5 && plainText.toLowerCase().includes(r.addedText.toLowerCase().trim()))
+            ));
+            if (matchingRev) {
+              blockAuthor = canonicalMap[matchingRev.author] || matchingRev.author;
+              blockTimestamp = matchingRev.timestamp;
             } else {
-              blockAuthor = authorList[0] || 'Student Author';
+              const validRevs = revisions.filter(r => !isForbidden(r.author));
+              if (validRevs.length > 0) {
+                // Attribution fallback: attribute to latest revision author, never round-robin modulo
+                const latestRev = validRevs[validRevs.length - 1];
+                blockAuthor = canonicalMap[latestRev.author] || latestRev.author;
+                blockTimestamp = latestRev.timestamp;
+              } else {
+                blockAuthor = authorList[0] || 'Student Author';
+              }
             }
           }
         }
@@ -1657,13 +1722,15 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
     });
 
     // Build Transparent Author Summary (Live Document Contribution + Revision Telemetry)
+    let totalPct = 0;
     const authorSummary = authorList.map((author, index) => {
       const liveWords = liveAuthorWords[author] || 0;
       const stats = authorRevStats[author] || {};
       const grossWordsAdded = stats.grossWordsAdded || 0;
       const grossWordsDeleted = stats.grossWordsDeleted || 0;
       const revisionCount = stats.revisionCount || 0;
-      const percentage = actualDocWords > 0 ? Math.min(100, Math.round((liveWords / actualDocWords) * 100)) : 0;
+      const percentage = actualDocWords > 0 ? Math.round((liveWords / actualDocWords) * 100) : 0;
+      totalPct += percentage;
       const palette = authorColorMap[author] || PALETTES[index % PALETTES.length];
 
       return {
@@ -1677,6 +1744,15 @@ app.get('/api/documents/:id/author-markup', async (req, res) => {
         ...palette
       };
     });
+
+    // Ensure sum of percentages equals exactly 100% when document has words
+    if (actualDocWords > 0 && authorSummary.length > 0) {
+      const diff = 100 - totalPct;
+      if (diff !== 0) {
+        const topAuthor = authorSummary.reduce((max, a) => a.liveWords > max.liveWords ? a : max, authorSummary[0]);
+        topAuthor.percentage = Math.max(0, topAuthor.percentage + diff);
+      }
+    }
 
     // Sort: authors with live words first (descending), followed by authors with historical revisions
     authorSummary.sort((a, b) => (b.liveWords - a.liveWords) || (b.grossWordsAdded - a.grossWordsAdded));
@@ -2358,23 +2434,32 @@ app.post('/api/documents/import-external', async (req, res) => {
     const realCollabs = [formattedOwnerName];
     const initialAllowed = [cleanOwner, cleanStudentId].filter(Boolean);
 
+    // Helper to add external author uniquely without duplicating the same student
+    const addUniqueCollab = (rawName) => {
+      if (!rawName || typeof rawName !== 'string') return;
+      const clean = rawName.trim();
+      if (!clean) return;
+      if (isSameStudent(clean, formattedOwnerName)) {
+        if (!realCollabs.includes(formattedOwnerName)) realCollabs.push(formattedOwnerName);
+        return;
+      }
+      const existing = realCollabs.find(c => isSameStudent(clean, c));
+      if (!existing) {
+        realCollabs.push(clean);
+      }
+    };
+
     // Add Word metadata authors
     if (docxMetadata) {
-      if (docxMetadata.creator && !realCollabs.includes(docxMetadata.creator)) {
-        realCollabs.push(docxMetadata.creator);
-      }
-      if (docxMetadata.lastModifiedBy && !realCollabs.includes(docxMetadata.lastModifiedBy)) {
-        realCollabs.push(docxMetadata.lastModifiedBy);
-      }
+      if (docxMetadata.creator) addUniqueCollab(docxMetadata.creator);
+      if (docxMetadata.lastModifiedBy) addUniqueCollab(docxMetadata.lastModifiedBy);
     }
 
     // Add Google Drive revisions authors
     if (googleRevisions && googleRevisions.length > 0) {
       googleRevisions.forEach(r => {
         const name = r.lastModifyingUser?.displayName || r.lastModifyingUser?.emailAddress;
-        if (name && typeof name === 'string' && !realCollabs.includes(name)) {
-          realCollabs.push(name);
-        }
+        if (name) addUniqueCollab(name);
       });
     }
 
@@ -2382,7 +2467,7 @@ app.post('/api/documents/import-external', async (req, res) => {
       reqCollaborators.forEach(c => {
         if (c && typeof c === 'string') {
           const cleanC = c.trim();
-          if (!realCollabs.includes(cleanC)) realCollabs.push(cleanC);
+          addUniqueCollab(cleanC);
           if (!initialAllowed.includes(cleanC.toLowerCase())) initialAllowed.push(cleanC.toLowerCase());
         }
       });
@@ -2422,19 +2507,29 @@ app.post('/api/documents/import-external', async (req, res) => {
 
     // Check if there are authentic distinct external authors from Google Drive or Word XML
     const externalAuthors = [];
+    const addExternalAuthor = (rawName) => {
+      if (!rawName || typeof rawName !== 'string') return;
+      const clean = rawName.trim();
+      if (!clean) return;
+      if (isSameStudent(clean, formattedOwnerName)) {
+        if (!externalAuthors.includes(formattedOwnerName)) externalAuthors.push(formattedOwnerName);
+        return;
+      }
+      const existing = externalAuthors.find(a => isSameStudent(clean, a));
+      if (!existing) {
+        externalAuthors.push(clean);
+      }
+    };
+
     if (googleRevisions && googleRevisions.length > 0) {
       googleRevisions.forEach(r => {
         const name = r.lastModifyingUser?.displayName || r.lastModifyingUser?.emailAddress;
-        if (name && !externalAuthors.includes(name)) externalAuthors.push(name);
+        if (name) addExternalAuthor(name);
       });
     }
     if (docxMetadata) {
-      if (docxMetadata.creator && !externalAuthors.includes(docxMetadata.creator)) {
-        externalAuthors.push(docxMetadata.creator);
-      }
-      if (docxMetadata.lastModifiedBy && !externalAuthors.includes(docxMetadata.lastModifiedBy)) {
-        externalAuthors.push(docxMetadata.lastModifiedBy);
-      }
+      if (docxMetadata.creator) addExternalAuthor(docxMetadata.creator);
+      if (docxMetadata.lastModifiedBy) addExternalAuthor(docxMetadata.lastModifiedBy);
     }
 
     const hasDistinctExternalAuthors = externalAuthors.length > 1;
@@ -2613,6 +2708,9 @@ app.post('/api/documents/:id/sync-external', async (req, res) => {
       } else if (lastMod?.emailAddress) {
         syncerAuthor = lastMod.emailAddress;
       }
+    }
+    if (doc.ownerName && isSameStudent(syncerAuthor, doc.ownerName)) {
+      syncerAuthor = doc.ownerName;
     }
 
     // ML Intent Classification

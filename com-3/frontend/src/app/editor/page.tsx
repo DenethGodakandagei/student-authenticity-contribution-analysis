@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -30,6 +30,7 @@ import KeyboardShortcutsModal from '../../components/KeyboardShortcutsModal';
 import FindReplaceBar from '../../components/FindReplaceBar';
 import ImportDocumentModal from '../../components/ImportDocumentModal';
 import VersionHistoryView from '../../components/VersionHistoryView';
+import SpellingCorrectionModal from '../../components/SpellingCorrectionModal';
 
 // Custom Tiptap Font Size Extension (MS Word Style)
 const FontSize = Extension.create({
@@ -77,6 +78,28 @@ const FontSize = Extension.create({
 });
 
 const getSocketUrl = () => getBackendUrl();
+
+// Student Author Identity Normalization Helpers
+function parseAuthorTokens(str: string) {
+  if (!str || typeof str !== 'string') return { id: '', tokens: [] as string[] };
+  const idMatch = str.match(/\b([a-zA-Z]{2,}\d{5,8}|\d{7,10}|seu\/[a-zA-Z0-9\/]+)\b/i);
+  const id = idMatch ? idMatch[1].toLowerCase() : '';
+  const clean = str.toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9]/g, ' ');
+  const tokens = clean.split(/\s+/).filter(w => w.length >= 3 && !w.match(/\d/));
+  return { id, tokens };
+}
+
+function isSameStudent(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  if (a.toLowerCase().trim() === b.toLowerCase().trim()) return true;
+  const pA = parseAuthorTokens(a);
+  const pB = parseAuthorTokens(b);
+  if (pA.id && pB.id) {
+    return pA.id === pB.id;
+  }
+  const shared = pA.tokens.filter(t => pB.tokens.includes(t));
+  return shared.length > 0;
+}
 
 // IndexedDB Helper Functions
 const openDB = (): Promise<IDBDatabase> => {
@@ -139,7 +162,7 @@ const clearPendingEdit = async (docId: string) => {
   }
 };
 
-const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink, onSubmitAssignment, submissionStatus }: any) => {
+const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink, onSubmitAssignment, submissionStatus, onOpenSpellCheck }: any) => {
   if (!editor) return null;
 
   const addImage = () => {
@@ -646,20 +669,21 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
           </select>
         </div>
 
-        {/* 13. Spellcheck Toggle Icon */}
+        {/* 13. Spellcheck & Correction Suggestions (ABC✓) */}
         <button
           type="button"
           onClick={(e) => {
             const el = document.querySelector('.ProseMirror');
             if (el) {
-              const current = el.getAttribute('spellcheck');
-              const next = current === 'false' ? 'true' : 'false';
-              el.setAttribute('spellcheck', next);
-              e.currentTarget.classList.toggle('active', next === 'true');
+              el.setAttribute('spellcheck', 'true');
+              e.currentTarget.classList.add('active');
+            }
+            if (onOpenSpellCheck) {
+              onOpenSpellCheck();
             }
           }}
           className="toolbar-btn toolbar-icon-btn active"
-          title="Spellcheck & Correction Suggestions (ABC✓)"
+          title="Spellcheck & Correction Suggestions (ABC✓) - F7"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 16l3-8 3 8" />
@@ -807,6 +831,7 @@ function EditorComponent() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [spellCheckModalOpen, setSpellCheckModalOpen] = useState(false);
   const [showRuler, setShowRuler] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showZoomDropdown, setShowZoomDropdown] = useState(false);
@@ -896,23 +921,104 @@ function EditorComponent() {
   const [isHighlightMode, setIsHighlightMode] = useState(false);
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
-  // Deduplicate authors in frontend (merge bare names like "Rashi" into "Rashi (IT23217522)")
+  const effectiveAuthor = user
+    ? `${user.name} (${user.studentId})`
+    : 'Anonymous Student';
+
+  // Live mutable refs so useEditor and socket listeners never have stale closures
+  const authRef = useRef({ isAuthenticated, user });
+  authRef.current = { isAuthenticated, user };
+
+  const socketRef = useRef<any>(null);
+  socketRef.current = socket;
+
+  const selectedDocIdRef = useRef(selectedDocId);
+  selectedDocIdRef.current = selectedDocId;
+
+  const effectiveAuthorRef = useRef(effectiveAuthor);
+  effectiveAuthorRef.current = effectiveAuthor;
+
+  const accessDeniedRef = useRef(accessDenied);
+  accessDeniedRef.current = accessDenied;
+
+  const isOfflineRef = useRef(isOffline);
+  isOfflineRef.current = isOffline;
+
+  const offlineRevisionsRef = useRef(offlineRevisions);
+  offlineRevisionsRef.current = offlineRevisions;
+
+  const loadedDocIdRef = useRef<string | null>(null);
+  const prevSelectedDocIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (prevSelectedDocIdRef.current !== selectedDocId) {
+      prevSelectedDocIdRef.current = selectedDocId;
+      loadedDocIdRef.current = null;
+    }
+  }, [selectedDocId]);
+
+  // Group and merge authors representing the same student into a single canonical entry
   const displayAuthors = React.useMemo(() => {
     if (!markupData?.authors || !Array.isArray(markupData.authors)) return [];
-    const detailed = markupData.authors.filter((a: any) => a.author && a.author.includes('(') && a.author.includes(')'));
-    return markupData.authors.filter((a: any) => {
-      if (!a.author) return false;
-      if ((a.totalWordsAdded === 0 || a.percentage === 0) && !a.author.includes('(')) {
-        const plainLower = a.author.trim().toLowerCase();
-        const hasBetter = detailed.some((d: any) => {
-          const dBase = d.author.split('(')[0].trim().toLowerCase();
-          return dBase === plainLower;
-        });
-        if (hasBetter) return false;
+
+    // Group author items that represent the same student
+    const groups: Array<any[]> = [];
+    for (const authorItem of markupData.authors) {
+      if (!authorItem || !authorItem.author) continue;
+      let placed = false;
+      for (const group of groups) {
+        if (isSameStudent(group[0].author, authorItem.author)) {
+          group.push(authorItem);
+          placed = true;
+          break;
+        }
       }
-      return true;
+      if (!placed) {
+        groups.push([authorItem]);
+      }
+    }
+
+    // Merge each group into one unified author entry
+    const mergedList = groups.map(group => {
+      // Pick best canonical display name: prioritize one with student ID or matching user's effectiveAuthor
+      let canonical = group[0];
+      for (const item of group) {
+        if (effectiveAuthor && isSameStudent(item.author, effectiveAuthor) && item.author.includes('(')) {
+          canonical = item;
+          break;
+        }
+        if (item.author.includes('(') && item.author.includes(')')) {
+          canonical = item;
+        }
+      }
+
+      // Sum stats across all variants of this student
+      let totalLiveWords = 0;
+      let totalGrossAdded = 0;
+      let totalGrossDeleted = 0;
+      let totalRevisions = 0;
+
+      for (const item of group) {
+        totalLiveWords += (typeof item.liveWords === 'number' ? item.liveWords : (item.totalWordsAdded || 0));
+        totalGrossAdded += (item.grossWordsAdded || item.totalWordsAdded || 0);
+        totalGrossDeleted += (item.grossWordsDeleted || 0);
+        totalRevisions += (item.revisionCount || 0);
+      }
+
+      return {
+        ...canonical,
+        author: (effectiveAuthor && isSameStudent(canonical.author, effectiveAuthor)) ? effectiveAuthor : canonical.author,
+        liveWords: totalLiveWords,
+        totalWordsAdded: totalLiveWords,
+        grossWordsAdded: totalGrossAdded,
+        grossWordsDeleted: totalGrossDeleted,
+        revisionCount: totalRevisions,
+        percentage: 0
+      };
     });
-  }, [markupData?.authors]);
+
+    return mergedList;
+  }, [markupData?.authors, effectiveAuthor]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -1013,10 +1119,6 @@ function EditorComponent() {
     }, 3500);
     return () => clearInterval(interval);
   }, [selectedDocId, isOffline]);
-
-  const effectiveAuthor = user
-    ? `${user.name} (${user.studentId})`
-    : 'Anonymous Student';
 
   // Handle URL param docId change
   useEffect(() => {
@@ -1120,9 +1222,16 @@ function EditorComponent() {
           setAccessDenied(false);
           setAccessDeniedInfo(null);
           setDocDetails(data);
+          // Only populate editor content if loading a different document or the editor is completely empty.
+          // NEVER wipe or overwrite the user's actively typed text!
           if (editor && !editor.isDestroyed && data.content !== undefined) {
-            editor.commands.setContent(data.content || '<p></p>', { emitUpdate: false });
-            setLastText(editor.getText());
+            const isDifferentDoc = loadedDocIdRef.current !== selectedDocId;
+            const isEditorBlank = editor.getText().trim() === '';
+            if (isDifferentDoc || isEditorBlank) {
+              editor.commands.setContent(data.content || '<p></p>', { emitUpdate: false });
+              setLastText(editor.getText());
+              loadedDocIdRef.current = selectedDocId;
+            }
           }
         }
       })
@@ -1168,11 +1277,16 @@ function EditorComponent() {
       }
     },
     onUpdate: ({ editor }) => {
-      if (!isAuthenticated || accessDenied) return;
+      const curAuth = authRef.current;
+      if (!curAuth.isAuthenticated || accessDeniedRef.current) return;
+      const currentDocId = selectedDocIdRef.current;
+      if (!currentDocId) return;
+
       const html = editor.getHTML();
       const plainText = editor.getText();
+      const authorToUse = effectiveAuthorRef.current;
 
-      if (isOffline) {
+      if (isOfflineRef.current) {
         const oldWords = lastText.split(/\s+/).filter(Boolean).length;
         const newWords = plainText.split(/\s+/).filter(Boolean).length;
 
@@ -1186,7 +1300,7 @@ function EditorComponent() {
 
         if (added > 0 || deleted > 0) {
           const newRev = {
-            author: effectiveAuthor,
+            author: authorToUse,
             timestamp: new Date(),
             addedText: added > 0 ? `Offline typing: +${added} words` : "",
             deletedText: deleted > 0 ? `Offline deletion: -${deleted} words` : "",
@@ -1197,24 +1311,37 @@ function EditorComponent() {
 
           setOfflineRevisions((prev: any[]) => {
             const updated = [...prev, newRev];
-            savePendingEdit(selectedDocId, html, effectiveAuthor, updated);
+            savePendingEdit(currentDocId, html, authorToUse, updated);
             return updated;
           });
         } else {
-          savePendingEdit(selectedDocId, html, effectiveAuthor, offlineRevisions);
+          savePendingEdit(currentDocId, html, authorToUse, offlineRevisionsRef.current);
         }
         setSyncStatus('offline');
       } else {
-        if (socket) {
-          socket.emit('send-changes', {
-            documentId: selectedDocId,
+        const curSocket = socketRef.current;
+        if (curSocket && curSocket.connected) {
+          curSocket.emit('send-changes', {
+            documentId: currentDocId,
             content: html,
-            author: effectiveAuthor,
-            username: user?.username,
-            studentId: user?.studentId || user?.username,
-            email: user?.email,
-            role: user?.role
+            author: authorToUse,
+            username: curAuth.user?.username,
+            studentId: curAuth.user?.studentId || curAuth.user?.username,
+            email: curAuth.user?.email,
+            role: curAuth.user?.role
           });
+        } else {
+          // Fallback auto-save via REST if socket is connecting or temporarily disconnected
+          fetch(`${getSocketUrl()}/api/documents/${currentDocId}/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: html,
+              author: authorToUse,
+              username: curAuth.user?.username,
+              studentId: curAuth.user?.studentId || curAuth.user?.username
+            })
+          }).catch(() => {});
         }
       }
       setLastText(plainText);
@@ -1232,13 +1359,15 @@ function EditorComponent() {
   // Ensure editor content syncs if docDetails loads before editor is mounted
   useEffect(() => {
     if (editor && !editor.isDestroyed && docDetails?.content !== undefined) {
-      const current = editor.getHTML();
-      if (current === '<p></p>' || current === '' || current === '<p></p>\n') {
+      const isDifferentDoc = loadedDocIdRef.current !== selectedDocId;
+      const isEditorBlank = editor.getText().trim() === '';
+      if (isDifferentDoc || isEditorBlank) {
         editor.commands.setContent(docDetails.content || '<p></p>', { emitUpdate: false });
         setLastText(editor.getText());
+        loadedDocIdRef.current = selectedDocId;
       }
     }
-  }, [editor, docDetails?.content]);
+  }, [editor, docDetails?.content, selectedDocId]);
 
   // Global Keyboard Shortcuts (Ctrl+S, Ctrl+O, Ctrl+F, Ctrl+Shift+C, Ctrl+/)
   useEffect(() => {
@@ -1277,6 +1406,11 @@ function EditorComponent() {
       if ((e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey && e.key.toLowerCase() === 'h') {
         e.preventDefault();
         setVersionHistoryOpen(prev => !prev);
+      }
+      // F7: Spelling & Grammar Check
+      if (e.key === 'F7') {
+        e.preventDefault();
+        setSpellCheckModalOpen(prev => !prev);
       }
       // Ctrl + + / Ctrl + = : Zoom In
       if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd' || e.code === 'Equal')) {
@@ -1359,8 +1493,13 @@ function EditorComponent() {
 
     s.on('load-document', (content) => {
       if (editor && !editor.isDestroyed) {
-        editor.commands.setContent(content || '', { emitUpdate: false });
-        setLastText(editor.getText());
+        const isDifferentDoc = loadedDocIdRef.current !== selectedDocId;
+        const isEditorBlank = editor.getText().trim() === '';
+        if (isDifferentDoc || isEditorBlank) {
+          editor.commands.setContent(content || '', { emitUpdate: false });
+          setLastText(editor.getText());
+          loadedDocIdRef.current = selectedDocId;
+        }
       }
     });
 
@@ -1570,7 +1709,7 @@ function EditorComponent() {
         savePendingEdit(selectedDocId, html, effectiveAuthor, offlineRevisions);
         showToast("Offline changes saved locally in browser cache", "info", "Offline Saved");
       } else {
-        if (socket) {
+        if (socket && socket.connected) {
           socket.emit('send-changes', {
             documentId: selectedDocId,
             content: html,
@@ -1581,6 +1720,18 @@ function EditorComponent() {
             role: user?.role
           });
         }
+        // Always persist via REST fallback as well to guarantee cloud save
+        fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: html,
+            author: effectiveAuthor,
+            username: user?.username,
+            studentId: user?.studentId || user?.username
+          })
+        }).catch(err => console.warn('REST save fallback:', err));
+
         showToast(`Document "${docDetails?.title || selectedDocId}" saved to cloud database!`, "success", "Saved Successfully");
         fetchMarkupData();
       }
@@ -2138,6 +2289,14 @@ function EditorComponent() {
         onClose={() => setShortcutsModalOpen(false)}
       />
 
+      {/* Spelling & Grammar Check Modal */}
+      <SpellingCorrectionModal
+        isOpen={spellCheckModalOpen}
+        onClose={() => setSpellCheckModalOpen(false)}
+        editor={editor}
+        onToast={showToast}
+      />
+
       {/* Google Docs Version History View (Ctrl+Alt+Shift+H) */}
       <VersionHistoryView
         documentId={selectedDocId}
@@ -2151,6 +2310,81 @@ function EditorComponent() {
       />
     </>
   );
+
+  const editorWordCount = editor ? (editor.getText().trim().split(/\s+/).filter(Boolean).length) : 0;
+  const liveDocWordCount = editorWordCount > 0 ? editorWordCount : (markupData?.totalWords || 0);
+  const wordCount = liveDocWordCount;
+
+  // Real-time live document word division calculation (Unconditional Hook Execution)
+  // Ensures typing ONLY increases the active author's count and percentages sum to exactly 100%
+  const computedAuthors = React.useMemo(() => {
+    let authors = displayAuthors;
+
+    // If no authors yet but user is logged in, show user as sole author
+    if (authors.length === 0 && effectiveAuthor) {
+      authors = [{
+        author: effectiveAuthor,
+        liveWords: liveDocWordCount,
+        grossWordsAdded: liveDocWordCount,
+        grossWordsDeleted: 0,
+        revisionCount: 1,
+        color: '#10b981',
+        bg: '#ECFDF5',
+        border: '#A7F3D0'
+      }];
+    }
+
+    if (authors.length === 0) return [];
+
+    if (authors.length === 1) {
+      return [{
+        ...authors[0],
+        authorLiveWords: liveDocWordCount,
+        authorPercentage: liveDocWordCount > 0 ? 100 : 0
+      }];
+    }
+
+    // Multiple collaborators:
+    const baselineDocWords = authors.reduce((sum, a) => sum + (a.liveWords || 0), 0);
+    const typedDelta = liveDocWordCount - baselineDocWords;
+
+    // Find which author corresponds to the currently logged in user
+    let userAuthorIndex = authors.findIndex(a => isSameStudent(a.author, effectiveAuthor));
+
+    // Calculate individual live words: typing additions/deletions only affect the active student
+    const calculated = authors.map((a, idx) => {
+      let liveWords = a.liveWords || 0;
+      if (idx === userAuthorIndex || (userAuthorIndex === -1 && idx === 0)) {
+        liveWords = Math.max(0, liveWords + typedDelta);
+      }
+      return {
+        ...a,
+        authorLiveWords: liveWords
+      };
+    });
+
+    // Calculate percentages
+    let sumPercentages = 0;
+    const withPercentages = calculated.map(a => {
+      const pct = liveDocWordCount > 0 ? Math.round((a.authorLiveWords / liveDocWordCount) * 100) : 0;
+      sumPercentages += pct;
+      return {
+        ...a,
+        authorPercentage: pct
+      };
+    });
+
+    // Ensure sum of percentages equals 100% when document has words
+    if (liveDocWordCount > 0 && withPercentages.length > 0) {
+      const diff = 100 - sumPercentages;
+      if (diff !== 0) {
+        const topAuthor = withPercentages.reduce((max, a) => a.authorLiveWords > max.authorLiveWords ? a : max, withPercentages[0]);
+        topAuthor.authorPercentage = Math.max(0, topAuthor.authorPercentage + diff);
+      }
+    }
+
+    return withPercentages;
+  }, [displayAuthors, liveDocWordCount, effectiveAuthor]);
 
   // Require Authentication Screen
   if (!isAuthenticated) {
@@ -2437,10 +2671,6 @@ function EditorComponent() {
     );
   }
 
-  const editorWordCount = editor ? (editor.getText().trim().split(/\s+/).filter(Boolean).length) : 0;
-  const liveDocWordCount = editorWordCount > 0 ? editorWordCount : (markupData?.totalWords || 0);
-  const wordCount = liveDocWordCount;
-
   return (
     <div className={`editor-container ${currentSkin === 'google' ? 'google-docs-mode' : currentSkin === 'word' ? 'ms-word-mode' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
 
@@ -2525,6 +2755,7 @@ function EditorComponent() {
         onToggleGrowthChart={() => setReportsModalOpen(true)}
         onToggleHeatmap={() => setReportsModalOpen(true)}
         syncStatus={syncStatus}
+        onOpenSpellCheck={() => setSpellCheckModalOpen(true)}
       />
 
       {/* Floating Find & Replace Bar (Ctrl+F) */}
@@ -2544,6 +2775,7 @@ function EditorComponent() {
         onSaveAndRename={handleSaveAndRename}
         onSubmitAssignment={handleSubmitAssignment}
         submissionStatus={docDetails?.submissionStatus}
+        onOpenSpellCheck={() => setSpellCheckModalOpen(true)}
         onPromptImage={() => {
           setPromptDialog({
             isOpen: true,
@@ -2643,7 +2875,7 @@ function EditorComponent() {
                 {markupData?.segments?.map((seg: any) => {
                   const isMatched = selectedAuthorFilter === 'ALL' ||
                     seg.author === selectedAuthorFilter ||
-                    (selectedAuthorFilter.includes('(') && seg.author === selectedAuthorFilter.split('(')[0].trim());
+                    isSameStudent(seg.author, selectedAuthorFilter);
                   const authorColor = seg.color || '#4285f4';
                   const authorBg = seg.bgColor || 'rgba(66, 133, 244, 0.2)';
 
@@ -2712,7 +2944,7 @@ function EditorComponent() {
               fontWeight: 700
             }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-              {displayAuthors.length} active
+              {computedAuthors.length} active
             </span>
           </div>
 
@@ -2739,14 +2971,11 @@ function EditorComponent() {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {displayAuthors && displayAuthors.length > 0 ? (
-              displayAuthors.map((a: any) => {
+            {computedAuthors && computedAuthors.length > 0 ? (
+              computedAuthors.map((a: any) => {
                 const isActive = selectedAuthorFilter === a.author;
-                const authorLiveWords = typeof a.liveWords === 'number'
-                  ? a.liveWords
-                  : (liveDocWordCount > 0 && typeof a.percentage === 'number'
-                    ? Math.round((a.percentage / 100) * liveDocWordCount)
-                    : (a.totalWordsAdded || 0));
+                const authorLiveWords = a.authorLiveWords;
+                const authorPercentage = a.authorPercentage;
                 return (
                   <div
                     key={a.author}
@@ -2774,7 +3003,7 @@ function EditorComponent() {
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: a.color || '#4F46E5', boxShadow: `0 0 6px ${a.color || '#4F46E5'}`, flexShrink: 0 }}></span>
                         <strong style={{ color: '#0F172A', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.author}</strong>
                       </div>
-                      <strong style={{ color: a.color || '#0D9488', fontSize: '0.88rem', flexShrink: 0 }}>{a.percentage}%</strong>
+                      <strong style={{ color: a.color || '#0D9488', fontSize: '0.88rem', flexShrink: 0 }}>{authorPercentage}%</strong>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#334155' }}>
@@ -2784,7 +3013,7 @@ function EditorComponent() {
 
                     {/* Progress Bar */}
                     <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '4px', marginTop: '0.45rem', overflow: 'hidden' }}>
-                      <div style={{ width: `${a.percentage}%`, height: '100%', background: a.color || '#0D9488', borderRadius: '4px', transition: 'width 0.4s ease' }}></div>
+                      <div style={{ width: `${authorPercentage}%`, height: '100%', background: a.color || '#0D9488', borderRadius: '4px', transition: 'width 0.4s ease' }}></div>
                     </div>
 
                     {/* Research Telemetry Details */}
