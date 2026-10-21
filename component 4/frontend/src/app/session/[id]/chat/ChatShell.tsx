@@ -22,6 +22,9 @@ import type {
   UnderstandingSummary,
 } from '../../../utils/types';
 
+import '../../../components/dashboard/dashboard.css';
+import './chat.css';
+
 export default function ChatShell({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, getServerAuthSnapshot);
@@ -143,52 +146,96 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
 
   if (!token || stateLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <span className="spinner" />
+      <main className="dash-loading">
+        <span className="dash-spinner" aria-hidden="true" />
       </main>
     );
   }
 
   if (stateError) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-8">
-        <section className="card">
-          <h1 className="text-xl font-semibold">Teaching session</h1>
-          <p
-            className="mt-3 rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300"
-            role="alert"
-          >
-            {stateError}
-          </p>
-        </section>
-      </main>
+      <div className="chat-page dash-page">
+        <main className="dash-container">
+          <section className="dash-card">
+            <h1 className="dash-greeting__title">Teaching session</h1>
+            <div className="dash-alert" role="alert" style={{ marginTop: '1rem' }}>
+              {stateError}
+            </div>
+            <Link href="/dashboard" className="dash-btn" style={{ marginTop: '1.25rem' }}>
+              Back to dashboard
+            </Link>
+          </section>
+        </main>
+      </div>
     );
   }
 
   if (!pretestSubmitted) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <span className="spinner" />
+      <main className="dash-loading">
+        <span className="dash-spinner" aria-hidden="true" />
       </main>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="chat-page dash-page">
+      <main className="dash-container" style={{ maxWidth: '1240px' }}>
+        {/* Navigation / Header Banner */}
+        <section className="dash-card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.28rem 0.75rem',
+                  borderRadius: '999px',
+                  background: '#eff8f3',
+                  border: '1px solid rgba(111, 175, 154, 0.4)',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  color: '#3e8b75',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                Interactive Tutoring
+              </div>
+              <h1 className="dash-greeting__title">
+                {sessionState?.topic || 'Nova Teaching Session'}
+              </h1>
+              <p className="dash-greeting__text">
+                Teach the virtual student Nova by answering her questions and clarifying key concepts.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <Link href={`/session/${sessionId}/details`} className="dash-btn dash-btn--sm">
+                Session Details
+              </Link>
+              <Link href="/dashboard" className="dash-btn dash-btn--sm">
+                Dashboard
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_370px]">
           <div className="min-w-0">
             <ChatBox sessionId={sessionId} onTurn={handleTurn} />
           </div>
 
           <aside className="space-y-4 self-start lg:sticky lg:top-6">
             {/* Need Help? Card */}
-            <section className="card" style={{ border: '1px solid rgba(111, 175, 154, 0.35)' }}>
+            <section className="dash-card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                 <span
                   style={{
-                    width: '26px',
-                    height: '26px',
+                    width: '28px',
+                    height: '28px',
                     borderRadius: '50%',
                     background: '#eff8f3',
                     border: '1px solid rgba(111, 175, 154, 0.45)',
@@ -200,8 +247,8 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                   }}
                 >
                   <svg
-                    width="14"
-                    height="14"
+                    width="15"
+                    height="15"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -214,9 +261,9 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
                 </span>
-                <h2 className="text-lg font-semibold" style={{ margin: 0 }}>Need help?</h2>
+                <h2 className="dash-card__title" style={{ margin: 0 }}>Need help?</h2>
               </div>
-              <p className="text-xs text-gray-400" style={{ marginBottom: '0.85rem' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--d-muted)', marginBottom: '0.85rem', lineHeight: 1.5 }}>
                 Use these tools if you get stuck explaining a concept to Nova.
               </p>
 
@@ -225,14 +272,14 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                 href={`/session/${sessionId}/study`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="button w-full text-center"
+                className="dash-btn"
                 style={{
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.45rem',
-                  textDecoration: 'none',
-                  fontSize: '0.86rem',
+                  gap: '0.5rem',
+                  fontSize: '0.84rem',
                   padding: '0.55rem 0.9rem',
                 }}
               >
@@ -249,7 +296,7 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
                   <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                 </svg>
-                Open study guide
+                Open Study Guide
                 <svg
                   width="12"
                   height="12"
@@ -272,15 +319,15 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                 style={{
                   marginTop: '0.9rem',
                   paddingTop: '0.85rem',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderTop: '1px solid rgba(111, 175, 154, 0.25)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-                  <span className="text-xs font-semibold text-gray-300">
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--d-muted)' }}>
                     Progressive Hint
                   </span>
                   {hintsLeft !== null && (
-                    <span className="text-xs font-medium text-emerald-400">
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#2b7a63' }}>
                       Hints left: {hintsLeft}
                     </span>
                   )}
@@ -288,19 +335,20 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
 
                 <button
                   type="button"
-                  className="button w-full"
+                  className="dash-btn"
                   style={{
+                    width: '100%',
                     fontSize: '0.84rem',
                     padding: '0.5rem 0.85rem',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#f5f5f7',
+                    background: '#ffffff',
+                    color: '#0d1110',
+                    border: '1px solid rgba(111, 175, 154, 0.35)',
                   }}
                   onClick={handleRequestHint}
                   disabled={hintLoading || hintsLeft === 0}
                   aria-busy={hintLoading || undefined}
                 >
-                  {hintLoading && <span className="spinner" style={{ marginRight: '0.4rem', width: '0.85rem', height: '0.85rem' }} />}
+                  {hintLoading && <span className="dash-spinner" style={{ marginRight: '0.4rem', width: '0.85rem', height: '0.85rem' }} />}
                   {hintLoading
                     ? 'Thinking…'
                     : currentHint
@@ -309,29 +357,30 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                 </button>
 
                 {hintError && (
-                  <p
-                    className="mt-2 rounded-md border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-300"
+                  <div
+                    className="dash-alert"
                     role="alert"
+                    style={{ marginTop: '0.65rem', padding: '0.55rem 0.75rem', fontSize: '0.8rem' }}
                   >
                     {hintError}
-                  </p>
+                  </div>
                 )}
 
                 {currentHint && !hintError && (
                   <div
                     style={{
                       marginTop: '0.65rem',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: '10px',
-                      background: 'rgba(111, 175, 154, 0.12)',
+                      padding: '0.75rem 0.95rem',
+                      borderRadius: '12px',
+                      background: '#eff8f3',
                       border: '1px solid rgba(111, 175, 154, 0.35)',
-                      fontSize: '0.82rem',
-                      lineHeight: 1.5,
-                      color: '#eff8f3',
+                      fontSize: '0.84rem',
+                      lineHeight: 1.55,
+                      color: '#0d1110',
                     }}
                   >
                     {hintConcept && (
-                      <p style={{ margin: '0 0 0.25rem', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#6faf9a' }}>
+                      <p style={{ margin: '0 0 0.25rem', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#3e8b75' }}>
                         Concept: {hintConcept}
                       </p>
                     )}
@@ -345,7 +394,7 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                 style={{
                   marginTop: '0.9rem',
                   paddingTop: '0.85rem',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderTop: '1px solid rgba(111, 175, 154, 0.25)',
                 }}
               >
                 <button
@@ -364,7 +413,7 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                   onClick={() => setTipsOpen((prev) => !prev)}
                   aria-expanded={tipsOpen}
                 >
-                  <span className="text-xs font-semibold text-gray-300">
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--d-muted)' }}>
                     How to teach Nova
                   </span>
                   <svg
@@ -393,36 +442,41 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                       paddingLeft: '1.15rem',
                       fontSize: '0.8rem',
                       lineHeight: 1.55,
-                      color: 'var(--text-secondary, #9ca3af)',
+                      color: 'var(--d-muted)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.35rem',
                     }}
                   >
                     <li>
-                      <strong className="text-gray-200">Use an everyday analogy:</strong> Compare the technical concept to real life (like blueprints and houses).
+                      <strong style={{ color: '#0d1110' }}>Use an everyday analogy:</strong> Compare the technical concept to real life (like blueprints and houses).
                     </li>
                     <li>
-                      <strong className="text-gray-200">Give a tiny example:</strong> Write 2-3 lines of code showing how it works.
+                      <strong style={{ color: '#0d1110' }}>Give a tiny example:</strong> Write 2-3 lines of code showing how it works.
                     </li>
                     <li>
-                      <strong className="text-gray-200">Ask Nova to repeat back:</strong> Prompt her to explain what she understood in her own words.
+                      <strong style={{ color: '#0d1110' }}>Ask Nova to repeat back:</strong> Prompt her to explain what she understood in her own words.
                     </li>
                   </ul>
                 )}
               </div>
             </section>
 
-            <section className="card">
-              <h2 className="text-lg font-semibold">Finish teaching</h2>
-              <p className="mt-1 text-sm text-gray-400">
+            <section className="dash-card">
+              <h2 className="dash-card__title">Finish Teaching</h2>
+              <p style={{ margin: '0.25rem 0 0.85rem', fontSize: '0.84rem', color: 'var(--d-muted)', lineHeight: 1.5 }}>
                 {turnCount === 0
                   ? 'Teach Nova for at least one turn to unlock the post-test.'
                   : `${turnCount} teaching ${turnCount === 1 ? 'turn' : 'turns'} completed.`}
               </p>
               <button
                 type="button"
-                className="button mt-3 w-full disabled:opacity-50"
+                className="dash-btn"
+                style={{
+                  width: '100%',
+                  opacity: !postSubmitted && turnCount < 1 ? 0.45 : 1,
+                  cursor: !postSubmitted && turnCount < 1 ? 'not-allowed' : 'pointer',
+                }}
                 onClick={() =>
                   router.push(
                     postSubmitted
@@ -432,13 +486,21 @@ export default function ChatShell({ sessionId }: { sessionId: string }) {
                 }
                 disabled={!postSubmitted && turnCount < 1}
               >
-                {postSubmitted ? 'View learning report' : 'Finish & take post-test'}
+                {postSubmitted ? 'View Learning Report →' : 'Finish & Take Post-test →'}
               </button>
               <Link
                 href={`/session/${sessionId}/details`}
-                className="mt-2 block text-center text-sm text-indigo-300 hover:underline"
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  marginTop: '0.75rem',
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  color: '#3e8b75',
+                  textDecoration: 'none',
+                }}
               >
-                Session details and tools
+                Session details and tools →
               </Link>
             </section>
 

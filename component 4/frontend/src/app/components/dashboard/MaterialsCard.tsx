@@ -13,7 +13,7 @@ import type {
 } from '../../utils/types';
 
 const STEPS: Array<{ state: MaterialState; label: string }> = [
-  { state: 'ingesting', label: 'Reading PDF' },
+  { state: 'ingesting', label: 'Reading file' },
   { state: 'extracting_concepts', label: 'Finding concepts' },
   { state: 'generating_misconceptions', label: 'Finding misconceptions' },
   { state: 'ready', label: 'Ready' },
@@ -32,7 +32,7 @@ function isActive(material: MaterialSummary): boolean {
 function stateLabel(state: MaterialState): string {
   switch (state) {
     case 'ingesting':
-      return 'Reading PDF';
+      return 'Reading file';
     case 'extracting_concepts':
       return 'Finding concepts';
     case 'generating_misconceptions':
@@ -203,9 +203,9 @@ export default function MaterialsCard() {
 
   return (
     <section className="dash-card">
-      <h2 className="dash-card__title">Your PDF materials</h2>
+      <h2 className="dash-card__title">Your study materials</h2>
       <p className="dash-card__text">
-        Upload a lecture PDF to build a private knowledge base. Nova uses it to ground
+        Upload a lecture PDF, Word document (.docx), or plain text file (.txt) to build a private knowledge base. Nova uses it to ground
         misconceptions for your teaching sessions.
       </p>
 
@@ -227,15 +227,15 @@ export default function MaterialsCard() {
         <input
           ref={inputRef}
           type="file"
-          accept="application/pdf,.pdf"
+          accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="sr-only"
           onChange={(event) => {
             void uploadFile(event.target.files?.[0]);
             event.target.value = '';
           }}
         />
-        <p className="dash-material-drop__title">Drop a PDF here</p>
-        <p className="dash-material-drop__hint">PDF only · your file stays private</p>
+        <p className="dash-material-drop__title">Drop a file here</p>
+        <p className="dash-material-drop__hint">PDF, DOCX, or TXT · your file stays private</p>
         <button
           type="button"
           className="dash-btn dash-btn--sm"
@@ -244,7 +244,7 @@ export default function MaterialsCard() {
           aria-busy={uploading || undefined}
         >
           {uploading && <span className="dash-btn__spinner" aria-hidden="true" />}
-          {uploading ? 'Uploading…' : 'Choose PDF'}
+          {uploading ? 'Uploading…' : 'Choose File'}
         </button>
       </div>
 

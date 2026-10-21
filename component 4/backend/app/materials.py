@@ -128,10 +128,12 @@ def _counts(kb_id: str) -> Dict[str, int]:
 
 def check_kb_access(kb_id: str, user: Dict[str, Any], require_owner: bool = False) -> Optional[Dict[str, Any]]:
     """
-    Ensures the KB exists and is not owned by another user.
+    Ensures the KB exists and is accessible.
 
-    Public KBs (no meta.json) are readable unless require_owner is True.
-    Raises 404 for unknown KBs and 403 for foreign or owner-only KBs.
+    - Public KBs (no meta.json) are readable by anyone unless require_owner is True.
+    - If user is the owner, access is granted.
+    - If require_owner is False, students can access KBs published by lecturers.
+    - Different lecturers cannot modify or view each other's private KBs.
     """
     kb_dir = _kb_dir(kb_id)
     if not os.path.isdir(kb_dir):
@@ -141,21 +143,39 @@ def check_kb_access(kb_id: str, user: Dict[str, Any], require_owner: bool = Fals
         if require_owner:
             raise HTTPException(status_code=403, detail="You do not own this material.")
         return None
-    if meta.get("owner_id") != str(user["id"]):
+
+    user_id = str(user["id"])
+    is_owner = meta.get("owner_id") == user_id
+    if is_owner:
+        return meta
+
+    if require_owner:
         raise HTTPException(status_code=403, detail="You do not own this material.")
-    return meta
+
+    # Students can access lecture materials created by lecturers
+    if user.get("role") == "student" and meta.get("owner_role") == "lecturer":
+        return meta
+
+    raise HTTPException(status_code=403, detail="You do not have access to this material.")
 
 
 def _public_material(kb_id: str, meta: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """Builds the list/status shape without exposing the stored PDF path."""
+    """Builds the list/status shape without exposing the stored file path."""
+    name = (meta or {}).get("name") or kb_id
+    doc_type = os.path.splitext(name)[1].replace(".", "").upper() or "DOC"
     return {
         "kb_id": kb_id,
-        "name": (meta or {}).get("name") or kb_id,
+        "name": name,
         "state": (meta or {}).get("state") or "ready",
         "message": (meta or {}).get("message") or "Ready",
         "created_at": (meta or {}).get("created_at"),
+        "owner_id": (meta or {}).get("owner_id"),
+        "owner_name": (meta or {}).get("owner_name"),
+        "owner_role": (meta or {}).get("owner_role"),
+        "doc_type": doc_type,
         **_counts(kb_id),
     }
+
 
 
 # ---------------------------------------------------------------------------
@@ -206,34 +226,38 @@ async def upload_material(
     file: UploadFile = File(...),
     user: Dict[str, Any] = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    """Accepts a PDF, stores it, and starts background knowledge-base creation."""
+    """Accepts a PDF, DOCX, or TXT file, stores it, and starts background knowledge-base creation."""
     original_name = os.path.basename((file.filename or "").replace("\\", "/"))
-    if not original_name.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
-    if file.content_type and file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Uploaded file must be a PDF.")
+    ext = os.path.splitext(original_name)[1].lower()
+    allowed_exts = {".pdf", ".docx", ".txt", ".text"}
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail="Only PDF, DOCX, and TXT files are allowed.")
 
-    header = await file.read(5)
-    if header != b"%PDF-":
-        raise HTTPException(status_code=400, detail="Uploaded file is not a valid PDF.")
-    await file.seek(0)
+    if ext == ".pdf":
+        header = await file.read(5)
+        if header != b"%PDF-":
+            raise HTTPException(status_code=400, detail="Uploaded file is not a valid PDF.")
+        await file.seek(0)
 
     kb_id = f"u{user['id']}_{secrets.token_hex(4)}"
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    safe_name = original_name or "material.pdf"
-    pdf_path = os.path.join(UPLOAD_DIR, f"{kb_id}_{safe_name}")
+    safe_name = original_name or f"material{ext}"
+    saved_path = os.path.join(UPLOAD_DIR, f"{kb_id}_{safe_name}")
     try:
-        with open(pdf_path, "wb") as buffer:
+        with open(saved_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
     except OSError as exc:
-        raise HTTPException(status_code=500, detail=f"Could not save PDF: {exc}")
+        raise HTTPException(status_code=500, detail=f"Could not save document: {exc}")
 
     meta = {
         "owner_id": str(user["id"]),
-        "name": original_name or "material.pdf",
-        "pdf_path": pdf_path,
+        "owner_name": user.get("name") or "Lecturer",
+        "owner_role": user.get("role") or "student",
+        "name": original_name or f"material{ext}",
+        "file_path": saved_path,
+        "pdf_path": saved_path,
         "state": "ingesting",
-        "message": "Reading PDF…",
+        "message": f"Reading {ext.upper().replace('.', '')}…",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     _write_meta(kb_id, meta)
@@ -242,7 +266,7 @@ async def upload_material(
         "upload saved",
         kb_id=kb_id,
         filename=meta["name"],
-        bytes=os.path.getsize(pdf_path),
+        bytes=os.path.getsize(saved_path),
     )
     step(
         "STATE",
@@ -251,7 +275,7 @@ async def upload_material(
         state=meta["state"],
         state_message=meta["message"],
     )
-    background_tasks.add_task(_process_material, kb_id, pdf_path)
+    background_tasks.add_task(_process_material, kb_id, saved_path)
 
     return {
         "kb_id": kb_id,
@@ -261,10 +285,16 @@ async def upload_material(
     }
 
 
+
 @router.get("")
 def list_materials(user: Dict[str, Any] = Depends(get_current_user)) -> List[Dict[str, Any]]:
-    """Lists the current user's materials plus the public demo knowledge base."""
+    """
+    Lists materials:
+    - If user is a lecturer: only lists their own materials and demo.
+    - If user is a student: lists their own materials, lecturer-published materials, and demo.
+    """
     owner = str(user["id"])
+    role = user.get("role", "student")
     materials: List[Dict[str, Any]] = []
     if not os.path.isdir(KNOWLEDGE_DIR):
         return materials
@@ -275,12 +305,22 @@ def list_materials(user: Dict[str, Any] = Depends(get_current_user)) -> List[Dic
         meta = _read_meta(entry.name)
         if meta is None and entry.name != PUBLIC_KB_ID:
             continue
-        if meta is not None and meta.get("owner_id") != owner:
-            continue
+
+        if meta is not None:
+            is_own = meta.get("owner_id") == owner
+            is_lecturer_material = meta.get("owner_role") == "lecturer"
+            if role == "lecturer":
+                if not is_own:
+                    continue
+            else:  # student
+                if not is_own and not is_lecturer_material:
+                    continue
+
         materials.append(_public_material(entry.name, meta))
 
     materials.sort(key=lambda item: item.get("created_at") or "", reverse=True)
     return materials
+
 
 
 @router.get("/{kb_id}/status")

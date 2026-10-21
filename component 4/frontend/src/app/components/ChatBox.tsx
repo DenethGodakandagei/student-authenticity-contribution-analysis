@@ -162,20 +162,51 @@ export default function ChatBox({
   );
 
   return (
-    <section className="card flex flex-col">
-      <h2 className="mb-4 text-lg font-semibold">Teaching session</h2>
+    <section className="card flex flex-col" style={{ padding: '1.5rem', background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(111,175,154,0.3)', boxShadow: '0 4px 20px rgba(111,175,154,0.08)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.2rem 0.65rem',
+              borderRadius: '999px',
+              background: '#eff8f3',
+              border: '1px solid rgba(111, 175, 154, 0.4)',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: '#3e8b75',
+              marginBottom: '0.35rem',
+            }}
+          >
+            Live Tutoring
+          </div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#0d1110' }}>Teaching Nova</h2>
+        </div>
+        <span style={{ fontSize: '0.8rem', color: '#52615b', fontWeight: 500 }}>
+          {messages.length > 0 ? `${Math.floor(messages.length / 2)} turns` : 'Ready to start'}
+        </span>
+      </div>
 
-      <div className="mb-4 max-h-[58vh] min-h-[16rem] space-y-4 overflow-y-auto pr-1">
+      <div className="chat-transcript">
         {loadingHistory && (
-          <p className="flex items-center gap-2 py-8 text-center text-sm text-gray-400">
-            <span className="spinner" /> Loading conversation…
+          <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '2rem 0', color: '#52615b', fontSize: '0.88rem' }}>
+            <span className="dash-spinner" style={{ width: '1.2rem', height: '1.2rem' }} /> Loading conversation history…
           </p>
         )}
 
         {!loadingHistory && messages.length === 0 && !error && (
-          <p className="py-8 text-center text-sm text-gray-500">
-            Start teaching Nova by explaining a concept below.
-          </p>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#52615b' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 600, color: '#0d1110', margin: '0 0 0.4rem' }}>
+              Say hello and start teaching Nova! 👋
+            </p>
+            <p style={{ fontSize: '0.86rem', maxWidth: '420px', margin: '0 auto', lineHeight: 1.5 }}>
+              Explain concepts simply, use everyday analogies, or give code examples. Nova will respond and ask questions as she learns.
+            </p>
+          </div>
         )}
 
         {messages.map((msg, i) => (
@@ -185,14 +216,14 @@ export default function ChatBox({
               msg.role === 'teacher' ? 'items-end' : 'items-start'
             }`}
           >
-            <span className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">
-              {msg.role === 'teacher' ? 'You' : 'Nova'}
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem', color: msg.role === 'teacher' ? '#3e8b75' : '#52615b' }}>
+              {msg.role === 'teacher' ? 'You (Teacher)' : 'Nova (Student)'}
             </span>
             <div
-              className={`max-w-[85%] whitespace-pre-wrap rounded-xl p-3 text-sm leading-relaxed ${
+              className={`max-w-[85%] whitespace-pre-wrap ${
                 msg.role === 'teacher'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-800 text-gray-100'
+                  ? 'chat-bubble-teacher'
+                  : 'chat-bubble-nova'
               }`}
             >
               {msg.content}
@@ -200,9 +231,19 @@ export default function ChatBox({
 
             {i === lastNovaIndex && check && CHECK_BADGE[check.result] && (
               <span
-                className={`mt-1.5 ml-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
-                  CHECK_BADGE[check.result].className
-                }`}
+                style={{
+                  marginTop: '0.45rem',
+                  marginLeft: '0.25rem',
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: '999px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  background: check.result === 'passed' ? '#e6f7ef' : check.result === 'failed' ? '#fff8e6' : '#fdf3f2',
+                  border: `1px solid ${check.result === 'passed' ? 'rgba(43,122,99,0.4)' : check.result === 'failed' ? 'rgba(183,121,31,0.4)' : 'rgba(180,68,60,0.4)'}`,
+                  color: check.result === 'passed' ? '#2b7a63' : check.result === 'failed' ? '#b7791f' : '#b4443c',
+                }}
                 title={check.feedback ?? check.question ?? undefined}
               >
                 {CHECK_BADGE[check.result].label}
@@ -213,10 +254,11 @@ export default function ChatBox({
 
         {pending && (
           <div className="flex flex-col items-start">
-            <span className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">
-              Nova
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem', color: '#52615b' }}>
+              Nova (Student)
             </span>
-            <div className="rounded-xl bg-gray-800 p-3 text-sm italic text-gray-400">
+            <div className="chat-bubble-nova" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontStyle: 'italic', color: '#52615b' }}>
+              <span className="dash-spinner" style={{ width: '0.85rem', height: '0.85rem' }} />
               Nova is thinking…
             </div>
           </div>
@@ -226,27 +268,32 @@ export default function ChatBox({
       </div>
 
       {error && (
-        <p className="mb-3 rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+        <div className="dash-alert" role="alert" style={{ margin: '0.85rem 0' }}>
           {error}
-        </p>
+        </div>
       )}
 
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', alignItems: 'flex-start' }}>
         <textarea
           rows={2}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Explain the concept… (Enter to send, Shift+Enter for a new line)"
-          className="min-w-0 flex-1 rounded-md bg-gray-900 p-2 text-gray-100 placeholder:text-gray-500"
+          className="chat-input"
         />
         <button
           type="button"
           onClick={sendMessage}
-          className="button min-w-[90px]"
+          className="dash-btn"
           disabled={pending || !input.trim()}
+          style={{
+            padding: '0.85rem 1.4rem',
+            opacity: pending || !input.trim() ? 0.45 : 1,
+            cursor: pending || !input.trim() ? 'not-allowed' : 'pointer',
+          }}
         >
-          {pending ? <span className="spinner" /> : 'Send'}
+          {pending ? 'Sending…' : 'Send'}
         </button>
       </div>
     </section>

@@ -204,6 +204,10 @@ export interface MaterialSummary {
   page_count: number;
   chunk_count: number;
   concept_count: number;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  owner_role?: string | null;
+  doc_type?: string | null;
 }
 
 /** POST /materials */

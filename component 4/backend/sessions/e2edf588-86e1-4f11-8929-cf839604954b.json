@@ -1,0 +1,144 @@
+{
+  "session_id": "e2edf588-86e1-4f11-8929-cf839604954b",
+  "topic": "Object Oriented Programming",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "demo",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [],
+  "misconceptions": [
+    {
+      "id": "m1",
+      "wrong_concept": "I think that a class is a specific instance of an object, and an object is just a blueprint of a class.",
+      "correct_concept": "An Object is a specific instance of the data type (class).",
+      "reason": "Students may confuse the concept of a class as a blueprint with the idea that a class is a specific instance. This misconception arises from a misunderstanding of the relationship between a class and an object.",
+      "concept": "class and object",
+      "source_pages": [
+        9
+      ],
+      "source_quote": "\u2022 An Object is a specific instance of the data type (class)",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "m3",
+      "wrong_concept": "I think that the constructor is used to destroy the object when it is declared.",
+      "correct_concept": "The constructor is used to initialize the object when it is declared.",
+      "reason": "Students may misunderstand the purpose of the constructor and think it has the opposite effect.",
+      "concept": "constructor",
+      "source_pages": [
+        34
+      ],
+      "source_quote": "The constructor is used to initialize the object when it is declared.",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [
+    {
+      "time": "2026-10-21T11:08:41.794084",
+      "type": "pretest_submitted",
+      "score": 0.0,
+      "correct_count": 0,
+      "total_questions": 2
+    }
+  ],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "m1",
+          "concept": "class and object",
+          "question": "What is the relationship between a class and an object?",
+          "options": [
+            "A class is a specific instance of an object",
+            "An object is a specific instance of the data type (class)",
+            "A class is a blueprint for an object",
+            "A class is a type of object"
+          ],
+          "correct_index": 1,
+          "explanation": "According to the lecture, an Object is a specific instance of the data type (class). This means that a class is the blueprint or template, and an object is a specific instance of that class, with its own unique characteristics. This is supported by the quote: 'An Object is a specific instance of the data type (class)'"
+        },
+        {
+          "id": "m3",
+          "concept": "constructor",
+          "question": "What is the purpose of a constructor in an object-oriented program?",
+          "options": [
+            "The constructor is used to destroy the object when it is declared",
+            "The constructor is used to initialize the object when it is declared",
+            "The constructor is used to modify the object after it is declared",
+            "The constructor is used to compare the object with another object"
+          ],
+          "correct_index": 1,
+          "explanation": "According to the lecture, the constructor is used to initialize the object when it is declared. This means that the constructor is responsible for setting the initial state of the object, rather than destroying it. This is supported by the quote: 'The constructor is used to initialize the object when it is declared.'"
+        }
+      ],
+      "answers": [
+        {
+          "question_id": "m1",
+          "choice": 3
+        },
+        {
+          "question_id": "m3",
+          "choice": 2
+        }
+      ],
+      "score": {
+        "total_questions": 2,
+        "correct_count": 0,
+        "overall_percentage": 0.0,
+        "per_question": [
+          {
+            "question_id": "m1",
+            "concept": "class and object",
+            "question": "What is the relationship between a class and an object?",
+            "choice": 3,
+            "correct_index": 1,
+            "correct": false,
+            "explanation": "According to the lecture, an Object is a specific instance of the data type (class). This means that a class is the blueprint or template, and an object is a specific instance of that class, with its own unique characteristics. This is supported by the quote: 'An Object is a specific instance of the data type (class)'"
+          },
+          {
+            "question_id": "m3",
+            "concept": "constructor",
+            "question": "What is the purpose of a constructor in an object-oriented program?",
+            "choice": 2,
+            "correct_index": 1,
+            "correct": false,
+            "explanation": "According to the lecture, the constructor is used to initialize the object when it is declared. This means that the constructor is responsible for setting the initial state of the object, rather than destroying it. This is supported by the quote: 'The constructor is used to initialize the object when it is declared.'"
+          }
+        ],
+        "per_concept": [
+          {
+            "concept": "class and object",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          },
+          {
+            "concept": "constructor",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          }
+        ]
+      },
+      "submitted_at": "2026-10-21T11:08:41.794067"
+    }
+  },
+  "created_at": "2026-10-21T11:07:05.783190",
+  "updated_at": "2026-10-21T11:08:41.794123"
+}

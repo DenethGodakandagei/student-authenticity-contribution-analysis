@@ -62,9 +62,22 @@ export default function NewSessionPage() {
   const [atlas, setAtlas] = useState('');
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [availableKbs, setAvailableKbs] = useState<Array<{ kb_id: string; name: string; owner_name?: string }>>([]);
 
   useEffect(() => {
-    if (!token) router.replace('/login');
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    apiRequest<Array<{ kb_id: string; name: string; owner_name?: string; state?: string }>>('/materials', 'GET').then((res) => {
+      if (res.ok && Array.isArray(res.data)) {
+        const readyKbs = res.data.filter((k) => k.state === 'ready' || k.kb_id === 'demo');
+        setAvailableKbs(readyKbs);
+        if (readyKbs.length > 0 && !readyKbs.some((k) => k.kb_id === kbId)) {
+          setKbId(readyKbs[0].kb_id);
+        }
+      }
+    });
   }, [token, router]);
 
   const fail = (res: { data?: unknown; error?: string }, fallback: string) => {
@@ -393,15 +406,42 @@ export default function NewSessionPage() {
 
               <div className="new-session-form-grid">
                 <label className="new-session-field">
-                  <span className="dash-field__label">Knowledge Base ID</span>
-                  <input
-                    className="new-session-input"
-                    value={kbId}
-                    onChange={(event) => setKbId(event.target.value)}
-                    placeholder="e.g. demo"
-                    required
-                  />
-                  <span className="new-session-field__hint">The repository identifier or KB name</span>
+                  <span className="dash-field__label">Knowledge Base</span>
+                  {availableKbs.length > 0 ? (
+                    <select
+                      className="new-session-input"
+                      value={kbId}
+                      onChange={(event) => setKbId(event.target.value)}
+                      required
+                    >
+                      {availableKbs.map((kb) => (
+                        <option key={kb.kb_id} value={kb.kb_id}>
+                          {kb.name || kb.kb_id} {kb.owner_name ? `(By ${kb.owner_name})` : kb.kb_id === 'demo' ? '(Built-in Demo)' : ''}
+                        </option>
+                      ))}
+                      <option value="__custom__">Custom ID…</option>
+                    </select>
+                  ) : (
+                    <input
+                      className="new-session-input"
+                      value={kbId}
+                      onChange={(event) => setKbId(event.target.value)}
+                      placeholder="e.g. demo"
+                      required
+                    />
+                  )}
+                  {kbId === '__custom__' && (
+                    <input
+                      className="new-session-input"
+                      style={{ marginTop: '0.5rem' }}
+                      placeholder="Type custom knowledge base ID"
+                      onChange={(e) => setKbId(e.target.value)}
+                      autoFocus
+                    />
+                  )}
+                  <span className="new-session-field__hint">
+                    Select a topic curated by your lecturer or the built-in demo
+                  </span>
                 </label>
 
                 <label className="new-session-field">

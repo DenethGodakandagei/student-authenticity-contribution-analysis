@@ -42,21 +42,71 @@ def _get_embedding_model():
     return _EMBEDDING_MODEL
 
 
-def extract_pages(pdf_path: str) -> List[Dict[str, Any]]:
+import zipfile
+import xml.etree.ElementTree as ET
+
+def extract_docx_text(docx_path: str) -> str:
+    """Extracts raw text from a .docx file without requiring external docx libraries."""
+    try:
+        with zipfile.ZipFile(docx_path) as z:
+            xml_content = z.read("word/document.xml")
+            tree = ET.fromstring(xml_content)
+            # w:t elements contain the text fragments
+            paragraphs = []
+            for p in tree.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p"):
+                texts = [
+                    node.text
+                    for node in p.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t")
+                    if node.text
+                ]
+                if texts:
+                    paragraphs.append("".join(texts))
+            return "\n\n".join(paragraphs)
+    except Exception as exc:
+        logger.warning(f"Failed extracting text from docx {docx_path}: {exc}")
+        return ""
+
+
+def extract_pages(file_path: str) -> List[Dict[str, Any]]:
     """
-    Extracts text from each page of a PDF using pypdf.
+    Extracts text from each page/section of a PDF, DOCX, or TXT file.
 
     Returns:
-        List of {"page": int (1-based), "text": str}; pages with no text are skipped.
+        List of {"page": int (1-based), "text": str}; empty pages are skipped.
     """
-    reader = PdfReader(pdf_path)
+    ext = os.path.splitext(file_path)[1].lower()
     pages: List[Dict[str, Any]] = []
+
+    if ext == ".docx":
+        full_text = extract_docx_text(file_path).strip()
+        if full_text:
+            # Group into ~1500 character virtual pages to maintain page-awareness
+            chunks = [full_text[i : i + 1500] for i in range(0, len(full_text), 1500)]
+            for idx, chunk in enumerate(chunks, start=1):
+                pages.append({"page": idx, "text": chunk.strip()})
+        return pages
+
+    if ext in (".txt", ".text", ".md"):
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                full_text = f.read().strip()
+            if full_text:
+                chunks = [full_text[i : i + 1500] for i in range(0, len(full_text), 1500)]
+                for idx, chunk in enumerate(chunks, start=1):
+                    pages.append({"page": idx, "text": chunk.strip()})
+        except Exception as exc:
+            logger.warning(f"Failed reading text file {file_path}: {exc}")
+        return pages
+
+    # Default to PDF
+    reader = PdfReader(file_path)
     for page_number, page in enumerate(reader.pages, start=1):
         text = (page.extract_text() or "").strip()
         if not text:
             continue
         pages.append({"page": page_number, "text": text})
     return pages
+
 
 
 def chunk_pages(
