@@ -30,6 +30,7 @@ import KeyboardShortcutsModal from '../../components/KeyboardShortcutsModal';
 import FindReplaceBar from '../../components/FindReplaceBar';
 import ImportDocumentModal from '../../components/ImportDocumentModal';
 import VersionHistoryView from '../../components/VersionHistoryView';
+import SpellingCorrectionModal from '../../components/SpellingCorrectionModal';
 
 // Custom Tiptap Font Size Extension (MS Word Style)
 const FontSize = Extension.create({
@@ -139,7 +140,7 @@ const clearPendingEdit = async (docId: string) => {
   }
 };
 
-const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink, onSubmitAssignment, submissionStatus }: any) => {
+const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveAndRename, onPromptImage, onPromptLink, onSubmitAssignment, submissionStatus, onOpenSpellCheck }: any) => {
   if (!editor) return null;
 
   const addImage = () => {
@@ -646,20 +647,21 @@ const MenuBar = ({ editor, isOffline, syncStatus, toggleOffline, onSave, onSaveA
           </select>
         </div>
 
-        {/* 13. Spellcheck Toggle Icon */}
+        {/* 13. Spellcheck & Correction Suggestions (ABC✓) */}
         <button
           type="button"
           onClick={(e) => {
             const el = document.querySelector('.ProseMirror');
             if (el) {
-              const current = el.getAttribute('spellcheck');
-              const next = current === 'false' ? 'true' : 'false';
-              el.setAttribute('spellcheck', next);
-              e.currentTarget.classList.toggle('active', next === 'true');
+              el.setAttribute('spellcheck', 'true');
+              e.currentTarget.classList.add('active');
+            }
+            if (onOpenSpellCheck) {
+              onOpenSpellCheck();
             }
           }}
           className="toolbar-btn toolbar-icon-btn active"
-          title="Spellcheck & Correction Suggestions (ABC✓)"
+          title="Spellcheck & Correction Suggestions (ABC✓) - F7"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 16l3-8 3 8" />
@@ -807,6 +809,7 @@ function EditorComponent() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [spellCheckModalOpen, setSpellCheckModalOpen] = useState(false);
   const [showRuler, setShowRuler] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showZoomDropdown, setShowZoomDropdown] = useState(false);
@@ -1277,6 +1280,11 @@ function EditorComponent() {
       if ((e.ctrlKey || e.metaKey) && e.altKey && e.shiftKey && e.key.toLowerCase() === 'h') {
         e.preventDefault();
         setVersionHistoryOpen(prev => !prev);
+      }
+      // F7: Spelling & Grammar Check
+      if (e.key === 'F7') {
+        e.preventDefault();
+        setSpellCheckModalOpen(prev => !prev);
       }
       // Ctrl + + / Ctrl + = : Zoom In
       if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd' || e.code === 'Equal')) {
@@ -2138,6 +2146,14 @@ function EditorComponent() {
         onClose={() => setShortcutsModalOpen(false)}
       />
 
+      {/* Spelling & Grammar Check Modal */}
+      <SpellingCorrectionModal
+        isOpen={spellCheckModalOpen}
+        onClose={() => setSpellCheckModalOpen(false)}
+        editor={editor}
+        onToast={showToast}
+      />
+
       {/* Google Docs Version History View (Ctrl+Alt+Shift+H) */}
       <VersionHistoryView
         documentId={selectedDocId}
@@ -2525,6 +2541,7 @@ function EditorComponent() {
         onToggleGrowthChart={() => setReportsModalOpen(true)}
         onToggleHeatmap={() => setReportsModalOpen(true)}
         syncStatus={syncStatus}
+        onOpenSpellCheck={() => setSpellCheckModalOpen(true)}
       />
 
       {/* Floating Find & Replace Bar (Ctrl+F) */}
@@ -2544,6 +2561,7 @@ function EditorComponent() {
         onSaveAndRename={handleSaveAndRename}
         onSubmitAssignment={handleSubmitAssignment}
         submissionStatus={docDetails?.submissionStatus}
+        onOpenSpellCheck={() => setSpellCheckModalOpen(true)}
         onPromptImage={() => {
           setPromptDialog({
             isOpen: true,
