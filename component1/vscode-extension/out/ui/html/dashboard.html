@@ -399,21 +399,25 @@
           </button>
         </div>
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px; margin-bottom:12px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)); gap:8px; margin-bottom:12px;">
           <div class="highlight-stat">
             <div class="hl-label">Total Lines</div>
             <div class="hl-value" id="provTotalLines">0</div>
           </div>
           <div class="highlight-stat">
-            <div class="hl-label">Manual Typed</div>
+            <div class="hl-label">✍️ Manual</div>
             <div class="hl-value" id="provManualLines" style="color:#22c55e;">0</div>
           </div>
           <div class="highlight-stat">
-            <div class="hl-label">Pasted / AI</div>
+            <div class="hl-label">🤖 AI Code</div>
+            <div class="hl-value" id="provAiLines" style="color:#a855f7;">0</div>
+          </div>
+          <div class="highlight-stat">
+            <div class="hl-label">📋 Pasted</div>
             <div class="hl-value" id="provPastedLines" style="color:#ef4444;">0</div>
           </div>
           <div class="highlight-stat">
-            <div class="hl-label">Manual Score</div>
+            <div class="hl-label">Manual %</div>
             <div class="hl-value" id="provManualPct">100%</div>
           </div>
         </div>
@@ -650,6 +654,7 @@
         setVal('provActiveFile', prov.fileName || 'Active Document');
         setVal('provTotalLines', prov.totalLines);
         setVal('provManualLines', prov.manualLineCount);
+        setVal('provAiLines', prov.aiLineCount || 0);
         setVal('provPastedLines', prov.pastedLineCount + (prov.mixedLineCount || 0));
         setVal('provManualPct', prov.manualPercentage + '%');
 

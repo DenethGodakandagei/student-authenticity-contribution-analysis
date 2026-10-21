@@ -270,8 +270,14 @@ export function getFileIntelligence(
   );
   const latestSession = chronologicalSessions[chronologicalSessions.length - 1] || null;
 
+  // Prioritize real live VS Code extension telemetry over synthetic offline directory scans
+  const isLiveSession = (s: any) => s.isOffline === false || s.saveCount !== undefined || s.diagnosticSummary !== undefined || s.pasteBursts !== undefined;
+  const offlineSessions = chronologicalSessions.filter(s => !isLiveSession(s));
+  const liveSessions = chronologicalSessions.filter(s => isLiveSession(s));
+
   let hasExternalAiActivity = false;
-  chronologicalSessions.forEach((s: any) => {
+  // Process offline scans first, then live extension sessions over them so live extension telemetry ALWAYS wins!
+  [...offlineSessions, ...liveSessions].forEach((s: any) => {
     (s.fileActivities || []).forEach((fa: any) => {
       if (isPathMatch(fa.filePath)) {
         if (fa.typingProvenance === 'ai_assisted' || (fa.aiChars || 0) > 0 || (fa.aiEvents || 0) > 0) {
@@ -285,6 +291,25 @@ export function getFileIntelligence(
   });
 
   const rawLines: string[] = file.lines || (file.content ? file.content.split('\n') : []);
+
+  // Detect duplicate / repeated code blocks across the file (e.g. copied functions / snippets)
+  const duplicateLineIndices = new Set<number>();
+  const seenBlockSignatures = new Map<string, number>();
+  const BLOCK_SIZE = 2; // 2+ non-empty lines forming a block
+
+  for (let i = 0; i <= rawLines.length - BLOCK_SIZE; i++) {
+    const slice = rawLines.slice(i, i + BLOCK_SIZE).map(l => l.trim()).filter(l => l.length > 0);
+    if (slice.length === BLOCK_SIZE) {
+      const sig = slice.join(':::');
+      if (seenBlockSignatures.has(sig)) {
+        for (let k = 0; k < BLOCK_SIZE; k++) {
+          duplicateLineIndices.add(i + k);
+        }
+      } else {
+        seenBlockSignatures.set(sig, i);
+      }
+    }
+  }
 
   // Compute realistic timestamps based on actual file modification time and telemetry
   const fileModDate = file.lastModified ? new Date(file.lastModified) : new Date();
@@ -344,12 +369,14 @@ export function getFileIntelligence(
     const secKey = lineTimestamp.toISOString().slice(0, 19);
     // Burst paste is only flagged if telemetry recorded 3+ copy_paste lines in the exact same second
     const isBurstPasted = explicitLineTimestamps.has(idx) && (pasteBurstSecondBuckets.get(secKey) || 0) >= 3;
+    const isDuplicateBlock = duplicateLineIndices.has(idx);
 
     // ── High-Precision Provenance Classification ─────────────────────────────
     const pType = classifyLineProvenance(lineContent, recordedLine, {
       prevTrimmed,
       nextTrimmed,
-      isBurstPasted
+      isBurstPasted,
+      isDuplicateBlock
     });
 
     const shortDate = lineTimestamp.toLocaleDateString([], {
@@ -424,7 +451,11 @@ export function getFileIntelligence(
     authenticityVerdict,
     authenticityMessage,
     lineAttributions,
-    memberColors: MEMBER_COLORS
+    memberColors: MEMBER_COLORS,
+    totalLines: totalAnalyzed,
+    typedCount,
+    pastedCount,
+    aiCount
   };
 }
 
@@ -460,18 +491,24 @@ export function classifyLineProvenance(
   }
 
   // 2. Direct Extension Telemetry Ground Truth (Live keystroke tracker from VS Code)
-  // When the student physically types in the IDE, telemetry logs 'manual'. That is the ground truth!
-  if (recordedLine?.provenance === 'ai_assisted') {
-    return 'ai_generated';
+  // When real live telemetry is recorded from the IDE, it is authoritative ground truth!
+  if (recordedLine && !recordedLine.isOffline) {
+    if (recordedLine.provenance === 'ai_assisted') return 'ai_generated';
+    if (recordedLine.provenance === 'manual') return 'typed';
+    if (recordedLine.provenance === 'copy_paste') return 'pasted';
   }
-  if (recordedLine?.provenance === 'manual') {
-    return 'typed';
-  }
-  if (recordedLine?.provenance === 'copy_paste') {
+
+  // 3. Duplicate / Repeated Code Blocks (exact multi-line snippets pasted across the file)
+  if (context?.isDuplicateBlock) {
     return 'pasted';
   }
 
-  // 3. Fallback Heuristics ONLY when no live telemetry is recorded for this line:
+  // 4. Telemetry from offline sessions
+  if (recordedLine?.provenance === 'ai_assisted') return 'ai_generated';
+  if (recordedLine?.provenance === 'copy_paste') return 'pasted';
+  if (recordedLine?.provenance === 'manual') return 'typed';
+
+  // 5. Fallback Heuristics ONLY when no live telemetry is recorded for this line:
   if (context?.isBurstPasted) {
     return 'pasted';
   }

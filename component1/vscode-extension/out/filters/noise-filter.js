@@ -158,8 +158,11 @@ exports.isInsideWorkspace = isInsideWorkspace;
 function shouldTrackFile(uri) {
     if (uri.scheme !== 'file')
         return false;
-    if (!isInsideWorkspace(uri))
-        return false;
+    const folders = vscode.workspace.workspaceFolders;
+    if (folders && folders.length > 0) {
+        if (!isInsideWorkspace(uri))
+            return false;
+    }
     // Normalize path for consistent matching
     const normalized = normalizeFsPath(uri.fsPath);
     // Directory blacklist check

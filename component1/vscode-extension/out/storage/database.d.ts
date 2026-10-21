@@ -1,18 +1,18 @@
-import Database from 'better-sqlite3';
 /**
  * Initialize the SQLite database.
- * - Creates the database file in VS Code's globalStorageUri
+ * - Creates the database file in VS Code's globalStorageUri if better-sqlite3 is available
  * - Configures WAL mode for crash resilience and concurrent reads
  * - Creates the telemetry_events table with full schema
+ * - Seamlessly falls back to memory database if native SQLite is unavailable
  *
  * @param globalStoragePath Path from context.globalStorageUri.fsPath
  */
-export declare function initDatabase(globalStoragePath: string): Database.Database;
+export declare function initDatabase(globalStoragePath: string): any;
 /**
  * Get the active database instance.
- * @throws if database has not been initialized
+ * Always returns a working database instance, never throws.
  */
-export declare function getDatabase(): Database.Database;
+export declare function getDatabase(): any;
 /**
  * Close the database connection gracefully.
  */

@@ -10,9 +10,9 @@ export declare function validateParticipantId(value: string): string | null;
 /**
  * Ensure participant ID and task condition are initialized in workspaceState.
  * If in Real Mode, skips prompts completely.
- * If in Experimental Mode, triggers modal prompts if not already configured.
+ * If in Experimental Mode, prompts if not configured or allows verification.
  */
-export declare function ensureParticipantSession(context: vscode.ExtensionContext): Promise<ExperimentSession>;
+export declare function ensureParticipantSession(context: vscode.ExtensionContext, forcePrompt?: boolean): Promise<ExperimentSession>;
 /**
  * Allow participants to switch task mode (e.g., when transitioning from Task A to Task B).
  */
