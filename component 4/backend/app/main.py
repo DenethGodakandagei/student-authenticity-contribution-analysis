@@ -678,5 +678,38 @@ def chat_with_nova(session_id: str, req: ChatMessageRequest, user: dict = Depend
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in Nova teaching session: {str(e)}")
 
+@app.post("/sessions/{session_id}/misconceptions/{misconception_id}/mark-learned")
+def mark_misconception_as_learned(session_id: str, misconception_id: str, user: dict = Depends(get_current_user)):
+    """Teacher marks a misconception as learned manually."""
+    session_file = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+    if not os.path.exists(session_file):
+        raise HTTPException(status_code=404, detail="Session not found.")
+    nova = NovaStudentAgent.load_state(session_file)
+    _check_session_owner(nova, user)
+
+    target_m = None
+    for m in nova.state.misconceptions:
+        if m.id == misconception_id:
+            target_m = m
+            break
+    if not target_m:
+        raise HTTPException(status_code=404, detail="Misconception not found.")
+
+    target_m.mark_learned(user_explanation="Marked as verified and correct by teacher.")
+    target_m.confidence = 0.0
+    nova._log_event({
+        "type": "misconception_marked_correct",
+        "misconception_id": target_m.id,
+        "concept": target_m.concept,
+    })
+    nova.save_state(session_file)
+    return {
+        "status": "success",
+        "misconception_id": target_m.id,
+        "updated_state": nova.to_public_dict(),
+        "understanding": understanding_summary(nova.state)
+    }
+
+
 
 

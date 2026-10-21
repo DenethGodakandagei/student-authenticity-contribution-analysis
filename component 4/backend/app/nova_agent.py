@@ -597,6 +597,8 @@ Return ONLY valid JSON:
         m.question_index = 0
         m.attempts = []
         m.status = "testing"
+        # When student gives a clear explanation, Nova's confidence in her misconception drops
+        m.confidence = round(max(0.2, m.confidence * 0.6), 2)
         decision(
             "STATE",
             "status change",

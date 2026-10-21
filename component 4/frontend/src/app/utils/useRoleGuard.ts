@@ -38,7 +38,9 @@ export function useRoleGuard(required?: AuthRole): RoleGuardResult {
     }
 
     const user = getStoredUser();
-    const actualRole = (user as { role?: string } | null)?.role;
+    const rawRole = (user as { role?: string } | null)?.role;
+    const actualRole: AuthRole =
+      rawRole && rawRole.toLowerCase() === 'lecturer' ? 'lecturer' : 'student';
 
     if (required && actualRole !== required) {
       // Redirect to the user's actual home (not /login) so they land somewhere
@@ -48,6 +50,7 @@ export function useRoleGuard(required?: AuthRole): RoleGuardResult {
       router.replace(destinationFor(safeRole));
       return;
     }
+
 
     setReady(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
