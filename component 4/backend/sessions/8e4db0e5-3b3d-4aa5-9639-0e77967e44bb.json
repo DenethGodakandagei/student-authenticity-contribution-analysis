@@ -1,0 +1,501 @@
+{
+  "session_id": "8e4db0e5-3b3d-4aa5-9639-0e77967e44bb",
+  "topic": "Object Oriented Programming",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Get a revision on OOC you learnt in Year 1",
+    "Understand Classes and Objects",
+    "Learn about Abstraction, Encapsulation, Inheritance, Polymorphism, Interfaces, and key differences between writing Simple Object Oriented Programs in C++ and Java"
+  ],
+  "misconceptions": [
+    {
+      "id": "4c62224d",
+      "wrong_concept": "Object Oriented programming is not a method of implementation",
+      "correct_concept": "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.",
+      "reason": "Students may misunderstand the definition of Object Oriented programming and its role in software development.",
+      "concept": "Object Oriented Programming",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "f8f07583",
+      "wrong_concept": "Object Oriented Programming is not a method of solving complex problems",
+      "correct_concept": "Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem.",
+      "reason": "Students may not recognize the benefits of using Object Oriented Programming to solve complex problems.",
+      "concept": "Object Oriented Programming",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "af568dc0",
+      "wrong_concept": "Object Oriented Programming is not about developing complex systems using smaller subsystems",
+      "correct_concept": "A complex system is developed using smaller subsystems, which are independent units containing their own data and functions, and can be reused to solve many different problems.",
+      "reason": "Students may not understand the concept of subsystems and how they contribute to the development of complex systems.",
+      "concept": "Object Oriented Programming",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [
+    {
+      "time": "2026-10-22T00:00:50.244227",
+      "type": "pretest_submitted",
+      "score": 20.0,
+      "correct_count": 2,
+      "total_questions": 10
+    },
+    {
+      "time": "2026-10-22T00:29:51.876513",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T00:29:51.876499"
+    },
+    {
+      "time": "2026-10-22T00:41:09.768280",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T00:41:09.768267"
+    },
+    {
+      "time": "2026-10-22T00:44:12.730382",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T00:44:12.730368"
+    },
+    {
+      "time": "2026-10-22T00:49:41.271471",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T00:49:41.271462"
+    },
+    {
+      "time": "2026-10-22T00:49:57.601777",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T00:49:57.601768"
+    },
+    {
+      "time": "2026-10-22T00:50:01.933040",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T00:50:01.933029"
+    },
+    {
+      "time": "2026-10-22T00:54:08.371701",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T00:54:08.371662"
+    },
+    {
+      "time": "2026-10-22T01:03:16.356948",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T01:03:16.356918"
+    }
+  ],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "Object Oriented Programming",
+          "question": "What is the primary goal of Object Oriented Programming?",
+          "options": [
+            "To organize programs as cooperative collections of objects",
+            "To develop software using functional programming",
+            "To create complex systems using smaller subsystems",
+            "To solve complex problems using procedural programming"
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "Object Oriented Programming",
+          "question": "What is the primary benefit of using Object Oriented Programming?",
+          "options": [
+            "To develop software more quickly",
+            "To reuse code more effectively",
+            "To make code more readable",
+            "To solve complex problems more efficiently"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "Object Oriented Programming",
+          "question": "What is the primary advantage of using classes in Object Oriented Programming?",
+          "options": [
+            "To develop software more quickly",
+            "To encapsulate data and behavior",
+            "To create complex systems using smaller subsystems",
+            "To reuse code more effectively"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "A class is a blueprint for creating objects, which encapsulate data and behavior, and can be reused to solve many different problems."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "Object Oriented Programming",
+          "question": "What is the primary way to reuse code in Object Oriented Programming?",
+          "options": [
+            "By using inheritance",
+            "By creating objects",
+            "By using functions",
+            "By copying and pasting code"
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Inheritance is the primary way to reuse code in Object Oriented Programming, where a child class inherits the properties and behavior of a parent class."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "Object Oriented Programming",
+          "question": "What is the primary way to solve complex problems in Object Oriented Programming?",
+          "options": [
+            "By using event-driven programming",
+            "By using functional programming",
+            "By using procedural programming",
+            "By using Object Oriented Programming"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which statement accurately describes Object Oriented Programming?",
+          "options": [
+            "Object Oriented Programming is strictly limited to low-level assembly routines.",
+            "Object Oriented Programming is not about developing complex systems using smaller subsystems",
+            "Object Oriented Programming can only be instantiated once globally across an entire program.",
+            "A complex system is developed using smaller subsystems, which are independent units containing their own data and functions, and can be reused to solve many different problems."
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: A complex system is developed using smaller subsystems, which are independent units containing their own data and functions, and can be reused to solve many different problems.. Common misconception: Object Oriented Programming is not about developing complex systems using smaller subsystems."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+          "options": [
+            "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.",
+            "Understanding Object Oriented Programming is essential for designing robust software architectures.",
+            "Object Oriented programming is not a method of implementation",
+            "Object Oriented Programming is only an obsolete theoretical notion with no modern application."
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            1
+          ],
+          "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is not a method of implementation."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which statement accurately describes Object Oriented Programming?",
+          "options": [
+            "Object Oriented Programming is strictly limited to low-level assembly routines.",
+            "Object Oriented Programming is not a method of solving complex problems",
+            "Object Oriented Programming can only be instantiated once globally across an entire program.",
+            "Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem."
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem.. Common misconception: Object Oriented Programming is not a method of solving complex problems."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which statement accurately describes Object Oriented Programming?",
+          "options": [
+            "Object Oriented Programming is not about developing complex systems using smaller subsystems",
+            "Object Oriented Programming is strictly limited to low-level assembly routines.",
+            "Object Oriented Programming can only be instantiated once globally across an entire program.",
+            "A complex system is developed using smaller subsystems, which are independent units containing their own data and functions, and can be reused to solve many different problems."
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: A complex system is developed using smaller subsystems, which are independent units containing their own data and functions, and can be reused to solve many different problems.. Common misconception: Object Oriented Programming is not about developing complex systems using smaller subsystems."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+          "options": [
+            "Understanding Object Oriented Programming is essential for designing robust software architectures.",
+            "Object Oriented programming is not a method of implementation",
+            "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.",
+            "Object Oriented Programming is only an obsolete theoretical notion with no modern application."
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            2
+          ],
+          "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is not a method of implementation."
+        }
+      ],
+      "answers": [
+        {
+          "question_id": "q_1_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_2_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_3_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_4_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_5_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_6_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_7_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_8_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_9_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_10_pre",
+          "choice": 0,
+          "choices": null
+        }
+      ],
+      "score": {
+        "total_questions": 10,
+        "correct_count": 2,
+        "overall_percentage": 20.0,
+        "per_question": [
+          {
+            "question_id": "q_1_pre",
+            "concept": "Object Oriented Programming",
+            "question": "What is the primary goal of Object Oriented Programming?",
+            "choice": 0,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": true,
+            "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships."
+          },
+          {
+            "question_id": "q_2_pre",
+            "concept": "Object Oriented Programming",
+            "question": "What is the primary benefit of using Object Oriented Programming?",
+            "choice": 0,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": false,
+            "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem."
+          },
+          {
+            "question_id": "q_3_pre",
+            "concept": "Object Oriented Programming",
+            "question": "What is the primary advantage of using classes in Object Oriented Programming?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": false,
+            "explanation": "A class is a blueprint for creating objects, which encapsulate data and behavior, and can be reused to solve many different problems."
+          },
+          {
+            "question_id": "q_4_pre",
+            "concept": "Object Oriented Programming",
+            "question": "What is the primary way to reuse code in Object Oriented Programming?",
+            "choice": 0,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": true,
+            "explanation": "Inheritance is the primary way to reuse code in Object Oriented Programming, where a child class inherits the properties and behavior of a parent class."
+          },
+          {
+            "question_id": "q_5_pre",
+            "concept": "Object Oriented Programming",
+            "question": "What is the primary way to solve complex problems in Object Oriented Programming?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem."
+          },
+          {
+            "question_id": "q_6_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which statement accurately describes Object Oriented Programming?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Core concept: A complex system is developed using smaller subsystems, which are independent units containing their own data and functions, and can be reused to solve many different problems.. Common misconception: Object Oriented Programming is not about developing complex systems using smaller subsystems."
+          },
+          {
+            "question_id": "q_7_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+            "choice": [
+              1
+            ],
+            "is_multiple": true,
+            "correct_index": 0,
+            "correct_indices": [
+              0,
+              1
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is not a method of implementation."
+          },
+          {
+            "question_id": "q_8_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which statement accurately describes Object Oriented Programming?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented Programming is a method of implementation in which programs are organized as a collection of objects which cooperate to solve a problem.. Common misconception: Object Oriented Programming is not a method of solving complex problems."
+          },
+          {
+            "question_id": "q_9_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which statement accurately describes Object Oriented Programming?",
+            "choice": 0,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Core concept: A complex system is developed using smaller subsystems, which are independent units containing their own data and functions, and can be reused to solve many different problems.. Common misconception: Object Oriented Programming is not about developing complex systems using smaller subsystems."
+          },
+          {
+            "question_id": "q_10_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+            "choice": [
+              0
+            ],
+            "is_multiple": true,
+            "correct_index": 0,
+            "correct_indices": [
+              0,
+              2
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is not a method of implementation."
+          }
+        ],
+        "per_concept": [
+          {
+            "concept": "Object Oriented Programming",
+            "correct": 2,
+            "total": 10,
+            "percentage": 20.0
+          }
+        ]
+      },
+      "submitted_at": "2026-10-22T00:00:50.244218"
+    }
+  },
+  "created_at": "2026-10-21T23:49:14.473221",
+  "updated_at": "2026-10-22T01:03:16.356969"
+}

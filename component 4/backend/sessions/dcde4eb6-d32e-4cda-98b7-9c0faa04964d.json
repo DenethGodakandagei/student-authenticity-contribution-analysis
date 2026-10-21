@@ -1,0 +1,879 @@
+{
+  "session_id": "dcde4eb6-d32e-4cda-98b7-9c0faa04964d",
+  "topic": "Secure Software Development: OAuth and Facebook API",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Register a client app in Facebook developer studio",
+    "Obtain an access token using the authorization code grant type",
+    "Access profile details and data through the access token"
+  ],
+  "misconceptions": [
+    {
+      "id": "9d548265",
+      "wrong_concept": "Assuming Facebook API requires a real profile",
+      "correct_concept": "Creating a dummy profile is acceptable for testing purposes",
+      "reason": "Students may assume that a real profile is required for testing, but the lecture notes explicitly state that a dummy profile can be used",
+      "concept": "Secure Software Development: OAuth and Facebook API",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.24,
+      "status": "learned",
+      "is_corrected": true,
+      "corrected_at": "2026-10-22T01:17:08.390767",
+      "user_explanation": "No we can do it using test account",
+      "questions": [
+        {
+          "question": "What would happen if you wanted to test the Facebook API without creating a real Facebook account? Would you need to create a real profile?",
+          "expected_answer": "No, we do not need a real profile"
+        },
+        {
+          "question": "If you're testing the Facebook API for a project, would you need to create a real Facebook profile or can you use a dummy profile instead?",
+          "expected_answer": "No, we do not need a real profile"
+        },
+        {
+          "question": "Which of the following statements is true: You need a real Facebook profile to test the Facebook API or You do not need a real Facebook profile to test the Facebook API?",
+          "expected_answer": "You do not need a real Facebook profile to test the Facebook API"
+        }
+      ],
+      "question_index": 0,
+      "attempts": [
+        {
+          "question": "What would happen if you wanted to test the Facebook API without creating a real Facebook account? Would you need to create a real profile?",
+          "answer": "No we can do it using test account",
+          "passed": true,
+          "feedback": "Correct, test accounts are available for testing OAuth and Facebook API."
+        }
+      ]
+    },
+    {
+      "id": "ccfba6d6",
+      "wrong_concept": "Failing to understand the authorization code grant type",
+      "correct_concept": "The authorization code grant type is used to obtain an access token for accessing user data",
+      "reason": "Students may struggle to understand the authorization code grant type, but the lecture notes provide a clear explanation and examples",
+      "concept": "Secure Software Development: OAuth and Facebook API",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.0,
+      "status": "learned",
+      "is_corrected": true,
+      "corrected_at": "2026-10-22T01:25:50.680868",
+      "user_explanation": "Marked as verified and correct by teacher.",
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "0e29e660",
+      "wrong_concept": "Not following the correct steps for obtaining an access token",
+      "correct_concept": "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code",
+      "reason": "Students may overlook or misinterpret the steps for obtaining an access token, leading to errors or failed attempts",
+      "concept": "Secure Software Development: OAuth and Facebook API",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.0,
+      "status": "learned",
+      "is_corrected": true,
+      "corrected_at": "2026-10-22T01:25:58.009341",
+      "user_explanation": "Marked as verified and correct by teacher.",
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [
+    {
+      "role": "teacher",
+      "content": "No we do not need a real profile"
+    },
+    {
+      "role": "nova",
+      "content": "Thank you for clarifying that we don't need a real profile to use the Facebook API. You're saying that we can just... what would happen if you wanted to test the Facebook API without creating a real Facebook account? Would you need to create a real profile?"
+    },
+    {
+      "role": "teacher",
+      "content": "No we can do it using test account"
+    },
+    {
+      "role": "nova",
+      "content": "You're saying that we can use a test account to test the Facebook API without creating a real Facebook account. So, I would write down the steps to get an access token using this test account."
+    },
+    {
+      "role": "teacher",
+      "content": "yes."
+    },
+    {
+      "role": "nova",
+      "content": "You're saying yes, so you're confirming that we can use a test account to test the Facebook API without creating a real Facebook account. That sounds like a good approach. So I would write down the steps to get an access token using this test account."
+    }
+  ],
+  "events": [
+    {
+      "time": "2026-10-22T01:10:37.126711",
+      "type": "pretest_submitted",
+      "score": 40.0,
+      "correct_count": 4,
+      "total_questions": 10
+    },
+    {
+      "time": "2026-10-22T01:11:59.137347",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T01:11:59.137333"
+    },
+    {
+      "time": "2026-10-22T01:13:25.790929",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T01:13:25.790921"
+    },
+    {
+      "time": "2026-10-22T01:13:25.869532",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T01:13:25.869522"
+    },
+    {
+      "time": "2026-10-22T01:15:50.646943",
+      "type": "teacher_message",
+      "text": "No we do not need a real profile"
+    },
+    {
+      "time": "2026-10-22T01:16:02.212707",
+      "type": "check_result",
+      "results": [
+        {
+          "id": "9d548265",
+          "addressed": true,
+          "quality": "clear"
+        },
+        {
+          "id": "ccfba6d6",
+          "addressed": false,
+          "quality": "vague"
+        },
+        {
+          "id": "0e29e660",
+          "addressed": false,
+          "quality": "vague"
+        }
+      ],
+      "message": "No we do not need a real profile"
+    },
+    {
+      "time": "2026-10-22T01:16:21.996204",
+      "type": "status_change",
+      "id": "9d548265",
+      "from": "active",
+      "to": "testing"
+    },
+    {
+      "time": "2026-10-22T01:16:21.996218",
+      "type": "question_asked",
+      "id": "9d548265",
+      "index": 0,
+      "question": "What would happen if you wanted to test the Facebook API without creating a real Facebook account? Would you need to create a real profile?",
+      "questions": [
+        "What would happen if you wanted to test the Facebook API without creating a real Facebook account? Would you need to create a real profile?",
+        "If you're testing the Facebook API for a project, would you need to create a real Facebook profile or can you use a dummy profile instead?",
+        "Which of the following statements is true: You need a real Facebook profile to test the Facebook API or You do not need a real Facebook profile to test the Facebook API?"
+      ]
+    },
+    {
+      "time": "2026-10-22T01:16:29.755014",
+      "type": "nova_reply",
+      "text": "Thank you for clarifying that we don't need a real profile to use the Facebook API. You're saying that we can just... what would happen if you wanted to test the Facebook API without creating a real Facebook account? Would you need to create a real profile?"
+    },
+    {
+      "time": "2026-10-22T01:17:03.216375",
+      "type": "teacher_message",
+      "text": "No we can do it using test account"
+    },
+    {
+      "time": "2026-10-22T01:17:08.390747",
+      "type": "answer_judged",
+      "id": "9d548265",
+      "question": "What would happen if you wanted to test the Facebook API without creating a real Facebook account? Would you need to create a real profile?",
+      "answer": "No we can do it using test account",
+      "passed": true,
+      "reasoning_ok": true,
+      "feedback": "Correct, test accounts are available for testing OAuth and Facebook API."
+    },
+    {
+      "time": "2026-10-22T01:17:08.390921",
+      "type": "status_change",
+      "id": "9d548265",
+      "from": "testing",
+      "to": "learned"
+    },
+    {
+      "time": "2026-10-22T01:17:14.998688",
+      "type": "nova_reply",
+      "text": "You're saying that we can use a test account to test the Facebook API without creating a real Facebook account. So, I would write down the steps to get an access token using this test account."
+    },
+    {
+      "time": "2026-10-22T01:17:25.100528",
+      "type": "detection",
+      "results": [
+        {
+          "id": "ccfba6d6",
+          "still_present": false,
+          "evidence": "",
+          "confidence": 1.0
+        },
+        {
+          "id": "0e29e660",
+          "still_present": false,
+          "evidence": "",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "time": "2026-10-22T01:24:07.235949",
+      "type": "teacher_message",
+      "text": "yes."
+    },
+    {
+      "time": "2026-10-22T01:24:24.547456",
+      "type": "check_result",
+      "results": [
+        {
+          "id": "ccfba6d6",
+          "addressed": false,
+          "quality": "vague"
+        },
+        {
+          "id": "0e29e660",
+          "addressed": false,
+          "quality": "vague"
+        }
+      ],
+      "message": "yes."
+    },
+    {
+      "time": "2026-10-22T01:24:32.240485",
+      "type": "nova_reply",
+      "text": "You're saying yes, so you're confirming that we can use a test account to test the Facebook API without creating a real Facebook account. That sounds like a good approach. So I would write down the steps to get an access token using this test account."
+    },
+    {
+      "time": "2026-10-22T01:24:42.168027",
+      "type": "detection",
+      "results": [
+        {
+          "id": "ccfba6d6",
+          "still_present": false,
+          "evidence": "",
+          "confidence": 1.0
+        },
+        {
+          "id": "0e29e660",
+          "still_present": false,
+          "evidence": "",
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "time": "2026-10-22T01:25:50.680916",
+      "type": "misconception_marked_correct",
+      "misconception_id": "ccfba6d6",
+      "concept": "Secure Software Development: OAuth and Facebook API"
+    },
+    {
+      "time": "2026-10-22T01:25:58.009360",
+      "type": "misconception_marked_correct",
+      "misconception_id": "0e29e660",
+      "concept": "Secure Software Development: OAuth and Facebook API"
+    }
+  ],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "Creating a dummy profile is acceptable for testing purposes",
+          "question": "What is the recommended approach when testing the Facebook API?",
+          "options": [
+            "Don't test the Facebook API",
+            "Use a different API for testing",
+            "Create a real Facebook profile for testing",
+            "Use a dummy profile for testing"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Creating a dummy profile is acceptable for testing purposes to avoid any potential issues with real user data."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "The authorization code grant type is used to obtain an access token for accessing user data",
+          "question": "What is the primary purpose of the authorization code grant type in OAuth?",
+          "options": [
+            "To authenticate users",
+            "To authorize access to a specific resource",
+            "To obtain an access token for accessing user data",
+            "To generate a random token"
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "The authorization code grant type is used to obtain an access token for accessing user data, which is a crucial step in secure software development."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code",
+          "question": "What are the essential steps for obtaining an access token using the Facebook API?",
+          "options": [
+            "Register a client app, obtain an authorization code, and use the access token to access user data",
+            "Obtain an access token, register a client app, and use it to access user data",
+            "Register a client app, obtain an access token, and use it to access user data",
+            "Obtain an authorization code, register a client app, and use the access token to access user data"
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Following the correct steps for obtaining an access token is crucial for secure software development, including registering a client app and obtaining an authorization code."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "The authorization code grant type is used to obtain an access token for accessing user data",
+          "question": "What type of grant is used to obtain an access token for accessing user data in OAuth?",
+          "options": [
+            "Authorization code grant",
+            "Refresh token grant",
+            "Client credentials grant",
+            "Implicit grant"
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "The authorization code grant type is used to obtain an access token for accessing user data in OAuth, which is a secure way to access user data."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "Not following the correct steps for obtaining an access token",
+          "question": "What is the most common mistake when trying to obtain an access token using the Facebook API?",
+          "options": [
+            "Not registering a client app",
+            "Not using the correct access token",
+            "Not following the correct steps for obtaining an access token",
+            "Not obtaining an authorization code"
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Not following the correct steps for obtaining an access token can lead to errors and failed attempts, which is why it's essential to follow the correct steps."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code",
+            "Not following the correct steps for obtaining an access token",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code. Common misconception: Not following the correct steps for obtaining an access token."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+          "options": [
+            "Assuming Facebook API requires a real profile",
+            "Understanding Secure Software Development: OAuth and Facebook API is essential for designing robust software architectures.",
+            "Creating a dummy profile is acceptable for testing purposes",
+            "Secure Software Development: OAuth and Facebook API is only an obsolete theoretical notion with no modern application."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            2
+          ],
+          "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "The authorization code grant type is used to obtain an access token for accessing user data",
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Failing to understand the authorization code grant type",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: The authorization code grant type is used to obtain an access token for accessing user data. Common misconception: Failing to understand the authorization code grant type."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code",
+            "Not following the correct steps for obtaining an access token",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code. Common misconception: Not following the correct steps for obtaining an access token."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+          "options": [
+            "Creating a dummy profile is acceptable for testing purposes",
+            "Understanding Secure Software Development: OAuth and Facebook API is essential for designing robust software architectures.",
+            "Secure Software Development: OAuth and Facebook API is only an obsolete theoretical notion with no modern application.",
+            "Assuming Facebook API requires a real profile"
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            1
+          ],
+          "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+        }
+      ],
+      "answers": [
+        {
+          "question_id": "q_1_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_2_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_3_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_4_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_5_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_6_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_7_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_8_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_9_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_10_pre",
+          "choice": 1,
+          "choices": null
+        }
+      ],
+      "score": {
+        "total_questions": 10,
+        "correct_count": 4,
+        "overall_percentage": 40.0,
+        "per_question": [
+          {
+            "question_id": "q_1_pre",
+            "concept": "Creating a dummy profile is acceptable for testing purposes",
+            "question": "What is the recommended approach when testing the Facebook API?",
+            "choice": 3,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "Creating a dummy profile is acceptable for testing purposes to avoid any potential issues with real user data."
+          },
+          {
+            "question_id": "q_2_pre",
+            "concept": "The authorization code grant type is used to obtain an access token for accessing user data",
+            "question": "What is the primary purpose of the authorization code grant type in OAuth?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 2,
+            "correct_indices": [
+              2
+            ],
+            "correct": false,
+            "explanation": "The authorization code grant type is used to obtain an access token for accessing user data, which is a crucial step in secure software development."
+          },
+          {
+            "question_id": "q_3_pre",
+            "concept": "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code",
+            "question": "What are the essential steps for obtaining an access token using the Facebook API?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": false,
+            "explanation": "Following the correct steps for obtaining an access token is crucial for secure software development, including registering a client app and obtaining an authorization code."
+          },
+          {
+            "question_id": "q_4_pre",
+            "concept": "The authorization code grant type is used to obtain an access token for accessing user data",
+            "question": "What type of grant is used to obtain an access token for accessing user data in OAuth?",
+            "choice": 0,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": true,
+            "explanation": "The authorization code grant type is used to obtain an access token for accessing user data in OAuth, which is a secure way to access user data."
+          },
+          {
+            "question_id": "q_5_pre",
+            "concept": "Not following the correct steps for obtaining an access token",
+            "question": "What is the most common mistake when trying to obtain an access token using the Facebook API?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 2,
+            "correct_indices": [
+              2
+            ],
+            "correct": false,
+            "explanation": "Not following the correct steps for obtaining an access token can lead to errors and failed attempts, which is why it's essential to follow the correct steps."
+          },
+          {
+            "question_id": "q_6_pre",
+            "concept": "Secure Software Development: OAuth and Facebook API",
+            "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": true,
+            "explanation": "Core concept: Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code. Common misconception: Not following the correct steps for obtaining an access token."
+          },
+          {
+            "question_id": "q_7_pre",
+            "concept": "Secure Software Development: OAuth and Facebook API",
+            "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+            "choice": [
+              1
+            ],
+            "is_multiple": true,
+            "correct_index": 1,
+            "correct_indices": [
+              1,
+              2
+            ],
+            "correct": false,
+            "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+          },
+          {
+            "question_id": "q_8_pre",
+            "concept": "Secure Software Development: OAuth and Facebook API",
+            "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": false,
+            "explanation": "Core concept: The authorization code grant type is used to obtain an access token for accessing user data. Common misconception: Failing to understand the authorization code grant type."
+          },
+          {
+            "question_id": "q_9_pre",
+            "concept": "Secure Software Development: OAuth and Facebook API",
+            "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": true,
+            "explanation": "Core concept: Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code. Common misconception: Not following the correct steps for obtaining an access token."
+          },
+          {
+            "question_id": "q_10_pre",
+            "concept": "Secure Software Development: OAuth and Facebook API",
+            "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+            "choice": [
+              1
+            ],
+            "is_multiple": true,
+            "correct_index": 0,
+            "correct_indices": [
+              0,
+              1
+            ],
+            "correct": false,
+            "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+          }
+        ],
+        "per_concept": [
+          {
+            "concept": "Creating a dummy profile is acceptable for testing purposes",
+            "correct": 1,
+            "total": 1,
+            "percentage": 100.0
+          },
+          {
+            "concept": "The authorization code grant type is used to obtain an access token for accessing user data",
+            "correct": 1,
+            "total": 2,
+            "percentage": 50.0
+          },
+          {
+            "concept": "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          },
+          {
+            "concept": "Not following the correct steps for obtaining an access token",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          },
+          {
+            "concept": "Secure Software Development: OAuth and Facebook API",
+            "correct": 2,
+            "total": 5,
+            "percentage": 40.0
+          }
+        ]
+      },
+      "submitted_at": "2026-10-22T01:10:37.126700"
+    },
+    "post": {
+      "questions": [
+        {
+          "id": "q_1_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+          "options": [
+            "Creating a dummy profile is acceptable for testing purposes",
+            "Understanding Secure Software Development: OAuth and Facebook API is essential for designing robust software architectures.",
+            "Assuming Facebook API requires a real profile",
+            "Secure Software Development: OAuth and Facebook API is only an obsolete theoretical notion with no modern application."
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            1
+          ],
+          "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+        },
+        {
+          "id": "q_2_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Failing to understand the authorization code grant type",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines.",
+            "The authorization code grant type is used to obtain an access token for accessing user data"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: The authorization code grant type is used to obtain an access token for accessing user data. Common misconception: Failing to understand the authorization code grant type."
+        },
+        {
+          "id": "q_3_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "Not following the correct steps for obtaining an access token",
+            "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines.",
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code. Common misconception: Not following the correct steps for obtaining an access token."
+        },
+        {
+          "id": "q_4_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+          "options": [
+            "Assuming Facebook API requires a real profile",
+            "Secure Software Development: OAuth and Facebook API is only an obsolete theoretical notion with no modern application.",
+            "Creating a dummy profile is acceptable for testing purposes",
+            "Understanding Secure Software Development: OAuth and Facebook API is essential for designing robust software architectures."
+          ],
+          "is_multiple": true,
+          "correct_index": 2,
+          "correct_indices": [
+            2,
+            3
+          ],
+          "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+        },
+        {
+          "id": "q_5_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "The authorization code grant type is used to obtain an access token for accessing user data",
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines.",
+            "Failing to understand the authorization code grant type"
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: The authorization code grant type is used to obtain an access token for accessing user data. Common misconception: Failing to understand the authorization code grant type."
+        },
+        {
+          "id": "q_6_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "Not following the correct steps for obtaining an access token",
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines.",
+            "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code. Common misconception: Not following the correct steps for obtaining an access token."
+        },
+        {
+          "id": "q_7_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+          "options": [
+            "Assuming Facebook API requires a real profile",
+            "Creating a dummy profile is acceptable for testing purposes",
+            "Understanding Secure Software Development: OAuth and Facebook API is essential for designing robust software architectures.",
+            "Secure Software Development: OAuth and Facebook API is only an obsolete theoretical notion with no modern application."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            2
+          ],
+          "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+        },
+        {
+          "id": "q_8_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines.",
+            "Failing to understand the authorization code grant type",
+            "The authorization code grant type is used to obtain an access token for accessing user data"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: The authorization code grant type is used to obtain an access token for accessing user data. Common misconception: Failing to understand the authorization code grant type."
+        },
+        {
+          "id": "q_9_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which statement accurately describes Secure Software Development: OAuth and Facebook API?",
+          "options": [
+            "Secure Software Development: OAuth and Facebook API can only be instantiated once globally across an entire program.",
+            "Not following the correct steps for obtaining an access token",
+            "Secure Software Development: OAuth and Facebook API is strictly limited to low-level assembly routines.",
+            "Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: Following the correct steps for obtaining an access token, including registering a client app and obtaining an authorization code. Common misconception: Not following the correct steps for obtaining an access token."
+        },
+        {
+          "id": "q_10_post",
+          "concept": "Secure Software Development: OAuth and Facebook API",
+          "question": "Which of the following statements regarding Secure Software Development: OAuth and Facebook API are correct? (Select all that apply)",
+          "options": [
+            "Creating a dummy profile is acceptable for testing purposes",
+            "Understanding Secure Software Development: OAuth and Facebook API is essential for designing robust software architectures.",
+            "Secure Software Development: OAuth and Facebook API is only an obsolete theoretical notion with no modern application.",
+            "Assuming Facebook API requires a real profile"
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            1
+          ],
+          "explanation": "Core concept: Creating a dummy profile is acceptable for testing purposes. Common misconception: Assuming Facebook API requires a real profile."
+        }
+      ],
+      "answers": [],
+      "score": null,
+      "submitted_at": null
+    }
+  },
+  "created_at": "2026-10-22T01:04:17.436266",
+  "updated_at": "2026-10-22T01:30:09.485457"
+}
