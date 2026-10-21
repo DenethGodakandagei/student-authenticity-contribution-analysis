@@ -59,10 +59,23 @@ export default function NovaLogo({ size = 38, className }: NovaLogoProps) {
   return (
     <span
       className={className ? `nova-logo ${className}` : 'nova-logo'}
-      style={{ ['--mark-size' as string]: `${Math.max(size * 0.42, 14)}px` }}
+      style={{
+        ['--mark-size' as string]: `${Math.max(size * 0.42, 14)}px`,
+        textDecoration: 'none',
+      }}
     >
       <NovaMark size={size} />
-      <span >NOVA</span>
+      <span
+        style={{
+          color: '#000000',
+          fontWeight: 800,
+          textDecoration: 'none',
+          letterSpacing: '0.12em',
+          fontSize: '1.15rem',
+        }}
+      >
+        NOVA
+      </span>
     </span>
   );
 }

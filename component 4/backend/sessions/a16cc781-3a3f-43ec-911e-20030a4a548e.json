@@ -14,11 +14,13 @@
   "misconceptions": [
     {
       "id": "m1",
-      "concept": "Loops",
       "wrong_concept": "I think that loops only work with arrays and collections.",
       "correct_concept": "Loops can be used with various data types, not just arrays and collections.",
       "reason": "Students may think that loops are only used for iterating over arrays and collections, but the concept of loops is more general and can be applied to any data type.",
-      "source_pages": [4],
+      "concept": "Loops",
+      "source_pages": [
+        4
+      ],
       "source_quote": "Use for-each for clean, read-only iteration over arrays and collections.",
       "confidence": 0.8,
       "status": "active",
@@ -31,11 +33,13 @@
     },
     {
       "id": "m2",
-      "concept": "Loops",
       "wrong_concept": "I think that the loop condition is checked only once at the beginning of the loop.",
       "correct_concept": "The loop condition is checked at the beginning of each iteration.",
       "reason": "Students may assume that the loop condition is only checked once at the beginning of the loop, but in reality, the condition is re-evaluated at the start of each iteration.",
-      "source_pages": [3],
+      "concept": "Loops",
+      "source_pages": [
+        3
+      ],
       "source_quote": "if (i == 3) { continue; }",
       "confidence": 0.8,
       "status": "active",
@@ -48,12 +52,14 @@
     },
     {
       "id": "m3",
-      "concept": "For Loop",
       "wrong_concept": "I think that a for loop can only be used to iterate over arrays or collections.",
       "correct_concept": "A for loop can be used to execute a block of code repeatedly as long as a given condition is true.",
       "reason": "Students may think this because they are familiar with the enhanced for loop (for-each) which is specifically designed for iterating over arrays or collections.",
-      "source_pages": [1],
-      "source_quote": "Java provides four main types of loops: — used when the number of iterations is known",
+      "concept": "For Loop",
+      "source_pages": [
+        1
+      ],
+      "source_quote": "Java provides four main types of loops: \u2014 used when the number of iterations is known",
       "confidence": 0.8,
       "status": "active",
       "is_corrected": false,
@@ -65,11 +71,13 @@
     },
     {
       "id": "m4",
-      "concept": "Do-While Loop",
       "wrong_concept": "I think that the do-while loop always runs at least once, but it can still terminate early if the condition is false.",
       "correct_concept": "The do-while loop executes the loop body first and checks the condition afterward, guaranteeing the body runs at least once, regardless of the condition.",
       "reason": "This misconception arises because students may not fully understand the difference between the do-while loop and the while loop. They may think that the do-while loop works similarly to the while loop, but with the added guarantee that the loop body runs at least once.",
-      "source_pages": [2],
+      "concept": "Do-While Loop",
+      "source_pages": [
+        2
+      ],
       "source_quote": "The do-while loop executes the loop body first and checks the condition afterward. This guarantees the body runs at least once, regardless of the condition.",
       "confidence": 0.8,
       "status": "active",
@@ -82,11 +90,13 @@
     },
     {
       "id": "m5",
-      "concept": "For-Each Loop",
       "wrong_concept": "I think that the For-Each Loop is only used to iterate over arrays and collections, and it's not applicable to other types of data structures.",
       "correct_concept": "The For-Each Loop is used to iterate over arrays, collections, and other types of data structures.",
       "reason": "This misconception arises because students may not fully understand the versatility of the For-Each Loop and may think it's limited to specific data structures.",
-      "source_pages": [2],
+      "concept": "For-Each Loop",
+      "source_pages": [
+        2
+      ],
       "source_quote": "Used to iterate over arrays or collections without needing an index variable.",
       "confidence": 0.8,
       "status": "active",
@@ -99,11 +109,13 @@
     },
     {
       "id": "m6",
-      "concept": "Nested Loops",
       "wrong_concept": "I think that nested loops always run infinitely.",
       "correct_concept": "A loop inside another loop is called a nested loop; the inner loop completes all its iterations for each single iteration of the outer loop.",
       "reason": "Students may think that nested loops always run infinitely because they don't understand how the inner loop completes its iterations before moving on to the next iteration of the outer loop.",
-      "source_pages": [3],
+      "concept": "Nested Loops",
+      "source_pages": [
+        3
+      ],
       "source_quote": "The inner loop completes all its iterations for each single iteration of the outer loop.",
       "confidence": 0.8,
       "status": "active",
@@ -116,11 +128,13 @@
     },
     {
       "id": "m7",
-      "concept": "Continue Statement",
       "wrong_concept": "I think that the Continue Statement skips the entire loop and moves to the next iteration of the outer loop.",
       "correct_concept": "The Continue Statement skips the current iteration and moves to the next iteration of the same loop.",
       "reason": "Students may mistakenly believe that the Continue Statement can skip multiple loops or iterations, when in fact it only skips the current iteration.",
-      "source_pages": [3],
+      "concept": "Continue Statement",
+      "source_pages": [
+        3
+      ],
       "source_quote": "Labels let break and continue target a specific outer loop when working with nested loops.",
       "confidence": 0.8,
       "status": "active",
@@ -552,8 +566,189 @@
         ]
       },
       "submitted_at": "2026-10-21T20:50:38.052596"
+    },
+    "post": {
+      "questions": [
+        {
+          "id": "q_1_post",
+          "concept": "Loops",
+          "question": "Which of the following statements regarding Loops are correct? (Select all that apply)",
+          "options": [
+            "Loops only work with arrays and collections.",
+            "Understanding Loops is essential for designing robust software architectures.",
+            "Loops is only an obsolete theoretical notion with no modern application.",
+            "Loops can be used with various data types, not just arrays and collections."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            3
+          ],
+          "explanation": "Core concept: Loops can be used with various data types, not just arrays and collections.. Common misconception: Loops only work with arrays and collections.."
+        },
+        {
+          "id": "q_2_post",
+          "concept": "Loops",
+          "question": "Which statement accurately describes Loops?",
+          "options": [
+            "Loops can only be instantiated once globally across an entire program.",
+            "Loops is strictly limited to low-level assembly routines.",
+            "The loop condition is checked at the beginning of each iteration.",
+            "The loop condition is checked only once at the beginning of the loop."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: The loop condition is checked at the beginning of each iteration.. Common misconception: The loop condition is checked only once at the beginning of the loop.."
+        },
+        {
+          "id": "q_3_post",
+          "concept": "For Loop",
+          "question": "Which statement accurately describes For Loop?",
+          "options": [
+            "A for loop can only be used to iterate over arrays or collections.",
+            "A for loop can be used to execute a block of code repeatedly as long as a given condition is true.",
+            "For Loop can only be instantiated once globally across an entire program.",
+            "For Loop is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: A for loop can be used to execute a block of code repeatedly as long as a given condition is true.. Common misconception: A for loop can only be used to iterate over arrays or collections.."
+        },
+        {
+          "id": "q_4_post",
+          "concept": "Do-While Loop",
+          "question": "Which of the following statements regarding Do-While Loop are correct? (Select all that apply)",
+          "options": [
+            "Do-While Loop is only an obsolete theoretical notion with no modern application.",
+            "The do-while loop always runs at least once, but it can still terminate early if the condition is false.",
+            "Understanding Do-While Loop is essential for designing robust software architectures.",
+            "The do-while loop executes the loop body first and checks the condition afterward, guaranteeing the body runs at least once, regardless of the condition."
+          ],
+          "is_multiple": true,
+          "correct_index": 2,
+          "correct_indices": [
+            2,
+            3
+          ],
+          "explanation": "Core concept: The do-while loop executes the loop body first and checks the condition afterward, guaranteeing the body runs at least once, regardless of the condition.. Common misconception: The do-while loop always runs at least once, but it can still terminate early if the condition is false.."
+        },
+        {
+          "id": "q_5_post",
+          "concept": "For-Each Loop",
+          "question": "Which statement accurately describes For-Each Loop?",
+          "options": [
+            "For-Each Loop is strictly limited to low-level assembly routines.",
+            "The For-Each Loop is only used to iterate over arrays and collections, and it's not applicable to other types of data structures.",
+            "The For-Each Loop is used to iterate over arrays, collections, and other types of data structures.",
+            "For-Each Loop can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: The For-Each Loop is used to iterate over arrays, collections, and other types of data structures.. Common misconception: The For-Each Loop is only used to iterate over arrays and collections, and it's not applicable to other types of data structures.."
+        },
+        {
+          "id": "q_6_post",
+          "concept": "Nested Loops",
+          "question": "Which statement accurately describes Nested Loops?",
+          "options": [
+            "A loop inside another loop is called a nested loop; the inner loop completes all its iterations for each single iteration of the outer loop.",
+            "Nested loops always run infinitely.",
+            "Nested Loops can only be instantiated once globally across an entire program.",
+            "Nested Loops is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: A loop inside another loop is called a nested loop; the inner loop completes all its iterations for each single iteration of the outer loop.. Common misconception: Nested loops always run infinitely.."
+        },
+        {
+          "id": "q_7_post",
+          "concept": "Continue Statement",
+          "question": "Which of the following statements regarding Continue Statement are correct? (Select all that apply)",
+          "options": [
+            "Continue Statement is only an obsolete theoretical notion with no modern application.",
+            "Understanding Continue Statement is essential for designing robust software architectures.",
+            "The Continue Statement skips the current iteration and moves to the next iteration of the same loop.",
+            "The Continue Statement skips the entire loop and moves to the next iteration of the outer loop."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            2
+          ],
+          "explanation": "Core concept: The Continue Statement skips the current iteration and moves to the next iteration of the same loop.. Common misconception: The Continue Statement skips the entire loop and moves to the next iteration of the outer loop.."
+        },
+        {
+          "id": "q_8_post",
+          "concept": "Loops",
+          "question": "Which statement accurately describes Loops?",
+          "options": [
+            "Loops only work with arrays and collections.",
+            "Loops is strictly limited to low-level assembly routines.",
+            "Loops can be used with various data types, not just arrays and collections.",
+            "Loops can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: Loops can be used with various data types, not just arrays and collections.. Common misconception: Loops only work with arrays and collections.."
+        },
+        {
+          "id": "q_9_post",
+          "concept": "Loops",
+          "question": "Which statement accurately describes Loops?",
+          "options": [
+            "Loops can only be instantiated once globally across an entire program.",
+            "Loops is strictly limited to low-level assembly routines.",
+            "The loop condition is checked at the beginning of each iteration.",
+            "The loop condition is checked only once at the beginning of the loop."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: The loop condition is checked at the beginning of each iteration.. Common misconception: The loop condition is checked only once at the beginning of the loop.."
+        },
+        {
+          "id": "q_10_post",
+          "concept": "For Loop",
+          "question": "Which of the following statements regarding For Loop are correct? (Select all that apply)",
+          "options": [
+            "A for loop can only be used to iterate over arrays or collections.",
+            "A for loop can be used to execute a block of code repeatedly as long as a given condition is true.",
+            "For Loop is only an obsolete theoretical notion with no modern application.",
+            "Understanding For Loop is essential for designing robust software architectures."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            3
+          ],
+          "explanation": "Core concept: A for loop can be used to execute a block of code repeatedly as long as a given condition is true.. Common misconception: A for loop can only be used to iterate over arrays or collections.."
+        }
+      ],
+      "answers": [],
+      "score": null,
+      "submitted_at": null
     }
   },
   "created_at": "2026-10-21T20:33:47.313713",
-  "updated_at": "2026-10-21T20:50:38.052615"
+  "updated_at": "2026-10-21T23:26:14.438295"
 }

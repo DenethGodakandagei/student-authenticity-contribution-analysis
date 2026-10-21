@@ -379,6 +379,7 @@
   display: inline-flex;
   align-items: center;
   flex: none;
+  text-decoration: none !important;
   border-radius: 14px;
   padding: 0.35rem 0.65rem;
   background: linear-gradient(135deg, rgba(111, 175, 154, 0.12), rgba(239, 248, 243, 0.8));
