@@ -213,13 +213,12 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
 
   const exportLinesToCsv = () => {
     if (!intel?.lineAttributions || intel.lineAttributions.length === 0) return;
-    const headers = ['Line', 'Author', 'Provenance', 'Date', 'Time', 'Code Content'];
+    const headers = ['Line', 'Author', 'Date', 'Time', 'Code Content'];
     const rows = intel.lineAttributions.map((attr: any) => {
       const cleanContent = `"${(attr.lineContent || '').replace(/"/g, '""')}"`;
       return [
         attr.lineNumber,
         `"${attr.authorName || 'Student'}"`,
-        `"${attr.provenanceType || 'typed'}"`,
         `"${attr.shortDate || ''}"`,
         `"${attr.shortTime || attr.timeFormatted || ''}"`,
         cleanContent
@@ -241,7 +240,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
 
   const exportAllWorkspaceFilesToCsv = () => {
     if (!offlineEdits || offlineEdits.length === 0) return;
-    const headers = ['File Path', 'Line Number', 'Author', 'Date', 'Time', 'Provenance', 'Code Content'];
+    const headers = ['File Path', 'Line Number', 'Author', 'Date', 'Time', 'Code Content'];
     const rows: string[] = [];
 
     offlineEdits.forEach((file: any) => {
@@ -255,7 +254,6 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
             `"${attr.authorName || 'Student'}"`,
             `"${attr.shortDate || ''}"`,
             `"${attr.shortTime || attr.timeFormatted || ''}"`,
-            `"${attr.provenanceType || 'typed'}"`,
             cleanContent
           ].join(','));
         });
@@ -717,20 +715,11 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                       {workspaceFileViewTab === 'blame' && (
                         <div className="flex items-center gap-2">
                           <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl">
-                            <span className="text-slate-600 font-semibold">{intel?.totalLines || selectedOfflineFile.lineCount || 0} lines:</span>
-                            <span className="text-emerald-700 font-bold">✍️ {intel?.typedCount || 0} Manual</span>
-                            <span className="text-slate-300">·</span>
-                            <span className="text-rose-700 font-bold">📋 {intel?.pastedCount || 0} Pasted</span>
-                            {Boolean(intel?.aiCount) && (
-                              <>
-                                <span className="text-slate-300">·</span>
-                                <span className="text-purple-700 font-bold">🤖 {intel?.aiCount || 0} AI</span>
-                              </>
-                            )}
+                            <span className="text-slate-600 font-semibold">{intel?.totalLines || selectedOfflineFile.lineCount || 0} lines</span>
                           </div>
                           <button
                             onClick={exportLinesToCsv}
-                            title="Export line-by-line provenance with dates & times to CSV"
+                            title="Export lines with dates & times to CSV"
                             className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-mono font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
                           >
                             <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -874,7 +863,6 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                             <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase border-b border-slate-100">
                               <th className="py-2 px-3 text-right w-10 border-r border-slate-100">#</th>
                               <th className="py-2 px-3 text-left w-36 border-r border-slate-100">Author</th>
-                              <th className="py-2 px-3 text-center w-28 border-r border-slate-100">Provenance</th>
                               <th className="py-2 px-3 text-center w-36 border-r border-slate-100">Added (Date/Time)</th>
                               <th className="py-2 px-4 text-left">Code Content</th>
                             </tr>
@@ -894,21 +882,6 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                                       </span>
                                     </div>
                                   </td>
-                                  <td className="px-2 py-1 select-none w-28 border-r border-slate-100 text-[9px] text-center whitespace-nowrap">
-                                    {attr.provenanceType === 'pasted' ? (
-                                      <span className="text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded font-bold">
-                                        📋 Pasted
-                                      </span>
-                                    ) : attr.provenanceType === 'ai_generated' ? (
-                                      <span className="text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded font-bold">
-                                        🤖 AI-Assist
-                                      </span>
-                                    ) : (
-                                      <span className="text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-medium">
-                                        ✍️ Typed
-                                      </span>
-                                    )}
-                                  </td>
                                   <td className="px-2.5 py-1 select-none w-36 border-r border-slate-100 text-[9px] font-mono text-center whitespace-nowrap">
                                     {attr.shortDate ? (
                                       <span className="inline-flex items-center gap-1.5">
@@ -926,7 +899,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                               ))
                             ) : (
                               <tr>
-                                <td colSpan={5} className="p-8 text-center text-xs text-slate-400">
+                                <td colSpan={4} className="p-8 text-center text-xs text-slate-400">
                                   No line attributions available.
                                 </td>
                               </tr>
@@ -1019,7 +992,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
                 <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400 space-y-2">
                   <Fingerprint className="w-8 h-8 text-slate-300 stroke-[1.5]" />
                   <span className="text-xs font-mono text-slate-500">
-                    Select any file from the explorer to inspect authorship provenance, typing metrics, and live diffs.
+                    Select any file from the explorer to inspect authorship, typing metrics, and live diffs.
                   </span>
                 </div>
               )}
@@ -1071,7 +1044,7 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
               </h4>
               <p className="text-xs text-[#576561] font-normal max-w-md mx-auto mt-1">
                 Link your local cloned repository directory. INCODE verifies the hidden{' '}
-                <code className="text-[#2d5849] font-mono bg-[#EFF8F3] px-1.5 py-0.5 rounded border border-[#6FAF9A]/25">.git/config</code> remote path to ensure authentic provenance.
+                <code className="text-[#2d5849] font-mono bg-[#EFF8F3] px-1.5 py-0.5 rounded border border-[#6FAF9A]/25">.git/config</code> remote path to ensure authentic tracking.
               </p>
             </div>
             <button

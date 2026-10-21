@@ -4,9 +4,9 @@
   "description": "Backend for Student Contribution Tracking and Assignment Analytics Platform",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "nodemon --watch src -e ts --exec ts-node src/server.ts",
+    "build": "node init && tsc",
+    "start": "node init && node dist/server.js",
+    "dev": "node init && nodemon --watch src -e ts --exec ts-node src/server.ts",
     "seed": "ts-node src/seed.ts"
   },
   "dependencies": {
