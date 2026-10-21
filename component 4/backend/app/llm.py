@@ -238,16 +238,119 @@ class HuggingFaceProvider(BaseLLMProvider):
             logger.error(f"HuggingFace API request failed: {e}")
             raise ConnectionError(f"LLM Connection Error: HuggingFace API request failed: {e}") from e
 
+class GroqProvider(BaseLLMProvider):
+    """
+    Groq Cloud API provider delivering ultra-fast cloud inference for Llama 3 models.
+    """
+    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None):
+        self.api_key = (api_key or settings.GROQ_API_KEY).strip()
+        self.model_name = (model_name or settings.GROQ_MODEL).strip()
+
+    def generate(self, prompt: str, json_mode: bool = False) -> str:
+        if not self.api_key:
+            raise ConnectionError("LLM Configuration Error: GROQ_API_KEY is not set.")
+
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        }
+        data = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": "You are Atlas, an expert AI pedagogical tutor that analyzes lecture material and extracts student misconceptions in JSON format."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
+        }
+        if json_mode:
+            data["response_format"] = {"type": "json_object"}
+
+        started = time.perf_counter()
+        try:
+            req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
+            with urllib.request.urlopen(req, timeout=45) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                response_text = res_data["choices"][0]["message"]["content"]
+                llm_call(
+                    type(self).__name__,
+                    self.model_name,
+                    prompt,
+                    json_mode=json_mode,
+                    seconds=time.perf_counter() - started,
+                    response=response_text,
+                    attempt=1,
+                )
+                return response_text
+        except Exception as e:
+            llm_call(
+                type(self).__name__,
+                self.model_name,
+                prompt,
+                json_mode=json_mode,
+                seconds=time.perf_counter() - started,
+                attempt=1,
+                error=str(e),
+            )
+            logger.error(f"Groq API call failed: {e}")
+            raise ConnectionError(f"LLM Connection Error: Groq API request failed: {e}") from e
+
+class FallbackLLMProvider(BaseLLMProvider):
+    """
+    Primary provider (e.g. Ollama) with seamless fallback to external cloud APIs
+    (Groq, OpenAI, or HuggingFace) on timeout or connection failures.
+    """
+    def __init__(self, primary: BaseLLMProvider, fallback: Optional[BaseLLMProvider] = None):
+        self.primary = primary
+        self.fallback = fallback
+        self.model_name = getattr(primary, "model_name", "primary")
+
+    def generate(self, prompt: str, json_mode: bool = False) -> str:
+        try:
+            return self.primary.generate(prompt, json_mode=json_mode)
+        except (TimeoutError, ConnectionError, RuntimeError) as primary_err:
+            if not self.fallback:
+                logger.error(f"Primary provider failed and no fallback configured: {primary_err}")
+                raise primary_err
+            
+            logger.warning(
+                f"Primary provider {type(self.primary).__name__} timed out or failed ({primary_err}). "
+                f"Switching automatically to fallback provider {type(self.fallback).__name__}..."
+            )
+            return self.fallback.generate(prompt, json_mode=json_mode)
+
+def get_fallback_provider() -> Optional[BaseLLMProvider]:
+    """Returns the best available external cloud fallback provider based on configured API keys."""
+    if settings.GROQ_API_KEY:
+        logger.info(f"Configuring GroqProvider as cloud fallback ({settings.GROQ_MODEL})")
+        return GroqProvider()
+    if settings.OPENAI_API_KEY:
+        logger.info(f"Configuring OpenAIProvider as cloud fallback ({settings.OPENAI_MODEL})")
+        return OpenAIProvider()
+    if settings.HF_TOKEN:
+        logger.info(f"Configuring HuggingFaceProvider as cloud fallback ({settings.HF_MODEL})")
+        return HuggingFaceProvider()
+    return None
+
 def get_llm_provider() -> BaseLLMProvider:
     """
     Factory function returning configured LLM provider according to settings.
-    Raises ConnectionError if no valid provider configuration is present.
+    When Ollama is selected, automatically wraps it in FallbackLLMProvider if an external API key is set.
     """
     provider_type = settings.LLM_PROVIDER.lower()
+    fallback = get_fallback_provider()
     
-    if provider_type == "ollama":
-        logger.info(f"Using OllamaProvider ({settings.OLLAMA_MODEL} @ {settings.OLLAMA_HOST})")
-        return OllamaProvider()
+    if provider_type == "groq" or (provider_type not in ["ollama", "openai", "huggingface"] and settings.GROQ_API_KEY):
+        logger.info(f"Using GroqProvider directly ({settings.GROQ_MODEL})")
+        return GroqProvider()
+    elif provider_type == "ollama":
+        primary = OllamaProvider()
+        if fallback:
+            logger.info(f"Using OllamaProvider with fallback to {type(fallback).__name__}")
+            return FallbackLLMProvider(primary=primary, fallback=fallback)
+        logger.info(f"Using OllamaProvider without fallback ({settings.OLLAMA_MODEL} @ {settings.OLLAMA_HOST})")
+        return primary
     elif provider_type == "huggingface" or settings.HF_TOKEN:
         logger.info(f"Using HuggingFaceProvider ({settings.HF_MODEL})")
         return HuggingFaceProvider()
@@ -257,7 +360,7 @@ def get_llm_provider() -> BaseLLMProvider:
     else:
         raise ConnectionError(
             f"LLM Provider Error: Unknown or unconfigured provider '{provider_type}'. "
-            "Please configure a valid LLM provider (Ollama, OpenAI, or HuggingFace)."
+            "Please configure a valid LLM provider (Ollama, Groq, OpenAI, or HuggingFace)."
         )
 
 def generate_response(prompt: str, provider: Optional[BaseLLMProvider] = None, json_mode: bool = False) -> str:

@@ -9,6 +9,9 @@ import sys
 import json
 import time
 import logging
+import re
+import zipfile
+import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, Optional
 # pyrefly: ignore [missing-import]
 import numpy as np
@@ -68,18 +71,24 @@ def extract_docx_text(docx_path: str) -> str:
 
 
 def extract_pptx_slides(pptx_path: str) -> List[Dict[str, Any]]:
-    """Extracts text per slide from a PowerPoint (.pptx) file using standard library zipfile and XML parsing."""
+    """
+    Extracts text per slide from a PowerPoint (.pptx) file using standard library zipfile and XML parsing.
+    Extracts all text tags from slide XMLs, notesSlide XMLs, and diagram data.
+    """
     slides: List[Dict[str, Any]] = []
     try:
         with zipfile.ZipFile(pptx_path) as z:
-            # Find all slide XML files (e.g., ppt/slides/slide1.xml)
+            all_files = z.namelist()
+            logger.info(f"PPTX contents count: {len(all_files)} files in zip archive.")
+
+            # Match slide XML files (e.g. ppt/slides/slide1.xml)
             slide_names = [
-                name for name in z.namelist()
-                if name.startswith("ppt/slides/slide") and name.endswith(".xml")
+                name for name in all_files
+                if "/slides/slide" in name.lower() and name.lower().endswith(".xml")
             ]
-            # Natural sort by slide number: ppt/slides/slide1.xml -> 1
+
             def slide_num(name: str) -> int:
-                m = re.search(r"slide(\d+)\.xml", name)
+                m = re.search(r"slide(\d+)\.xml", name, re.IGNORECASE)
                 return int(m.group(1)) if m else 9999
 
             slide_names.sort(key=slide_num)
@@ -88,16 +97,59 @@ def extract_pptx_slides(pptx_path: str) -> List[Dict[str, Any]]:
                 try:
                     xml_content = z.read(slide_name)
                     tree = ET.fromstring(xml_content)
-                    texts = [
-                        node.text
-                        for node in tree.iter("{http://schemas.openxmlformats.org/drawingml/2006/main}t")
-                        if node.text
-                    ]
-                    slide_text = " ".join(t.strip() for t in texts if t.strip())
+                    texts: List[str] = []
+                    
+                    # Extract from all text elements (.text or .tail)
+                    for elem in tree.iter():
+                        tag_name = elem.tag.split("}")[-1].lower() if "}" in elem.tag else elem.tag.lower()
+                        if tag_name in ("t", "r", "p") and elem.text and elem.text.strip():
+                            texts.append(elem.text.strip())
+                        elif elem.tail and elem.tail.strip():
+                            texts.append(elem.tail.strip())
+
+                    slide_text = " ".join(texts).strip()
                     if slide_text:
                         slides.append({"page": idx, "text": slide_text})
                 except Exception as slide_err:
                     logger.debug(f"Failed parsing slide {slide_name}: {slide_err}")
+
+            # If no text found from slides/slide*.xml, check notesSlides and diagram data
+            if not slides:
+                logger.info("No slide XML text found, checking notesSlides and diagram data...")
+                fallback_names = [
+                    name for name in all_files
+                    if ("/notesslides/" in name.lower() or "/diagrams/" in name.lower() or "sharedstrings.xml" in name.lower())
+                    and name.lower().endswith(".xml")
+                ]
+                for idx, fb_name in enumerate(fallback_names, start=1):
+                    try:
+                        content = z.read(fb_name)
+                        tree = ET.fromstring(content)
+                        texts = [elem.text.strip() for elem in tree.iter() if elem.text and elem.text.strip()]
+                        if texts:
+                            slides.append({"page": idx, "text": " ".join(texts)})
+                    except Exception:
+                        pass
+
+            # Ultimate fallback: scan every XML file under ppt/ for readable textual content
+            if not slides:
+                logger.info("Scanning all ppt/*.xml files for text...")
+                all_xmls = [n for n in all_files if n.lower().startswith("ppt/") and n.lower().endswith(".xml")]
+                aggregated_texts: List[str] = []
+                for xfile in all_xmls:
+                    try:
+                        content = z.read(xfile)
+                        tree = ET.fromstring(content)
+                        for elem in tree.iter():
+                            tag = elem.tag.split("}")[-1].lower() if "}" in elem.tag else elem.tag.lower()
+                            if tag == "t" and elem.text and elem.text.strip():
+                                aggregated_texts.append(elem.text.strip())
+                    except Exception:
+                        pass
+                if aggregated_texts:
+                    slides.append({"page": 1, "text": " ".join(aggregated_texts)})
+
+            logger.info(f"Extracted {len(slides)} slide/section texts from PPTX: {pptx_path}")
     except Exception as exc:
         logger.warning(f"Failed extracting slides from pptx {pptx_path}: {exc}")
     return slides

@@ -41,13 +41,8 @@ export default function DashboardPage() {
     }
   }
 
-  // Fetch sessions once the guard has cleared.
-  useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
-
+  const loadSessions = () => {
     apiRequest<SessionListItem[] | ApiError>('/sessions', 'GET').then((res) => {
-      if (cancelled) return;
       if (res.ok && Array.isArray(res.data)) {
         setSessions(res.data);
       } else {
@@ -57,10 +52,12 @@ export default function DashboardPage() {
         );
       }
     });
+  };
 
-    return () => {
-      cancelled = true;
-    };
+  // Fetch sessions once the guard has cleared.
+  useEffect(() => {
+    if (!ready) return;
+    loadSessions();
   }, [ready]);
 
   if (!ready) {
@@ -93,6 +90,7 @@ export default function DashboardPage() {
       <UploadMaterialModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
+        onSessionCreated={() => loadSessions()}
       />
     </div>
   );

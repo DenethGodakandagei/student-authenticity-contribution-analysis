@@ -24,7 +24,7 @@ export default function TestRunner({
 }) {
   const router = useRouter();
   const [questions, setQuestions] = useState<TestQuestion[]>([]);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number | number[]>>({});
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -73,8 +73,34 @@ export default function TestRunner({
   }, [sessionId, form, router, afterSubmitPath]);
 
   const current = questions[index];
-  const answered = current ? answers[current.id] !== undefined : false;
-  const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined);
+  const currentAnswer = current ? answers[current.id] : undefined;
+  const answered = current
+    ? current.is_multiple
+      ? Array.isArray(currentAnswer) && currentAnswer.length > 0
+      : currentAnswer !== undefined
+    : false;
+
+  const allAnswered =
+    questions.length > 0 &&
+    questions.every((q) => {
+      const a = answers[q.id];
+      return q.is_multiple ? Array.isArray(a) && a.length > 0 : a !== undefined;
+    });
+
+  const toggleOption = (optionIndex: number) => {
+    if (!current) return;
+    if (current.is_multiple) {
+      setAnswers((prev) => {
+        const existing = Array.isArray(prev[current.id]) ? (prev[current.id] as number[]) : [];
+        const next = existing.includes(optionIndex)
+          ? existing.filter((i) => i !== optionIndex)
+          : [...existing, optionIndex];
+        return { ...prev, [current.id]: next };
+      });
+    } else {
+      setAnswers((prev) => ({ ...prev, [current.id]: optionIndex }));
+    }
+  };
 
   const submit = async () => {
     if (submitting || !allAnswered) return;
@@ -82,7 +108,19 @@ export default function TestRunner({
     setError('');
 
     const payload = {
-      answers: questions.map((q) => ({ question_id: q.id, choice: answers[q.id] })),
+      answers: questions.map((q) => {
+        const val = answers[q.id];
+        if (q.is_multiple) {
+          return {
+            question_id: q.id,
+            choices: Array.isArray(val) ? val : [],
+          };
+        }
+        return {
+          question_id: q.id,
+          choice: typeof val === 'number' ? val : 0,
+        };
+      }),
     };
     const res = await apiRequest<SubmitTestResponse & ApiError>(
       `/sessions/${sessionId}/tests/${form}/submit`,
@@ -98,6 +136,33 @@ export default function TestRunner({
     setError(res.data?.detail ?? res.error ?? 'Could not submit this test. Please try again.');
   };
 
+  const [prepStep, setPrepStep] = useState(0);
+
+  const PREP_STEPS = [
+    {
+      title: 'Retrieving Session Knowledge',
+      desc: 'Loading key concept definitions and misconceptions from your uploaded material...',
+    },
+    {
+      title: 'Formulating Questions with LLM',
+      desc: 'Creating targeted diagnostic multiple-choice questions to assess baseline knowledge...',
+    },
+    {
+      title: 'Finalizing Evaluation Matrix',
+      desc: 'Calibrating answer keys and building your interactive assessment room...',
+    },
+  ];
+
+  useEffect(() => {
+    if (!loading) return;
+    const t1 = setTimeout(() => setPrepStep(1), 3000);
+    const t2 = setTimeout(() => setPrepStep(2), 9000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [loading]);
+
   if (loading) {
     return (
       <div className="dash-page">
@@ -105,27 +170,170 @@ export default function TestRunner({
           <section
             className="dash-card"
             style={{
-              padding: '3.5rem 1.5rem',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '1.25rem',
+              padding: '2.5rem 1.5rem',
+              maxWidth: '680px',
+              margin: '0 auto',
+              textAlign: 'left',
             }}
           >
-            <span
-              className="dash-spinner"
-              style={{ width: '2.5rem', height: '2.5rem', borderWidth: '3.5px' }}
-              aria-hidden="true"
-            />
-            <div>
-              <h1 className="dash-greeting__title" style={{ fontSize: '1.25rem' }}>
-                Preparing your {title}…
-              </h1>
-              <p className="dash-greeting__text">
-                Generating questions for your session concepts. This may take a few moments.
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.5rem' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: 'rgba(111, 175, 154, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#3e8b75',
+                  flexShrink: 0,
+                }}
+              >
+                <div className="dash-btn__spinner" style={{ width: '22px', height: '22px', borderWidth: '2.5px', borderTopColor: '#3e8b75' }} />
+              </div>
+              <div>
+                <h1 className="dash-greeting__title" style={{ fontSize: '1.25rem', margin: 0 }}>
+                  Preparing your {title}…
+                </h1>
+                <p className="dash-greeting__text" style={{ margin: 0, fontSize: '0.85rem' }}>
+                  Generating tailored questions for your session concepts. This takes a few moments.
+                </p>
+              </div>
             </div>
+
+            {/* Steps Container */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              {PREP_STEPS.map((step, idx) => {
+                const isDone = idx < prepStep;
+                const isCurrent = idx === prepStep;
+
+                let iconColor = '#94a3b8';
+                let circleBg = '#e2e8f0';
+                let titleColor = '#64748b';
+
+                if (isDone) {
+                  iconColor = '#ffffff';
+                  circleBg = '#3e8b75';
+                  titleColor = '#1f2937';
+                } else if (isCurrent) {
+                  iconColor = '#ffffff';
+                  circleBg = '#6faf9a';
+                  titleColor = '#0d1110';
+                }
+
+                return (
+                  <div
+                    key={step.title}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.85rem',
+                      padding: '0.8rem 1rem',
+                      borderRadius: '12px',
+                      background: isCurrent ? '#f9fbfb' : 'transparent',
+                      border: isCurrent ? '1.5px solid rgba(111, 175, 154, 0.45)' : '1.5px solid transparent',
+                      boxShadow: isCurrent ? '0 2px 8px rgba(13, 17, 16, 0.05)' : 'none',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        background: circleBg,
+                        color: iconColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        flexShrink: 0,
+                        marginTop: '0.1rem',
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      {isDone ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      ) : isCurrent ? (
+                        <div
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: '#ffffff',
+                            animation: 'pulse 1.2s infinite',
+                          }}
+                        />
+                      ) : (
+                        <span>{idx + 1}</span>
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: '0.88rem',
+                          fontWeight: isCurrent ? 700 : 600,
+                          color: titleColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                        }}
+                      >
+                        {step.title}
+                        {isCurrent && (
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                              color: '#3e8b75',
+                              background: 'rgba(111, 175, 154, 0.16)',
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: '6px',
+                            }}
+                          >
+                            In progress
+                          </span>
+                        )}
+                        {isDone && (
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                              color: '#15803d',
+                              background: 'rgba(34, 197, 94, 0.12)',
+                              padding: '0.1rem 0.45rem',
+                              borderRadius: '6px',
+                            }}
+                          >
+                            Done
+                          </span>
+                        )}
+                      </p>
+                      <p
+                        style={{
+                          margin: '0.2rem 0 0',
+                          fontSize: '0.78rem',
+                          color: isCurrent ? '#4b5563' : '#9ca3af',
+                          lineHeight: '1.45',
+                        }}
+                      >
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p style={{ margin: 0, fontSize: '0.78rem', color: '#688279', textAlign: 'center' }}>
+              Your test will open automatically as soon as question generation completes.
+            </p>
           </section>
         </main>
       </div>
@@ -217,8 +425,22 @@ export default function TestRunner({
             <ul style={{ listStyle: 'none', margin: '1rem 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {score.per_question.map((row, i) => {
                 const question = questions.find((q) => q.id === row.question_id);
-                const chosen = row.choice === null ? null : question?.options[row.choice];
-                const correct = question?.options[row.correct_index];
+                const isMulti = question?.is_multiple || Array.isArray(row.choice);
+                
+                let chosenText = 'No answer provided';
+                if (isMulti && Array.isArray(row.choice)) {
+                  chosenText = row.choice.map((c: number) => question?.options[c]).filter(Boolean).join(', ');
+                } else if (typeof row.choice === 'number') {
+                  chosenText = question?.options[row.choice] ?? 'No answer provided';
+                }
+
+                let correctText = '';
+                const correctIndices: number[] = (row as any).correct_indices || (question?.correct_index !== undefined ? [question.correct_index] : [row.correct_index]);
+                if (isMulti && correctIndices.length > 0) {
+                  correctText = correctIndices.map((ci: number) => question?.options[ci]).filter(Boolean).join(', ');
+                } else {
+                  correctText = question?.options[row.correct_index] ?? '—';
+                }
 
                 return (
                   <li
@@ -256,14 +478,14 @@ export default function TestRunner({
                     <p style={{ margin: '0 0 0.25rem', fontSize: '0.88rem', color: 'var(--d-muted)' }}>
                       <strong>Your answer: </strong>
                       <span style={{ color: row.correct ? '#2b7a63' : '#b4443c', fontWeight: 600 }}>
-                        {chosen ?? 'No answer provided'}
+                        {chosenText}
                       </span>
                     </p>
 
                     {!row.correct && (
                       <p style={{ margin: '0 0 0.45rem', fontSize: '0.88rem', color: '#2b7a63' }}>
                         <strong>Correct answer: </strong>
-                        <span style={{ fontWeight: 600 }}>{correct ?? '—'}</span>
+                        <span style={{ fontWeight: 600 }}>{correctText}</span>
                       </p>
                     )}
 
@@ -390,21 +612,35 @@ export default function TestRunner({
 
           {/* Concept Chip & Question Text */}
           <div style={{ marginBottom: '1.25rem' }}>
-            {current.concept && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+              {current.concept && (
+                <span
+                  style={{
+                    display: 'inline-block',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    color: '#3e8b75',
+                  }}
+                >
+                  Concept: {current.concept}
+                </span>
+              )}
               <span
                 style={{
-                  display: 'inline-block',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  color: '#3e8b75',
-                  marginBottom: '0.4rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '6px',
+                  background: current.is_multiple ? 'rgba(59, 130, 246, 0.12)' : 'rgba(111, 175, 154, 0.15)',
+                  color: current.is_multiple ? '#1d4ed8' : '#2e7d67',
                 }}
               >
-                Concept: {current.concept}
+                {current.is_multiple ? 'Multiple Answers (Select all that apply)' : 'Single Answer'}
               </span>
-            )}
+            </div>
+
             <h2
               style={{
                 fontSize: '1.18rem',
@@ -421,14 +657,15 @@ export default function TestRunner({
           {/* Answer Options */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {current.options.map((option, optionIndex) => {
-              const selected = answers[current.id] === optionIndex;
+              const selected = current.is_multiple
+                ? Array.isArray(answers[current.id]) && (answers[current.id] as number[]).includes(optionIndex)
+                : answers[current.id] === optionIndex;
+
               return (
                 <button
                   key={optionIndex}
                   type="button"
-                  onClick={() =>
-                    setAnswers((prev) => ({ ...prev, [current.id]: optionIndex }))
-                  }
+                  onClick={() => toggleOption(optionIndex)}
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -452,7 +689,7 @@ export default function TestRunner({
                       justifyContent: 'center',
                       width: '1.65rem',
                       height: '1.65rem',
-                      borderRadius: '50%',
+                      borderRadius: current.is_multiple ? '6px' : '50%',
                       background: selected ? '#3e8b75' : '#eff8f3',
                       color: selected ? '#ffffff' : '#3e8b75',
                       fontWeight: 700,
@@ -462,7 +699,7 @@ export default function TestRunner({
                       border: selected ? 'none' : '1px solid rgba(111, 175, 154, 0.4)',
                     }}
                   >
-                    {String.fromCharCode(65 + optionIndex)}
+                    {current.is_multiple && selected ? '✓' : String.fromCharCode(65 + optionIndex)}
                   </span>
                   <span style={{ lineHeight: 1.5, fontWeight: selected ? 600 : 400 }}>
                     {option}

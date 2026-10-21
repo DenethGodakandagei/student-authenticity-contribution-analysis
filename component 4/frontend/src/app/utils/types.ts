@@ -60,17 +60,20 @@ export interface TestQuestion {
   concept: string;
   question: string;
   options: string[];
+  is_multiple?: boolean;
 }
 
 /** Stored test question, with scoring fields only after submission. */
 export interface StoredTestQuestion extends TestQuestion {
   correct_index?: number;
+  correct_indices?: number[];
   explanation?: string;
 }
 
 export interface TestAnswer {
   question_id: string;
-  choice: number;
+  choice?: number;
+  choices?: number[];
 }
 
 /** One entry of `tests` inside the session state. */

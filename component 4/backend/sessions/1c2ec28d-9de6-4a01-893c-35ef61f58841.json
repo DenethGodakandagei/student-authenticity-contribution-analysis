@@ -1,0 +1,237 @@
+{
+  "session_id": "1c2ec28d-9de6-4a01-893c-35ef61f58841",
+  "topic": "Object Oriented Programming",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "demo",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [],
+  "misconceptions": [
+    {
+      "id": "m1",
+      "wrong_concept": "I think that a class is a specific instance of an object, and an object is just a blueprint of a class.",
+      "correct_concept": "An Object is a specific instance of the data type (class).",
+      "reason": "Students may confuse the concept of a class as a blueprint with the idea that a class is a specific instance. This misconception arises from a misunderstanding of the relationship between a class and an object.",
+      "concept": "class and object",
+      "source_pages": [
+        9
+      ],
+      "source_quote": "\u2022 An Object is a specific instance of the data type (class)",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "m3",
+      "wrong_concept": "I think that the constructor is used to destroy the object when it is declared.",
+      "correct_concept": "The constructor is used to initialize the object when it is declared.",
+      "reason": "Students may misunderstand the purpose of the constructor and think it has the opposite effect.",
+      "concept": "constructor",
+      "source_pages": [
+        34
+      ],
+      "source_quote": "The constructor is used to initialize the object when it is declared.",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "class and object",
+          "question": "Which of the following statements regarding class and object are correct? (Select all that apply)",
+          "options": [
+            "An Object is a specific instance of the data type (class).",
+            "Understanding class and object is essential for designing robust software architectures.",
+            "A class is a specific instance of an object, and an object is just a blueprint of a class.",
+            "class and object is only an obsolete theoretical notion with no modern application."
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            1
+          ],
+          "explanation": "Core concept: An Object is a specific instance of the data type (class).. Common misconception: A class is a specific instance of an object, and an object is just a blueprint of a class.."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "constructor",
+          "question": "Which statement accurately describes constructor?",
+          "options": [
+            "The constructor is used to destroy the object when it is declared.",
+            "constructor can only be instantiated once globally across an entire program.",
+            "The constructor is used to initialize the object when it is declared.",
+            "constructor is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: The constructor is used to initialize the object when it is declared.. Common misconception: The constructor is used to destroy the object when it is declared.."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "class and object",
+          "question": "Which statement accurately describes class and object?",
+          "options": [
+            "A class is a specific instance of an object, and an object is just a blueprint of a class.",
+            "class and object can only be instantiated once globally across an entire program.",
+            "class and object is strictly limited to low-level assembly routines.",
+            "An Object is a specific instance of the data type (class)."
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: An Object is a specific instance of the data type (class).. Common misconception: A class is a specific instance of an object, and an object is just a blueprint of a class.."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "constructor",
+          "question": "Which of the following statements regarding constructor are correct? (Select all that apply)",
+          "options": [
+            "The constructor is used to destroy the object when it is declared.",
+            "constructor is only an obsolete theoretical notion with no modern application.",
+            "Understanding constructor is essential for designing robust software architectures.",
+            "The constructor is used to initialize the object when it is declared."
+          ],
+          "is_multiple": true,
+          "correct_index": 2,
+          "correct_indices": [
+            2,
+            3
+          ],
+          "explanation": "Core concept: The constructor is used to initialize the object when it is declared.. Common misconception: The constructor is used to destroy the object when it is declared.."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "class and object",
+          "question": "Which statement accurately describes class and object?",
+          "options": [
+            "A class is a specific instance of an object, and an object is just a blueprint of a class.",
+            "class and object is strictly limited to low-level assembly routines.",
+            "class and object can only be instantiated once globally across an entire program.",
+            "An Object is a specific instance of the data type (class)."
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: An Object is a specific instance of the data type (class).. Common misconception: A class is a specific instance of an object, and an object is just a blueprint of a class.."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "constructor",
+          "question": "Which statement accurately describes constructor?",
+          "options": [
+            "constructor can only be instantiated once globally across an entire program.",
+            "The constructor is used to destroy the object when it is declared.",
+            "constructor is strictly limited to low-level assembly routines.",
+            "The constructor is used to initialize the object when it is declared."
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: The constructor is used to initialize the object when it is declared.. Common misconception: The constructor is used to destroy the object when it is declared.."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "class and object",
+          "question": "Which of the following statements regarding class and object are correct? (Select all that apply)",
+          "options": [
+            "class and object is only an obsolete theoretical notion with no modern application.",
+            "An Object is a specific instance of the data type (class).",
+            "Understanding class and object is essential for designing robust software architectures.",
+            "A class is a specific instance of an object, and an object is just a blueprint of a class."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            2
+          ],
+          "explanation": "Core concept: An Object is a specific instance of the data type (class).. Common misconception: A class is a specific instance of an object, and an object is just a blueprint of a class.."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "constructor",
+          "question": "Which statement accurately describes constructor?",
+          "options": [
+            "The constructor is used to destroy the object when it is declared.",
+            "The constructor is used to initialize the object when it is declared.",
+            "constructor is strictly limited to low-level assembly routines.",
+            "constructor can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: The constructor is used to initialize the object when it is declared.. Common misconception: The constructor is used to destroy the object when it is declared.."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "class and object",
+          "question": "Which statement accurately describes class and object?",
+          "options": [
+            "A class is a specific instance of an object, and an object is just a blueprint of a class.",
+            "class and object is strictly limited to low-level assembly routines.",
+            "An Object is a specific instance of the data type (class).",
+            "class and object can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: An Object is a specific instance of the data type (class).. Common misconception: A class is a specific instance of an object, and an object is just a blueprint of a class.."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "constructor",
+          "question": "Which of the following statements regarding constructor are correct? (Select all that apply)",
+          "options": [
+            "Understanding constructor is essential for designing robust software architectures.",
+            "constructor is only an obsolete theoretical notion with no modern application.",
+            "The constructor is used to destroy the object when it is declared.",
+            "The constructor is used to initialize the object when it is declared."
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            3
+          ],
+          "explanation": "Core concept: The constructor is used to initialize the object when it is declared.. Common misconception: The constructor is used to destroy the object when it is declared.."
+        }
+      ],
+      "answers": [],
+      "score": null,
+      "submitted_at": null
+    }
+  },
+  "created_at": "2026-10-21T19:06:21.749113",
+  "updated_at": "2026-10-21T19:07:09.366339"
+}

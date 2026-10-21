@@ -20,8 +20,12 @@ class Settings(BaseSettings):
     # Ollama Local LLM Settings
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "phi3"
-    OLLAMA_TIMEOUT: int = 300  # Timeout in seconds (5 minutes for local CPU inference)
+    OLLAMA_TIMEOUT: int = 45  # Timeout in seconds before falling back to external API
     
+    # Groq Settings (Ultra-fast cloud fallback with Llama 3)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
     # HuggingFace Settings
     HF_TOKEN: str = ""
     HF_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.2"

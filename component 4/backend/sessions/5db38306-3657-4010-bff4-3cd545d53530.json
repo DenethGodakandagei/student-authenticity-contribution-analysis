@@ -1,0 +1,179 @@
+{
+  "session_id": "5db38306-3657-4010-bff4-3cd545d53530",
+  "topic": "Data Structures and Algorithms: Recursion",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Understand the concept of recursion and its application in solving problems",
+    "Learn to identify and analyze recursive functions",
+    "Develop skills to solve recurrence relations using various methods"
+  ],
+  "misconceptions": [
+    {
+      "id": "5f96a2f0",
+      "wrong_concept": "Students may think that recursion is only applicable to simple problems",
+      "correct_concept": "Recursion can be used to solve complex problems by breaking them down into smaller, more manageable subproblems",
+      "reason": "Students may not fully grasp the power of recursion, leading them to believe it's only suitable for simple problems. This misconception can be rectified by providing examples of complex problems solved using recursion and emphasizing its ability to handle large inputs.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "194f242a",
+      "wrong_concept": "Students may assume that recursive functions always have a base case",
+      "correct_concept": "Not all recursive functions have a base case, and some may have multiple base cases",
+      "reason": "Students may not recognize that not all recursive functions have a clear base case, leading them to believe that all recursive functions must have one. This misconception can be corrected by providing examples of recursive functions without a base case and explaining the importance of identifying the correct base case.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "f12fbcfa",
+      "wrong_concept": "Students may think that the running time of a recursive function is always O(1)",
+      "correct_concept": "The running time of a recursive function can be O(n), O(log n), or any other time complexity",
+      "reason": "Students may not fully understand the concept of time complexity and may assume that recursive functions always have a constant running time. This misconception can be rectified by providing examples of recursive functions with different time complexities and emphasizing the importance of analyzing the running time of recursive functions.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "b8f5dcbe",
+      "wrong_concept": "Students may assume that the Master Theorem is only applicable to simple recurrences",
+      "correct_concept": "The Master Theorem can be applied to a wide range of recurrence relations",
+      "reason": "Students may not recognize the versatility of the Master Theorem and may believe it's only suitable for simple recurrences. This misconception can be corrected by providing examples of more complex recurrence relations and demonstrating how the Master Theorem can be applied to solve them.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "ca49a658",
+      "wrong_concept": "Students may think that recursion trees are only used for visualization purposes",
+      "correct_concept": "Recursion trees are a powerful tool for analyzing and solving recurrence relations",
+      "reason": "Students may not fully understand the importance of recursion trees and may view them as only a visualization tool. This misconception can be rectified by providing examples of using recursion trees to solve recurrence relations and emphasizing their role in analyzing the running time of recursive functions.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "5f96a2f0",
+          "concept": "Recursion",
+          "question": "What is the primary use of recursion in programming?",
+          "options": [
+            "Students may think that recursion is only applicable to simple problems",
+            "To break down complex problems into smaller, more manageable subproblems",
+            "To improve the readability of code",
+            "To reduce the amount of memory used"
+          ],
+          "correct_index": 1,
+          "explanation": "Recursion is a problem-solving strategy that involves breaking down complex problems into smaller, more manageable subproblems. This allows for the solution of complex problems that would be difficult or impossible to solve using other methods. (Source: [insert source])"
+        },
+        {
+          "id": "194f242a",
+          "concept": "Recursive functions",
+          "question": "What is a common characteristic of recursive functions?",
+          "options": [
+            "Students may assume that recursive functions always have a base case",
+            "They never have a base case",
+            "They may or may not have a base case",
+            "They always have a loop"
+          ],
+          "correct_index": 2,
+          "explanation": "Not all recursive functions have a base case. In fact, some recursive functions may have multiple base cases, or no base case at all. The key characteristic of a recursive function is that it calls itself repeatedly until it reaches a base case, at which point it can return a value. (Source: [insert source])"
+        },
+        {
+          "id": "f12fbcfa",
+          "concept": "Recursive function complexity",
+          "question": "What is the time complexity of a typical recursive function?",
+          "options": [
+            "O(1)",
+            "O(n), O(log n), or any other time complexity",
+            "O(n^2)",
+            "O(2^n)"
+          ],
+          "correct_index": 1,
+          "explanation": "The time complexity of a recursive function can be O(n), O(log n), or any other time complexity, depending on the specific implementation and the problem being solved. The key point is that the time complexity is not always O(1), as some students may assume. (Source: [insert source])"
+        },
+        {
+          "id": "b8f5dcbe",
+          "concept": "The Master Theorem",
+          "question": "What is the primary limitation of the Master Theorem?",
+          "options": [
+            "Students may assume that the Master Theorem is only applicable to simple recurrences",
+            "It can only be applied to recurrences with a single recursive call",
+            "It can be applied to a wide range of recurrence relations",
+            "It can only be applied to recurrences with a constant base case"
+          ],
+          "correct_index": 2,
+          "explanation": "The Master Theorem can be applied to a wide range of recurrence relations, making it a powerful tool for solving problems that involve recursive functions. The key point is that the Master Theorem is not limited to simple recurrences, as some students may assume. (Source: [insert source])"
+        },
+        {
+          "id": "ca49a658",
+          "concept": "Recursion trees",
+          "question": "What is the primary purpose of a recursion tree?",
+          "options": [
+            "Students may think that recursion trees are only used for visualization purposes",
+            "To analyze and solve recurrence relations",
+            "To optimize the recursive function",
+            "To reduce the amount of memory used"
+          ],
+          "correct_index": 1,
+          "explanation": "Recursion trees are a powerful tool for analyzing and solving recurrence relations. By visualizing the recursive function as a tree, we can better understand the structure of the problem and develop a solution. (Source: [insert source])"
+        }
+      ],
+      "answers": [],
+      "score": null,
+      "submitted_at": null
+    }
+  },
+  "created_at": "2026-10-21T17:15:07.772552",
+  "updated_at": "2026-10-21T17:17:33.683316"
+}

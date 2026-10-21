@@ -381,7 +381,14 @@ async def upload_material(file: UploadFile = File(...), user: dict = Depends(get
         from app.ingest import extract_pages
         extracted_pages = extract_pages(saved_filepath)
         page_count = len(extracted_pages)
-        full_extracted_text = "\n\n".join(p["text"] for p in extracted_pages if p.get("text"))
+        full_extracted_text = "\n\n".join(p["text"] for p in extracted_pages if p.get("text")).strip()
+
+        if not full_extracted_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"The uploaded file '{filename}' contains no readable text. If it is a scanned document or image-only presentation, please upload a text-readable PDF, PPTX, or DOCX file."
+            )
+
         num_chunks = max(1, len(full_extracted_text) // 500)
 
         # 2. Send extracted lecture text to Atlas Misconception Generator
@@ -405,6 +412,9 @@ async def upload_material(file: UploadFile = File(...), user: dict = Depends(get
             "nova_state": nova.to_dict()
         }
 
+    except HTTPException:
+        # Re-raise explicit HTTP exceptions directly
+        raise
     except Exception as e:
         # Cleanup file if processing fails, handling Windows file lock safely
         if os.path.exists(saved_filepath):
@@ -414,7 +424,7 @@ async def upload_material(file: UploadFile = File(...), user: dict = Depends(get
                 pass
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while processing the PDF file: {str(e)}"
+            detail=f"An error occurred while processing the file: {str(e)}"
         )
 
 # ============================================================================

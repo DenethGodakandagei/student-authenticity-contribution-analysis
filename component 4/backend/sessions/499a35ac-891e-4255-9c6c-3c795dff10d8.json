@@ -1,0 +1,507 @@
+{
+  "session_id": "499a35ac-891e-4255-9c6c-3c795dff10d8",
+  "topic": "Secure Software Development: OAuth and Authorization Code Grant Type",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Understand the OAuth protocol and its application in secure software development",
+    "Learn how to register a client app in the Facebook developer studio",
+    "Apply the authorization code grant type to obtain an access token and access user profile data",
+    "Analyze the requests and responses used in the authorization code grant type",
+    "Design and implement secure software development practices using OAuth"
+  ],
+  "misconceptions": [
+    {
+      "id": "25bb9397",
+      "wrong_concept": "OAuth is only used for social media authentication",
+      "correct_concept": "OAuth is a protocol for authorization that can be used for various applications, including social media, web services, and mobile apps",
+      "reason": "Students may misunderstand OAuth's scope due to its widespread use in social media. It's essential to emphasize that OAuth is a generic authorization protocol that can be applied to various scenarios, not just social media.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "591bf5bf",
+      "wrong_concept": "The authorization code grant type is only used for obtaining access tokens for user profile data",
+      "correct_concept": "The authorization code grant type is used to obtain an access token, which can be used to access various resources, including user profile data, as well as other data and functionality",
+      "reason": "Students may assume that the authorization code grant type is limited to accessing user profile data. In reality, it's a more general-purpose authorization mechanism that can be used for various purposes.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "aff28f6d",
+      "wrong_concept": "OAuth is a security protocol that only provides authentication",
+      "correct_concept": "OAuth is an authorization protocol that provides authentication, as well as access control and delegation of permissions",
+      "reason": "Students may view OAuth as solely an authentication protocol. However, it's essential to emphasize that OAuth also provides access control and delegation of permissions, making it a comprehensive authorization protocol.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "4f7e2bcd",
+      "wrong_concept": "The Facebook developer studio is only used for registering client apps for social media authentication",
+      "correct_concept": "The Facebook developer studio is used for registering client apps for various Facebook-related services, including social media, web services, and mobile apps",
+      "reason": "Students may assume that the Facebook developer studio is only used for social media authentication. In reality, it's a more general-purpose platform for registering client apps for various Facebook-related services.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "6451bc3a",
+      "wrong_concept": "OAuth is a complex and difficult-to-implement protocol",
+      "correct_concept": "OAuth is a relatively simple protocol to implement, with well-defined flows and APIs for client and server-side development",
+      "reason": "Students may view OAuth as a complex and difficult-to-implement protocol due to its abstract nature. However, it's essential to emphasize that OAuth has well-defined flows and APIs, making it relatively simple to implement for client and server-side development.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [
+    {
+      "time": "2026-10-21T18:52:43.251225",
+      "type": "pretest_submitted",
+      "score": 70.0,
+      "correct_count": 7,
+      "total_questions": 10
+    }
+  ],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary purpose of the OAuth protocol?",
+          "options": [
+            "To provide authentication only",
+            "To provide authorization and access control",
+            "To provide encryption only",
+            "To provide a secure way to share data"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "OAuth is an authorization protocol that provides authentication, as well as access control and delegation of permissions. It is not limited to providing encryption or sharing data."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "OAuth concept",
+          "question": "What is the main difference between OAuth and other authentication protocols?",
+          "options": [
+            "OAuth is more complex to implement",
+            "OAuth is simpler to implement",
+            "OAuth is only used for social media",
+            "OAuth is only used for web services"
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "OAuth is a relatively simple protocol to implement, with well-defined flows and APIs for client and server-side development. It is not limited to social media, web services, or any specific use case."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "Authorization Code Grant Type",
+          "question": "What is the main purpose of the Authorization Code Grant Type in OAuth?",
+          "options": [
+            "To obtain an access token for user profile data",
+            "To obtain an access token for various resources",
+            "To obtain an access token for client-side only",
+            "To obtain an access token for server-side only"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "The Authorization Code Grant Type is used to obtain an access token, which can be used to access various resources, including user profile data, as well as other data and functionality."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary benefit of using OAuth for authorization?",
+          "options": [
+            "To simplify the development process",
+            "To provide a secure way to share data",
+            "To provide a single sign-on solution",
+            "To provide a way to delegate permissions"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary benefit of using OAuth for authorization?",
+          "options": [
+            "To simplify the development process",
+            "To provide a secure way to share data",
+            "To provide a single sign-on solution",
+            "To provide a way to delegate permissions"
+          ],
+          "is_multiple": true,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary benefit of using OAuth for authorization?",
+          "options": [
+            "To simplify the development process",
+            "To provide a secure way to share data",
+            "To provide a single sign-on solution",
+            "To provide a way to delegate permissions"
+          ],
+          "is_multiple": true,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary benefit of using OAuth for authorization?",
+          "options": [
+            "To simplify the development process",
+            "To provide a secure way to share data",
+            "To provide a single sign-on solution",
+            "To provide a way to delegate permissions"
+          ],
+          "is_multiple": true,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary benefit of using OAuth for authorization?",
+          "options": [
+            "To simplify the development process",
+            "To provide a secure way to share data",
+            "To provide a single sign-on solution",
+            "To provide a way to delegate permissions"
+          ],
+          "is_multiple": true,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary benefit of using OAuth for authorization?",
+          "options": [
+            "To simplify the development process",
+            "To provide a secure way to share data",
+            "To provide a single sign-on solution",
+            "To provide a way to delegate permissions"
+          ],
+          "is_multiple": true,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "OAuth concept",
+          "question": "What is the primary benefit of using OAuth for authorization?",
+          "options": [
+            "To simplify the development process",
+            "To provide a secure way to share data",
+            "To provide a single sign-on solution",
+            "To provide a way to delegate permissions"
+          ],
+          "is_multiple": true,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+        }
+      ],
+      "answers": [
+        {
+          "question_id": "q_1_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_2_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_3_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_4_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_5_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_6_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_7_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_8_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_9_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_10_pre",
+          "choice": 3,
+          "choices": null
+        }
+      ],
+      "score": {
+        "total_questions": 10,
+        "correct_count": 7,
+        "overall_percentage": 70.0,
+        "per_question": [
+          {
+            "question_id": "q_1_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary purpose of the OAuth protocol?",
+            "choice": 3,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": false,
+            "explanation": "OAuth is an authorization protocol that provides authentication, as well as access control and delegation of permissions. It is not limited to providing encryption or sharing data."
+          },
+          {
+            "question_id": "q_2_pre",
+            "concept": "OAuth concept",
+            "question": "What is the main difference between OAuth and other authentication protocols?",
+            "choice": 3,
+            "is_multiple": false,
+            "correct_index": 2,
+            "correct_indices": [
+              2
+            ],
+            "correct": false,
+            "explanation": "OAuth is a relatively simple protocol to implement, with well-defined flows and APIs for client and server-side development. It is not limited to social media, web services, or any specific use case."
+          },
+          {
+            "question_id": "q_3_pre",
+            "concept": "Authorization Code Grant Type",
+            "question": "What is the main purpose of the Authorization Code Grant Type in OAuth?",
+            "choice": 3,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": false,
+            "explanation": "The Authorization Code Grant Type is used to obtain an access token, which can be used to access various resources, including user profile data, as well as other data and functionality."
+          },
+          {
+            "question_id": "q_4_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary benefit of using OAuth for authorization?",
+            "choice": 3,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+          },
+          {
+            "question_id": "q_5_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary benefit of using OAuth for authorization?",
+            "choice": [
+              3
+            ],
+            "is_multiple": true,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+          },
+          {
+            "question_id": "q_6_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary benefit of using OAuth for authorization?",
+            "choice": [
+              3
+            ],
+            "is_multiple": true,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+          },
+          {
+            "question_id": "q_7_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary benefit of using OAuth for authorization?",
+            "choice": [
+              3
+            ],
+            "is_multiple": true,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+          },
+          {
+            "question_id": "q_8_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary benefit of using OAuth for authorization?",
+            "choice": [
+              3
+            ],
+            "is_multiple": true,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+          },
+          {
+            "question_id": "q_9_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary benefit of using OAuth for authorization?",
+            "choice": [
+              3
+            ],
+            "is_multiple": true,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+          },
+          {
+            "question_id": "q_10_pre",
+            "concept": "OAuth concept",
+            "question": "What is the primary benefit of using OAuth for authorization?",
+            "choice": [
+              3
+            ],
+            "is_multiple": true,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "OAuth provides a way to delegate permissions, allowing users to grant access to resources without sharing their credentials. This provides a secure way to share data and delegate permissions."
+          }
+        ],
+        "per_concept": [
+          {
+            "concept": "OAuth concept",
+            "correct": 7,
+            "total": 9,
+            "percentage": 77.78
+          },
+          {
+            "concept": "Authorization Code Grant Type",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          }
+        ]
+      },
+      "submitted_at": "2026-10-21T18:52:43.251207"
+    }
+  },
+  "created_at": "2026-10-21T17:38:30.532935",
+  "updated_at": "2026-10-21T18:52:43.251237"
+}
