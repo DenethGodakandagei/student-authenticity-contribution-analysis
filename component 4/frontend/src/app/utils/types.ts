@@ -392,3 +392,32 @@ export interface QuizSummaryResponse {
   concepts: QuizSummaryConcept[];
   weak_misconception_ids: string[];
 }
+
+/** GET /sessions/{id}/study-guide */
+export interface StudyGuideSection {
+  concept: string;
+  explanation: string;
+  analogy: string;
+  example: string;
+  key_points: string[];
+  source_pages: number[];
+}
+
+export interface StudyGuideResponse {
+  topic: string;
+  overview: string;
+  sections: StudyGuideSection[];
+  teaching_tips: string[];
+}
+
+/** POST /sessions/{id}/hint */
+export interface HintRequest {
+  level: 1 | 2 | 3;
+}
+
+export interface HintResponse {
+  hint: string;
+  level: number;
+  concept: string | null;
+  hints_left: number;
+}

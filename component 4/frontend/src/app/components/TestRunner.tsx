@@ -31,7 +31,7 @@ export default function TestRunner({
 
   const title = form === 'pre' ? 'Pre-test' : 'Post-test';
   const afterSubmitPath =
-    form === 'pre' ? `/session/${sessionId}/chat` : `/session/${sessionId}/report`;
+    form === 'pre' ? `/session/${sessionId}/study` : `/session/${sessionId}/report`;
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +179,7 @@ export default function TestRunner({
             className="button mt-5"
             onClick={() => router.push(afterSubmitPath)}
           >
-            {form === 'pre' ? 'Continue to teaching' : 'View learning report'}
+            {form === 'pre' ? 'Continue to study guide' : 'View learning report'}
           </button>
         </section>
       </main>

@@ -173,6 +173,13 @@ def _process_material(kb_id: str, pdf_path: str) -> None:
         kb_dir = _kb_dir(kb_id)
         with open(os.path.join(kb_dir, "concepts.json"), "w", encoding="utf-8") as f:
             json.dump(concepts, f, indent=2, ensure_ascii=False)
+        # Invalidate cached study guide so it will be rebuilt from updated material
+        cached_guide = os.path.join(kb_dir, "study_guide.json")
+        if os.path.exists(cached_guide):
+            try:
+                os.remove(cached_guide)
+            except OSError:
+                pass
         step("INGEST", "concepts saved", kb_id=kb_id, concepts=len(concepts))
 
         _change_state(

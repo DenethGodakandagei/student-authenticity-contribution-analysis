@@ -1,0 +1,55 @@
+{
+  "session_id": "8ed57ecd-9122-4f74-a7a3-582302f80087",
+  "topic": "Object Oriented Programming",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "demo",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [],
+  "misconceptions": [
+    {
+      "id": "m1",
+      "wrong_concept": "I think that a class is a specific instance of an object, and an object is just a blueprint of a class.",
+      "correct_concept": "An Object is a specific instance of the data type (class).",
+      "reason": "Students may confuse the concept of a class as a blueprint with the idea that a class is a specific instance. This misconception arises from a misunderstanding of the relationship between a class and an object.",
+      "concept": "class and object",
+      "source_pages": [
+        9
+      ],
+      "source_quote": "\u2022 An Object is a specific instance of the data type (class)",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "m3",
+      "wrong_concept": "I think that the constructor is used to destroy the object when it is declared.",
+      "correct_concept": "The constructor is used to initialize the object when it is declared.",
+      "reason": "Students may misunderstand the purpose of the constructor and think it has the opposite effect.",
+      "concept": "constructor",
+      "source_pages": [
+        34
+      ],
+      "source_quote": "The constructor is used to initialize the object when it is declared.",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "tests": {},
+  "created_at": "2026-10-21T09:36:31.298829",
+  "updated_at": "2026-10-21T09:36:31.299636"
+}

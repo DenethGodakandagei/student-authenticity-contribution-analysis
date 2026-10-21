@@ -1,9 +1,10 @@
 // app/components/dashboard/HowItWorksCard.tsx
 const STEPS = [
+  'Take a quick pretest',
+  'Study the guide',
   'Teach Nova',
-  'She asks check questions',
-  'Fix the gaps',
-  'See your score',
+  'Fix her gaps',
+  'Posttest and your score',
 ];
 
 export default function HowItWorksCard() {

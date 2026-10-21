@@ -17,13 +17,8 @@ import type {
   SessionState,
   UnderstandingSummary,
 } from '../../../utils/types';
-
-const STATUS_STYLES: Record<string, string> = {
-  active: 'border-amber-500/40 bg-amber-500/15 text-amber-300',
-  testing: 'border-sky-500/40 bg-sky-500/15 text-sky-300',
-  learned: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
-  needs_review: 'border-rose-500/40 bg-rose-500/15 text-rose-300',
-};
+import '../../../components/dashboard/dashboard.css';
+import './details.css';
 
 function formatDate(value?: string | null): string {
   if (!value) return '—';
@@ -35,8 +30,17 @@ function formatScore(value: number | null | undefined): string {
   return typeof value === 'number' ? `${Math.round(value)}%` : '—';
 }
 
-function statusClass(status: string): string {
-  return STATUS_STYLES[status] ?? 'border-white/20 bg-white/10 text-gray-300';
+function statusPillClass(status: string): string {
+  switch (status) {
+    case 'learned':
+      return 'details-status-pill details-status-pill--learned';
+    case 'testing':
+      return 'details-status-pill details-status-pill--testing';
+    case 'needs_review':
+      return 'details-status-pill details-status-pill--needs_review';
+    default:
+      return 'details-status-pill details-status-pill--active';
+  }
 }
 
 function eventText(event: SessionState['events'][number]): string {
@@ -98,28 +102,27 @@ export default function SessionDetailsPage({
 
   if (!ready || loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <span className="spinner" />
+      <main className="dash-loading">
+        <span className="dash-spinner" aria-hidden="true" />
       </main>
     );
   }
 
   if (error || !state) {
     return (
-      <main className="mx-auto w-full max-w-4xl px-4 py-8">
-        <section className="card">
-          <h1 className="text-xl font-semibold">Session details</h1>
-          <p
-            className="mt-3 rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300"
-            role="alert"
-          >
-            {error || 'Session not found.'}
-          </p>
-          <Link href="/dashboard" className="button mt-4">
-            Back to dashboard
-          </Link>
-        </section>
-      </main>
+      <div className="details-page dash-page">
+        <main className="dash-container">
+          <section className="dash-card">
+            <h1 className="dash-greeting__title">Session details</h1>
+            <div className="dash-alert" role="alert" style={{ marginTop: '1rem' }}>
+              {error || 'Session not found.'}
+            </div>
+            <Link href="/dashboard" className="dash-btn" style={{ marginTop: '1rem' }}>
+              Back to dashboard
+            </Link>
+          </section>
+        </main>
+      </div>
     );
   }
 
@@ -127,128 +130,193 @@ export default function SessionDetailsPage({
   const post = state.tests?.post;
 
   return (
-    <div className="min-h-screen">
-      <main className="mx-auto w-full max-w-4xl space-y-4 px-4 py-8">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">{state.topic || 'Nova session'}</h1>
-            <p className="mt-1 text-sm text-gray-400">
-              Session <code>{state.session_id}</code>
-            </p>
+    <div className="details-page dash-page">
+      <main className="dash-container">
+        {/* Header Section */}
+        <section className="dash-card">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <div className="details-badge">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                Session Overview
+              </div>
+              <h1 className="dash-greeting__title">{state.topic || 'Nova session'}</h1>
+              <p className="dash-greeting__text">
+                Session ID: <code style={{ background: '#eff8f3', padding: '0.15rem 0.45rem', borderRadius: '6px', border: '1px solid rgba(111,175,154,0.3)', color: '#0d1110', fontSize: '0.86rem' }}>{state.session_id}</code>
+              </p>
+            </div>
+            <Link href="/dashboard" className="dash-btn dash-btn--sm">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              Back to dashboard
+            </Link>
           </div>
-          <Link href="/dashboard" className="rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-200 transition hover:bg-white/10">
-            Back to dashboard
-          </Link>
-        </div>
+        </section>
 
-        <nav className="flex flex-wrap gap-2">
-          <Link href={`/session/${state.session_id}/chat`} className="button">
-            Chat
+        {/* Action Navigation */}
+        <nav className="details-nav">
+          <Link href={`/session/${state.session_id}/chat`} className="details-nav-btn details-nav-btn--primary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+            </svg>
+            Teaching Chat
           </Link>
-          <Link href={`/session/${state.session_id}/pretest`} className="button">
+          <Link href={`/session/${state.session_id}/study`} className="details-nav-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+            Study Guide
+          </Link>
+          <Link href={`/session/${state.session_id}/pretest`} className="details-nav-btn">
             Pre-test
           </Link>
-          <Link href={`/session/${state.session_id}/posttest`} className="button">
+          <Link href={`/session/${state.session_id}/posttest`} className="details-nav-btn">
             Post-test
           </Link>
-          <Link href={`/session/${state.session_id}/report`} className="button">
-            Report
+          <Link href={`/session/${state.session_id}/report`} className="details-nav-btn">
+            Learning Report
           </Link>
-          <Link href={`/session/${state.session_id}/exam`} className="button">
-            Run exam
+          <Link href={`/session/${state.session_id}/exam`} className="details-nav-btn">
+            Run Exam
           </Link>
         </nav>
 
+        {/* Learning Evaluation Summary */}
         <EvaluationSummary sessionId={state.session_id} />
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        {/* Progress & Session Info Grid */}
+        <div className="dash-grid">
           <ProgressCard data={summary} loading={false} />
 
-          <section className="card">
-            <h2 className="text-lg font-semibold">Session info</h2>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-gray-400">Created</dt>
-                <dd className="text-right text-gray-200">{formatDate(state.created_at)}</dd>
+          <section className="dash-card">
+            <h2 className="dash-card__title">Session Info</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', margin: '1rem 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                <span style={{ color: 'var(--d-muted)', fontWeight: 500 }}>Created</span>
+                <span style={{ fontWeight: 600, color: '#0d1110' }}>{formatDate(state.created_at)}</span>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-gray-400">Updated</dt>
-                <dd className="text-right text-gray-200">{formatDate(state.updated_at)}</dd>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                <span style={{ color: 'var(--d-muted)', fontWeight: 500 }}>Updated</span>
+                <span style={{ fontWeight: 600, color: '#0d1110' }}>{formatDate(state.updated_at)}</span>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-gray-400">Knowledge base</dt>
-                <dd className="text-right text-gray-200">{state.kb_id || '—'}</dd>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                <span style={{ color: 'var(--d-muted)', fontWeight: 500 }}>Knowledge Base</span>
+                <span style={{ fontWeight: 600, color: '#0d1110' }}>{state.kb_id || '—'}</span>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-gray-400">Concepts tracked</dt>
-                <dd className="text-right text-gray-200">{state.misconceptions.length}</dd>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                <span style={{ color: 'var(--d-muted)', fontWeight: 500 }}>Concepts Tracked</span>
+                <span style={{ fontWeight: 600, color: '#0d1110' }}>{state.misconceptions.length}</span>
               </div>
-            </dl>
+            </div>
 
-            <h3 className="mt-5 text-sm font-semibold text-gray-200">Learning objectives</h3>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '1.25rem 0 0.5rem', color: '#0d1110', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Learning Objectives
+            </h3>
             {state.learning_objectives?.length ? (
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-300">
+              <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.88rem', color: 'var(--d-muted)' }}>
                 {state.learning_objectives.map((objective) => (
                   <li key={objective}>{objective}</li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-gray-500">No objectives recorded.</p>
+              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--d-muted)' }}>No objectives recorded.</p>
             )}
           </section>
         </div>
 
-        <section className="card">
-          <h2 className="text-lg font-semibold">Tests</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm">
-              <p className="text-gray-400">Pre-test</p>
-              <p className="mt-1 font-semibold text-gray-100">
+        {/* Tests Card */}
+        <section className="dash-card">
+          <h2 className="dash-card__title">Tests Overview</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+            <div className="details-stat-box">
+              <span className="details-stat-box__label">Pre-test</span>
+              <span className="details-stat-box__val" style={{ color: pre?.submitted_at ? '#2b7a63' : 'var(--d-muted)' }}>
                 {pre?.submitted_at ? formatScore(pre.score?.overall_percentage) : 'Not submitted'}
-              </p>
+              </span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--d-muted)' }}>
+                {pre?.submitted_at ? formatDate(pre.submitted_at) : 'Baseline knowledge assessment'}
+              </span>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm">
-              <p className="text-gray-400">Post-test</p>
-              <p className="mt-1 font-semibold text-gray-100">
+
+            <div className="details-stat-box">
+              <span className="details-stat-box__label">Post-test</span>
+              <span className="details-stat-box__val" style={{ color: post?.submitted_at ? '#2b7a63' : 'var(--d-muted)' }}>
                 {post?.submitted_at ? formatScore(post.score?.overall_percentage) : 'Not submitted'}
-              </p>
+              </span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--d-muted)' }}>
+                {post?.submitted_at ? formatDate(post.submitted_at) : 'Post-teaching knowledge assessment'}
+              </span>
             </div>
           </div>
         </section>
 
-        <section className="card">
-          <h2 className="text-lg font-semibold">Misconceptions</h2>
+        {/* Misconceptions */}
+        <section className="dash-card">
+          <h2 className="dash-card__title">Misconceptions & Understanding</h2>
+          <p className="dash-card__text">
+            All targeted misunderstandings seeded for Nova in this session.
+          </p>
           {state.misconceptions.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">No misconceptions in this session.</p>
+            <p className="dash-empty">No misconceptions in this session.</p>
           ) : (
-            <ul className="mt-3 space-y-3">
+            <ul style={{ listStyle: 'none', margin: '1rem 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {state.misconceptions.map((item) => {
                 const row = summary?.misconceptions.find((entry) => entry.concept === item.concept);
                 return (
-                  <li key={item.id} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-medium text-gray-100">{item.concept || 'General'}</p>
-                      <span className={`rounded-full border px-2 py-0.5 text-xs ${statusClass(item.status)}`}>
-                        {item.status}
+                  <li key={item.id} className="details-item-card">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.98rem', color: '#0d1110' }}>
+                        {item.concept || 'General'}
+                      </p>
+                      <span className={statusPillClass(item.status)}>
+                        {item.status.replace('_', ' ')}
                       </span>
                     </div>
-                    <p className="mt-2 text-gray-300">
-                      <span className="text-gray-500">Wrong belief: </span>
+
+                    <p style={{ margin: '0 0 0.35rem', fontSize: '0.88rem', color: 'var(--d-muted)', lineHeight: 1.55 }}>
+                      <strong style={{ color: '#0d1110' }}>Wrong belief: </strong>
                       {item.wrong_concept}
                     </p>
-                    <p className="mt-1 text-gray-300">
-                      <span className="text-gray-500">Correct concept: </span>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.88rem', color: 'var(--d-muted)', lineHeight: 1.55 }}>
+                      <strong style={{ color: '#0d1110' }}>Correct concept: </strong>
                       {item.correct_concept}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      confidence {Math.round(item.confidence * 100)}%
-                      {item.source_pages.length ? ` · page ${item.source_pages.join(', ')}` : ''}
-                      {row ? ` · ${row.tries} ${row.tries === 1 ? 'try' : 'tries'}` : ''}
-                    </p>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', fontSize: '0.78rem', color: 'var(--d-muted)', marginTop: '0.4rem' }}>
+                      <span>Confidence: {Math.round(item.confidence * 100)}%</span>
+                      {item.source_pages.length > 0 && (
+                        <span>Source: Page {item.source_pages.join(', ')}</span>
+                      )}
+                      {row && <span>Attempts: {row.tries}</span>}
+                    </div>
+
                     {item.source_quote && (
-                      <p className="mt-2 text-xs italic text-gray-400">
+                      <blockquote style={{ margin: '0.65rem 0 0', paddingLeft: '0.85rem', borderLeft: '3px solid #6faf9a', fontStyle: 'italic', fontSize: '0.82rem', color: 'var(--d-muted)' }}>
                         &ldquo;{item.source_quote}&rdquo;
-                      </p>
+                      </blockquote>
                     )}
                   </li>
                 );
@@ -257,18 +325,24 @@ export default function SessionDetailsPage({
           )}
         </section>
 
-        <section className="card">
-          <h2 className="text-lg font-semibold">Recent events</h2>
+        {/* Recent Events */}
+        <section className="dash-card">
+          <h2 className="dash-card__title">Recent Session Events</h2>
+          <p className="dash-card__text">Audit log of student messages, checks, and test activity.</p>
           {state.events.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">No events yet.</p>
+            <p className="dash-empty">No events recorded yet.</p>
           ) : (
-            <ol className="mt-3 space-y-1.5 text-xs">
+            <ol style={{ listStyle: 'none', margin: '0.75rem 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {state.events.slice(-12).reverse().map((event, index) => (
-                <li key={`${event.time}-${index}`} className="rounded bg-white/5 px-2 py-1.5">
-                  <span className="font-medium text-indigo-300">{event.type}</span>{' '}
-                  <span className="text-gray-500">{formatDate(event.time)}</span>
+                <li key={`${event.time}-${index}`} className="details-event-row">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: '#3e8b75', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.04em' }}>
+                      {event.type.replace('_', ' ')}
+                    </span>
+                    <span style={{ color: 'var(--d-faint)', fontSize: '0.74rem' }}>{formatDate(event.time)}</span>
+                  </div>
                   {eventText(event) && (
-                    <span className="mt-0.5 block line-clamp-2 text-gray-400">
+                    <span style={{ color: 'var(--d-muted)', lineHeight: 1.45, fontSize: '0.82rem' }}>
                       {eventText(event)}
                     </span>
                   )}

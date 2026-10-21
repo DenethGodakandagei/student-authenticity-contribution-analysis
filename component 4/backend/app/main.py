@@ -35,6 +35,7 @@ from app.learning_eval import router as learning_eval_router
 from app.materials import router as materials_router, check_kb_access
 from app.quiz_routes import router as quiz_router
 from app.lecturer_routes import router as lecturer_router
+from app.study_guide_routes import router as study_guide_router
 from app.config import settings
 from app.demo_log import DEMO_LOG_ENABLED, step
 
@@ -62,6 +63,9 @@ app.include_router(quiz_router)
 
 # Lecturer-only analytics and student management
 app.include_router(lecturer_router)
+
+# Study guide and progressive hints
+app.include_router(study_guide_router)
 
 # Setup CORS middleware
 app.add_middleware(
@@ -407,9 +411,12 @@ async def upload_material(file: UploadFile = File(...), user: dict = Depends(get
         }
 
     except Exception as e:
-        # Cleanup file if processing fails
+        # Cleanup file if processing fails, handling Windows file lock safely
         if os.path.exists(saved_filepath):
-            os.remove(saved_filepath)
+            try:
+                os.remove(saved_filepath)
+            except OSError:
+                pass
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while processing the PDF file: {str(e)}"

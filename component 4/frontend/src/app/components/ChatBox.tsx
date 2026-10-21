@@ -28,6 +28,7 @@ export interface ChatTurn {
   understanding?: UnderstandingSummary;
   detection?: DetectionItem[];
   state?: SessionState;
+  newly_corrected_ids?: string[];
 }
 
 /** Badge shown under Nova's reply — colours/labels as specified. */
@@ -137,6 +138,7 @@ export default function ChatBox({
         understanding: data.understanding,
         detection: data.detection,
         state: data.updated_state,
+        newly_corrected_ids: data.newly_corrected_ids,
       });
       return;
     }
