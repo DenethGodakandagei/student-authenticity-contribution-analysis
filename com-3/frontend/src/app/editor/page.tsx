@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -925,6 +925,38 @@ function EditorComponent() {
     ? `${user.name} (${user.studentId})`
     : 'Anonymous Student';
 
+  // Live mutable refs so useEditor and socket listeners never have stale closures
+  const authRef = useRef({ isAuthenticated, user });
+  authRef.current = { isAuthenticated, user };
+
+  const socketRef = useRef<any>(null);
+  socketRef.current = socket;
+
+  const selectedDocIdRef = useRef(selectedDocId);
+  selectedDocIdRef.current = selectedDocId;
+
+  const effectiveAuthorRef = useRef(effectiveAuthor);
+  effectiveAuthorRef.current = effectiveAuthor;
+
+  const accessDeniedRef = useRef(accessDenied);
+  accessDeniedRef.current = accessDenied;
+
+  const isOfflineRef = useRef(isOffline);
+  isOfflineRef.current = isOffline;
+
+  const offlineRevisionsRef = useRef(offlineRevisions);
+  offlineRevisionsRef.current = offlineRevisions;
+
+  const loadedDocIdRef = useRef<string | null>(null);
+  const prevSelectedDocIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (prevSelectedDocIdRef.current !== selectedDocId) {
+      prevSelectedDocIdRef.current = selectedDocId;
+      loadedDocIdRef.current = null;
+    }
+  }, [selectedDocId]);
+
   // Group and merge authors representing the same student into a single canonical entry
   const displayAuthors = React.useMemo(() => {
     if (!markupData?.authors || !Array.isArray(markupData.authors)) return [];
@@ -1190,9 +1222,16 @@ function EditorComponent() {
           setAccessDenied(false);
           setAccessDeniedInfo(null);
           setDocDetails(data);
+          // Only populate editor content if loading a different document or the editor is completely empty.
+          // NEVER wipe or overwrite the user's actively typed text!
           if (editor && !editor.isDestroyed && data.content !== undefined) {
-            editor.commands.setContent(data.content || '<p></p>', { emitUpdate: false });
-            setLastText(editor.getText());
+            const isDifferentDoc = loadedDocIdRef.current !== selectedDocId;
+            const isEditorBlank = editor.getText().trim() === '';
+            if (isDifferentDoc || isEditorBlank) {
+              editor.commands.setContent(data.content || '<p></p>', { emitUpdate: false });
+              setLastText(editor.getText());
+              loadedDocIdRef.current = selectedDocId;
+            }
           }
         }
       })
@@ -1238,11 +1277,16 @@ function EditorComponent() {
       }
     },
     onUpdate: ({ editor }) => {
-      if (!isAuthenticated || accessDenied) return;
+      const curAuth = authRef.current;
+      if (!curAuth.isAuthenticated || accessDeniedRef.current) return;
+      const currentDocId = selectedDocIdRef.current;
+      if (!currentDocId) return;
+
       const html = editor.getHTML();
       const plainText = editor.getText();
+      const authorToUse = effectiveAuthorRef.current;
 
-      if (isOffline) {
+      if (isOfflineRef.current) {
         const oldWords = lastText.split(/\s+/).filter(Boolean).length;
         const newWords = plainText.split(/\s+/).filter(Boolean).length;
 
@@ -1256,7 +1300,7 @@ function EditorComponent() {
 
         if (added > 0 || deleted > 0) {
           const newRev = {
-            author: effectiveAuthor,
+            author: authorToUse,
             timestamp: new Date(),
             addedText: added > 0 ? `Offline typing: +${added} words` : "",
             deletedText: deleted > 0 ? `Offline deletion: -${deleted} words` : "",
@@ -1267,24 +1311,37 @@ function EditorComponent() {
 
           setOfflineRevisions((prev: any[]) => {
             const updated = [...prev, newRev];
-            savePendingEdit(selectedDocId, html, effectiveAuthor, updated);
+            savePendingEdit(currentDocId, html, authorToUse, updated);
             return updated;
           });
         } else {
-          savePendingEdit(selectedDocId, html, effectiveAuthor, offlineRevisions);
+          savePendingEdit(currentDocId, html, authorToUse, offlineRevisionsRef.current);
         }
         setSyncStatus('offline');
       } else {
-        if (socket) {
-          socket.emit('send-changes', {
-            documentId: selectedDocId,
+        const curSocket = socketRef.current;
+        if (curSocket && curSocket.connected) {
+          curSocket.emit('send-changes', {
+            documentId: currentDocId,
             content: html,
-            author: effectiveAuthor,
-            username: user?.username,
-            studentId: user?.studentId || user?.username,
-            email: user?.email,
-            role: user?.role
+            author: authorToUse,
+            username: curAuth.user?.username,
+            studentId: curAuth.user?.studentId || curAuth.user?.username,
+            email: curAuth.user?.email,
+            role: curAuth.user?.role
           });
+        } else {
+          // Fallback auto-save via REST if socket is connecting or temporarily disconnected
+          fetch(`${getSocketUrl()}/api/documents/${currentDocId}/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: html,
+              author: authorToUse,
+              username: curAuth.user?.username,
+              studentId: curAuth.user?.studentId || curAuth.user?.username
+            })
+          }).catch(() => {});
         }
       }
       setLastText(plainText);
@@ -1302,13 +1359,15 @@ function EditorComponent() {
   // Ensure editor content syncs if docDetails loads before editor is mounted
   useEffect(() => {
     if (editor && !editor.isDestroyed && docDetails?.content !== undefined) {
-      const current = editor.getHTML();
-      if (current === '<p></p>' || current === '' || current === '<p></p>\n') {
+      const isDifferentDoc = loadedDocIdRef.current !== selectedDocId;
+      const isEditorBlank = editor.getText().trim() === '';
+      if (isDifferentDoc || isEditorBlank) {
         editor.commands.setContent(docDetails.content || '<p></p>', { emitUpdate: false });
         setLastText(editor.getText());
+        loadedDocIdRef.current = selectedDocId;
       }
     }
-  }, [editor, docDetails?.content]);
+  }, [editor, docDetails?.content, selectedDocId]);
 
   // Global Keyboard Shortcuts (Ctrl+S, Ctrl+O, Ctrl+F, Ctrl+Shift+C, Ctrl+/)
   useEffect(() => {
@@ -1434,8 +1493,13 @@ function EditorComponent() {
 
     s.on('load-document', (content) => {
       if (editor && !editor.isDestroyed) {
-        editor.commands.setContent(content || '', { emitUpdate: false });
-        setLastText(editor.getText());
+        const isDifferentDoc = loadedDocIdRef.current !== selectedDocId;
+        const isEditorBlank = editor.getText().trim() === '';
+        if (isDifferentDoc || isEditorBlank) {
+          editor.commands.setContent(content || '', { emitUpdate: false });
+          setLastText(editor.getText());
+          loadedDocIdRef.current = selectedDocId;
+        }
       }
     });
 
@@ -1645,7 +1709,7 @@ function EditorComponent() {
         savePendingEdit(selectedDocId, html, effectiveAuthor, offlineRevisions);
         showToast("Offline changes saved locally in browser cache", "info", "Offline Saved");
       } else {
-        if (socket) {
+        if (socket && socket.connected) {
           socket.emit('send-changes', {
             documentId: selectedDocId,
             content: html,
@@ -1656,6 +1720,18 @@ function EditorComponent() {
             role: user?.role
           });
         }
+        // Always persist via REST fallback as well to guarantee cloud save
+        fetch(`${getSocketUrl()}/api/documents/${selectedDocId}/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: html,
+            author: effectiveAuthor,
+            username: user?.username,
+            studentId: user?.studentId || user?.username
+          })
+        }).catch(err => console.warn('REST save fallback:', err));
+
         showToast(`Document "${docDetails?.title || selectedDocId}" saved to cloud database!`, "success", "Saved Successfully");
         fetchMarkupData();
       }
@@ -2235,6 +2311,81 @@ function EditorComponent() {
     </>
   );
 
+  const editorWordCount = editor ? (editor.getText().trim().split(/\s+/).filter(Boolean).length) : 0;
+  const liveDocWordCount = editorWordCount > 0 ? editorWordCount : (markupData?.totalWords || 0);
+  const wordCount = liveDocWordCount;
+
+  // Real-time live document word division calculation (Unconditional Hook Execution)
+  // Ensures typing ONLY increases the active author's count and percentages sum to exactly 100%
+  const computedAuthors = React.useMemo(() => {
+    let authors = displayAuthors;
+
+    // If no authors yet but user is logged in, show user as sole author
+    if (authors.length === 0 && effectiveAuthor) {
+      authors = [{
+        author: effectiveAuthor,
+        liveWords: liveDocWordCount,
+        grossWordsAdded: liveDocWordCount,
+        grossWordsDeleted: 0,
+        revisionCount: 1,
+        color: '#10b981',
+        bg: '#ECFDF5',
+        border: '#A7F3D0'
+      }];
+    }
+
+    if (authors.length === 0) return [];
+
+    if (authors.length === 1) {
+      return [{
+        ...authors[0],
+        authorLiveWords: liveDocWordCount,
+        authorPercentage: liveDocWordCount > 0 ? 100 : 0
+      }];
+    }
+
+    // Multiple collaborators:
+    const baselineDocWords = authors.reduce((sum, a) => sum + (a.liveWords || 0), 0);
+    const typedDelta = liveDocWordCount - baselineDocWords;
+
+    // Find which author corresponds to the currently logged in user
+    let userAuthorIndex = authors.findIndex(a => isSameStudent(a.author, effectiveAuthor));
+
+    // Calculate individual live words: typing additions/deletions only affect the active student
+    const calculated = authors.map((a, idx) => {
+      let liveWords = a.liveWords || 0;
+      if (idx === userAuthorIndex || (userAuthorIndex === -1 && idx === 0)) {
+        liveWords = Math.max(0, liveWords + typedDelta);
+      }
+      return {
+        ...a,
+        authorLiveWords: liveWords
+      };
+    });
+
+    // Calculate percentages
+    let sumPercentages = 0;
+    const withPercentages = calculated.map(a => {
+      const pct = liveDocWordCount > 0 ? Math.round((a.authorLiveWords / liveDocWordCount) * 100) : 0;
+      sumPercentages += pct;
+      return {
+        ...a,
+        authorPercentage: pct
+      };
+    });
+
+    // Ensure sum of percentages equals 100% when document has words
+    if (liveDocWordCount > 0 && withPercentages.length > 0) {
+      const diff = 100 - sumPercentages;
+      if (diff !== 0) {
+        const topAuthor = withPercentages.reduce((max, a) => a.authorLiveWords > max.authorLiveWords ? a : max, withPercentages[0]);
+        topAuthor.authorPercentage = Math.max(0, topAuthor.authorPercentage + diff);
+      }
+    }
+
+    return withPercentages;
+  }, [displayAuthors, liveDocWordCount, effectiveAuthor]);
+
   // Require Authentication Screen
   if (!isAuthenticated) {
     return (
@@ -2519,81 +2670,6 @@ function EditorComponent() {
       </div>
     );
   }
-
-  const editorWordCount = editor ? (editor.getText().trim().split(/\s+/).filter(Boolean).length) : 0;
-  const liveDocWordCount = editorWordCount > 0 ? editorWordCount : (markupData?.totalWords || 0);
-  const wordCount = liveDocWordCount;
-
-  // Real-time live document word division calculation
-  // Ensures typing ONLY increases the active author's count and percentages sum to exactly 100%
-  const computedAuthors = React.useMemo(() => {
-    let authors = displayAuthors;
-
-    // If no authors yet but user is logged in, show user as sole author
-    if (authors.length === 0 && effectiveAuthor) {
-      authors = [{
-        author: effectiveAuthor,
-        liveWords: liveDocWordCount,
-        grossWordsAdded: liveDocWordCount,
-        grossWordsDeleted: 0,
-        revisionCount: 1,
-        color: '#10b981',
-        bg: '#ECFDF5',
-        border: '#A7F3D0'
-      }];
-    }
-
-    if (authors.length === 0) return [];
-
-    if (authors.length === 1) {
-      return [{
-        ...authors[0],
-        authorLiveWords: liveDocWordCount,
-        authorPercentage: liveDocWordCount > 0 ? 100 : 0
-      }];
-    }
-
-    // Multiple collaborators:
-    const baselineDocWords = authors.reduce((sum, a) => sum + (a.liveWords || 0), 0);
-    const typedDelta = liveDocWordCount - baselineDocWords;
-
-    // Find which author corresponds to the currently logged in user
-    let userAuthorIndex = authors.findIndex(a => isSameStudent(a.author, effectiveAuthor));
-
-    // Calculate individual live words: typing additions/deletions only affect the active student
-    const calculated = authors.map((a, idx) => {
-      let liveWords = a.liveWords || 0;
-      if (idx === userAuthorIndex || (userAuthorIndex === -1 && idx === 0)) {
-        liveWords = Math.max(0, liveWords + typedDelta);
-      }
-      return {
-        ...a,
-        authorLiveWords: liveWords
-      };
-    });
-
-    // Calculate percentages
-    let sumPercentages = 0;
-    const withPercentages = calculated.map(a => {
-      const pct = liveDocWordCount > 0 ? Math.round((a.authorLiveWords / liveDocWordCount) * 100) : 0;
-      sumPercentages += pct;
-      return {
-        ...a,
-        authorPercentage: pct
-      };
-    });
-
-    // Ensure sum of percentages equals 100% when document has words
-    if (liveDocWordCount > 0 && withPercentages.length > 0) {
-      const diff = 100 - sumPercentages;
-      if (diff !== 0) {
-        const topAuthor = withPercentages.reduce((max, a) => a.authorLiveWords > max.authorLiveWords ? a : max, withPercentages[0]);
-        topAuthor.authorPercentage = Math.max(0, topAuthor.authorPercentage + diff);
-      }
-    }
-
-    return withPercentages;
-  }, [displayAuthors, liveDocWordCount, effectiveAuthor]);
 
   return (
     <div className={`editor-container ${currentSkin === 'google' ? 'google-docs-mode' : currentSkin === 'word' ? 'ms-word-mode' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
