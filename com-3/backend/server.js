@@ -22,6 +22,14 @@ const io = new Server(server, {
 
 const dmp = new DiffMatchPatch();
 
+// Global Node Process Resilience Handlers
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]:', reason);
+});
+
 // Password Hashing Helper
 function hashPassword(password) {
   const salt = 'doc_evo_salt_2026';
@@ -37,7 +45,7 @@ const UserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['student', 'group_leader', 'lecturer', 'admin'], default: 'student' },
   createdAt: { type: Date, default: Date.now }
-});
+}, { versionKey: false });
 const User = mongoose.model('User', UserSchema);
 
 // MongoDB Setup & Admin Seeding
@@ -89,7 +97,7 @@ const DocumentSchema = new mongoose.Schema({
   vivaRequired: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { versionKey: false });
 const Document = mongoose.model('Document', DocumentSchema);
 
 // Student Author Identity Normalization Helpers
@@ -250,7 +258,7 @@ const RevisionSchema = new mongoose.Schema({
   features: { type: mongoose.Schema.Types.Mixed, default: {} },
   isBulkInsertion: { type: Boolean, default: false },
   anomalyFlag: { type: String, default: null } // e.g. 'High-Volume Paste Event Detected'
-});
+}, { versionKey: false });
 const Revision = mongoose.model('Revision', RevisionSchema);
 
 // Anonymization Helper (Privacy-Preserving Author Telemetry)
@@ -450,179 +458,231 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send-changes', async (payload) => {
-    if (!payload || typeof payload !== 'object') return;
-    const { documentId, content, author, studentId, username, email, role } = payload;
-    if (!documentId) return;
+    try {
+      if (!payload || typeof payload !== 'object') return;
+      const { documentId, content, author, studentId, username, email, role } = payload;
+      if (!documentId) return;
 
-    const doc = await Document.findOne({ _id: documentId });
-    if (!doc) return;
+      const doc = await Document.findOne({ _id: documentId });
+      if (!doc) return;
 
-    const rooms = Array.from(socket.rooms || []);
-    const alreadyAuthorized = rooms.includes(documentId) || (socket.data?.allowedDocs && socket.data.allowedDocs.has(documentId));
+      const rooms = Array.from(socket.rooms || []);
+      const alreadyAuthorized = rooms.includes(documentId) || (socket.data?.allowedDocs && socket.data.allowedDocs.has(documentId));
 
-    if (!alreadyAuthorized) {
-      let userObj = socket.data?.user?.userObj || null;
-      if (!userObj) {
-        try {
-          const queryConds = [];
-          const sId = studentId || socket.data?.user?.studentId;
-          const uName = username || socket.data?.user?.username;
-          const uEmail = email || socket.data?.user?.email;
-          if (sId) {
-            queryConds.push({ studentId: new RegExp('^' + sId.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-            queryConds.push({ username: sId.toLowerCase().trim() });
-          }
-          if (uName) {
-            queryConds.push({ username: new RegExp('^' + uName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-          }
-          if (uEmail) {
-            queryConds.push({ email: new RegExp('^' + uEmail.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-          }
-          if (author && typeof author === 'string') {
-            const m = author.match(/^(.+?)\s*\((.+?)\)$/);
-            if (m) {
-              queryConds.push({ name: new RegExp('^' + m[1].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
-              queryConds.push({ studentId: new RegExp('^' + m[2].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+      if (!alreadyAuthorized) {
+        let userObj = socket.data?.user?.userObj || null;
+        if (!userObj) {
+          try {
+            const queryConds = [];
+            const sId = studentId || socket.data?.user?.studentId;
+            const uName = username || socket.data?.user?.username;
+            const uEmail = email || socket.data?.user?.email;
+            if (sId) {
+              queryConds.push({ studentId: new RegExp('^' + sId.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+              queryConds.push({ username: sId.toLowerCase().trim() });
             }
-          }
-          if (queryConds.length > 0) {
-            userObj = await User.findOne({ $or: queryConds }).lean();
-          }
-        } catch (e) {}
-      }
-
-      const isPermitted = hasDocumentAccess(doc, username || socket.data?.user?.username || author, studentId || socket.data?.user?.studentId, role || socket.data?.user?.role || 'student', email || socket.data?.user?.email, userObj);
-      if (isPermitted) {
-        socket.data.allowedDocs = socket.data.allowedDocs || new Set();
-        socket.data.allowedDocs.add(documentId);
-        socket.join(documentId);
-      } else {
-        console.warn(`[send-changes] Unauthorized change attempt dropped for doc: ${documentId}`);
-        return;
-      }
-    } else if (!rooms.includes(documentId)) {
-      socket.join(documentId);
-    }
-
-    if (doc) {
-      // Broadcast changes to peers only after verification
-      socket.broadcast.to(documentId).emit('receive-changes', content);
-
-      const oldText = stripHtml(doc.content);
-      const newText = stripHtml(content);
-
-      const diffs = dmp.diff_main(oldText, newText);
-      dmp.diff_cleanupSemantic(diffs);
-
-      let added = "";
-      let deleted = "";
-      let wordsAdded = 0;
-      let wordsDeleted = 0;
-
-      diffs.forEach(([op, text]) => {
-        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-        if (op === 1) { // Insert
-          added += text + " ";
-          wordsAdded += words;
-        } else if (op === -1) { // Delete
-          deleted += text + " ";
-          wordsDeleted += words;
+            if (uName) {
+              queryConds.push({ username: new RegExp('^' + uName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+            }
+            if (uEmail) {
+              queryConds.push({ email: new RegExp('^' + uEmail.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+            }
+            if (author && typeof author === 'string') {
+              const m = author.match(/^(.+?)\s*\((.+?)\)$/);
+              if (m) {
+                queryConds.push({ name: new RegExp('^' + m[1].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+                queryConds.push({ studentId: new RegExp('^' + m[2].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') });
+              }
+            }
+            if (queryConds.length > 0) {
+              userObj = await User.findOne({ $or: queryConds }).lean();
+            }
+          } catch (e) {}
         }
-      });
 
-      if (wordsAdded > 0 || wordsDeleted > 0) {
-        // Strict Security Guard 3: Bulk Paste / Insertion Anomaly Detection
-        const now = new Date();
-        const timeSinceLastEditSec = doc.updatedAt ? Math.max(1, (now.getTime() - new Date(doc.updatedAt).getTime()) / 1000) : 5;
-        const isBulk = wordsAdded >= 80 && (wordsAdded / timeSinceLastEditSec) > 15;
-        const anomaly = isBulk ? 'High-Volume Paste Event Detected' : null;
-
-        // Check if there is a consecutive micro-edit revision by the same author within 20s
-        const recentRev = await Revision.findOne({
-          documentId,
-          author: author || "Anonymous"
-        }).sort({ timestamp: -1 });
-
-        const isConsecutiveMicro = recentRev &&
-          (now.getTime() - new Date(recentRev.timestamp).getTime() < 20000) &&
-          !isBulk;
-
-        if (isConsecutiveMicro) {
-          // Consolidate into the active typing revision session
-          recentRev.afterText = newText;
-          if (added.trim()) {
-            recentRev.addedText = (recentRev.addedText ? (recentRev.addedText + " " + added.trim()) : added.trim()).trim();
-          }
-          if (deleted.trim()) {
-            recentRev.deletedText = (recentRev.deletedText ? (recentRev.deletedText + " " + deleted.trim()) : deleted.trim()).trim();
-          }
-          recentRev.wordCountAdded += wordsAdded;
-          recentRev.wordCountDeleted += wordsDeleted;
-          recentRev.timestamp = now;
-          await recentRev.save();
+        const isPermitted = hasDocumentAccess(doc, username || socket.data?.user?.username || author, studentId || socket.data?.user?.studentId, role || socket.data?.user?.role || 'student', email || socket.data?.user?.email, userObj);
+        if (isPermitted) {
+          socket.data.allowedDocs = socket.data.allowedDocs || new Set();
+          socket.data.allowedDocs.add(documentId);
+          socket.join(documentId);
         } else {
-          // Run ML Classification on Before/After Pair
-          const mlRes = await classifyRevisionWithML(oldText, newText, "General");
-
-          const explanationText = isBulk
-            ? `[Heuristic Flag] High-volume bulk insertion: +${wordsAdded} words in ${Math.round(timeSinceLastEditSec)}s. Flagged for reviewer inspection; does not constitute automated proof of misconduct.`
-            : (mlRes.explanation || '');
-
-          await Revision.create({
-            documentId,
-            author: author || "Anonymous",
-            anonymizedAuthorId: generateAnonymizedAuthorId(author),
-            timestamp: new Date(),
-            section: "General",
-            beforeText: oldText,
-            afterText: newText,
-            addedText: added.trim(),
-            deletedText: deleted.trim(),
-            wordCountAdded: wordsAdded,
-            wordCountDeleted: wordsDeleted,
-            sourcePlatform: doc.source || 'in_built',
-            syncStatus: 'synced',
-            predictedIntent: isBulk ? 'Content Addition' : (mlRes.predicted_intent || 'Unclassified'),
-            predictedSignificance: isBulk ? 'Major' : (mlRes.predicted_significance || 'Unclassified'),
-            semanticDistance: mlRes.semantic_distance || 0.0,
-            confidence: mlRes.confidence || 0.0,
-            modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
-            explanation: explanationText,
-            features: mlRes.features || {},
-            isBulkInsertion: isBulk,
-            anomalyFlag: anomaly
-          });
+          console.warn(`[send-changes] Unauthorized change attempt dropped for doc: ${documentId}`);
+          return;
         }
+      } else if (!rooms.includes(documentId)) {
+        socket.join(documentId);
       }
 
-      if (author) {
-        const authorTrimmed = author.trim();
+      if (doc) {
+        // Broadcast changes to peers only after verification
+        socket.broadcast.to(documentId).emit('receive-changes', content);
 
-        doc.collaborators = (doc.collaborators || []).filter(c => {
-          if (!c) return false;
-          return !isSameStudent(c, authorTrimmed);
+        const oldText = stripHtml(doc.content || '');
+        const newText = stripHtml(content || '');
+
+        const diffs = dmp.diff_main(oldText, newText);
+        dmp.diff_cleanupSemantic(diffs);
+
+        let added = "";
+        let deleted = "";
+        let wordsAdded = 0;
+        let wordsDeleted = 0;
+
+        diffs.forEach(([op, text]) => {
+          const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+          if (op === 1) { // Insert
+            added += text + " ";
+            wordsAdded += words;
+          } else if (op === -1) { // Delete
+            deleted += text + " ";
+            wordsDeleted += words;
+          }
         });
 
-        doc.collaborators.push(authorTrimmed);
+        if (wordsAdded > 0 || wordsDeleted > 0) {
+          // Strict Security Guard 3: Bulk Paste / Insertion Anomaly Detection
+          const now = new Date();
+          const timeSinceLastEditSec = doc.updatedAt ? Math.max(1, (now.getTime() - new Date(doc.updatedAt).getTime()) / 1000) : 5;
+          const isBulk = wordsAdded >= 80 && (wordsAdded / timeSinceLastEditSec) > 15;
+          const anomaly = isBulk ? 'High-Volume Paste Event Detected' : null;
 
-        if (doc.ownerName && isSameStudent(doc.ownerName, authorTrimmed) && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
-          doc.ownerName = authorTrimmed;
+          // Check if there is a consecutive micro-edit revision by the same author within 20s
+          const recentRev = await Revision.findOne({
+            documentId,
+            author: author || "Anonymous"
+          }).sort({ timestamp: -1 });
+
+          const isConsecutiveMicro = recentRev &&
+            (now.getTime() - new Date(recentRev.timestamp).getTime() < 20000) &&
+            !isBulk;
+
+          if (isConsecutiveMicro) {
+            // Consolidate into the active typing revision session
+            const updAdded = (recentRev.addedText ? (recentRev.addedText + " " + added.trim()) : added.trim()).trim();
+            const updDeleted = (recentRev.deletedText ? (recentRev.deletedText + " " + deleted.trim()) : deleted.trim()).trim();
+            await Revision.updateOne(
+              { _id: recentRev._id },
+              {
+                $set: {
+                  afterText: newText,
+                  addedText: updAdded,
+                  deletedText: updDeleted,
+                  wordCountAdded: (recentRev.wordCountAdded || 0) + wordsAdded,
+                  wordCountDeleted: (recentRev.wordCountDeleted || 0) + wordsDeleted,
+                  timestamp: now
+                }
+              }
+            );
+          } else {
+            // Run ML Classification on Before/After Pair
+            let mlRes = { predicted_intent: 'Unclassified', predicted_significance: 'Unclassified', semantic_distance: 0.0, confidence: 0.0, model_version: 'v1.0-rules-ml-ensemble', explanation: '', features: {} };
+            try {
+              mlRes = await classifyRevisionWithML(oldText, newText, "General");
+            } catch (mlErr) {
+              console.warn('[classifyRevisionWithML fallback]:', mlErr.message);
+            }
+
+            const explanationText = isBulk
+              ? `[Heuristic Flag] High-volume bulk insertion: +${wordsAdded} words in ${Math.round(timeSinceLastEditSec)}s. Flagged for reviewer inspection; does not constitute automated proof of misconduct.`
+              : (mlRes.explanation || '');
+
+            await Revision.create({
+              documentId,
+              author: author || "Anonymous",
+              anonymizedAuthorId: generateAnonymizedAuthorId(author),
+              timestamp: new Date(),
+              section: "General",
+              beforeText: oldText,
+              afterText: newText,
+              addedText: added.trim(),
+              deletedText: deleted.trim(),
+              wordCountAdded: wordsAdded,
+              wordCountDeleted: wordsDeleted,
+              sourcePlatform: doc.source || 'in_built',
+              syncStatus: 'synced',
+              predictedIntent: isBulk ? 'Content Addition' : (mlRes.predicted_intent || 'Unclassified'),
+              predictedSignificance: isBulk ? 'Major' : (mlRes.predicted_significance || 'Unclassified'),
+              semanticDistance: mlRes.semantic_distance || 0.0,
+              confidence: mlRes.confidence || 0.0,
+              modelVersion: mlRes.model_version || 'v1.0-rules-ml-ensemble',
+              explanation: explanationText,
+              features: mlRes.features || {},
+              isBulkInsertion: isBulk,
+              anomalyFlag: anomaly
+            });
+          }
+        }
+
+        const updateData = {
+          content: content,
+          updatedAt: Date.now()
+        };
+
+        if (author) {
+          const authorTrimmed = author.trim();
+
+          const collabs = (doc.collaborators || []).filter(c => {
+            if (!c) return false;
+            return !isSameStudent(c, authorTrimmed);
+          });
+
+          collabs.push(authorTrimmed);
+          updateData.collaborators = collabs;
+
+          if (doc.ownerName && isSameStudent(doc.ownerName, authorTrimmed) && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
+            updateData.ownerName = authorTrimmed;
+          }
+        }
+
+        await Document.updateOne({ _id: documentId }, { $set: updateData });
+
+        if (wordsAdded > 0 || wordsDeleted > 0) {
+          io.to(documentId).emit('markup-updated');
         }
       }
-
-      doc.content = content;
-      doc.updatedAt = Date.now();
-      await doc.save();
-
-      if (wordsAdded > 0 || wordsDeleted > 0) {
-        io.to(documentId).emit('markup-updated');
-      }
+    } catch (socketErr) {
+      console.error('[send-changes error]:', socketErr);
     }
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
+});
+
+// REST Fallback Document Auto-Save Endpoint
+app.post('/api/documents/:id/save', async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const { content, author } = req.body;
+    if (!documentId) return res.status(400).json({ error: 'documentId is required' });
+
+    const doc = await Document.findOne({ _id: documentId });
+    if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+    const updateData = {
+      content: content || '',
+      updatedAt: Date.now()
+    };
+
+    if (author) {
+      const authorTrimmed = author.trim();
+      const collabs = (doc.collaborators || []).filter(c => !isSameStudent(c, authorTrimmed));
+      collabs.push(authorTrimmed);
+      updateData.collaborators = collabs;
+      if (doc.ownerName && isSameStudent(doc.ownerName, authorTrimmed) && !doc.ownerName.includes('(') && authorTrimmed.includes('(')) {
+        updateData.ownerName = authorTrimmed;
+      }
+    }
+
+    await Document.updateOne({ _id: documentId }, { $set: updateData });
+    io.to(documentId).emit('markup-updated');
+
+    return res.json({ success: true, message: 'Document saved successfully' });
+  } catch (err) {
+    console.error('Error saving document via REST:', err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // Authentication APIs
