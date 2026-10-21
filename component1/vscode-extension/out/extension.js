@@ -384,6 +384,19 @@ async function saveAndSyncSession(context) {
             activeFolderSet.add(dir.replace(/\\/g, '/'));
         }
     });
+    // Synchronize exact per-line provenance tracked by defaultLineProvenanceTracker into fileActivity items
+    for (const doc of vscode.workspace.textDocuments) {
+        if (doc.uri.scheme !== 'file')
+            continue;
+        const rel = vscode.workspace.asRelativePath(doc.uri, false).replace(/\\/g, '/');
+        const fileItem = fileActivityMap.get(rel);
+        if (fileItem) {
+            const trackerRecords = line_provenance_tracker_1.defaultLineProvenanceTracker.getLineRecordsForFile(doc);
+            if (trackerRecords && trackerRecords.length > 0) {
+                fileItem.lineRecords = trackerRecords;
+            }
+        }
+    }
     const payload = {
         sessionStart: sessionStart.toISOString(),
         sessionEnd: sessionEnd.toISOString(),
