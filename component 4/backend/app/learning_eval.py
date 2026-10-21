@@ -112,54 +112,34 @@ def _build_test_prompt(
         "as the pre-test using refreshed problem scenarios and alternative examples."
     )
 
-    return f"""
-You are an expert university professor and psychometrician designing a rigorous diagnostic multiple-choice assessment on: {state.topic or "the uploaded course material"}.
+    return f"""Create a diagnostic multiple-choice assessment for: {state.topic or "course material"}.
 {form_note}
-
-{objectives}COURSE CONCEPTS & COMMONLY HELD STUDENT MISCONCEPTIONS:
+COURSE CONCEPTS & MISCONCEPTIONS:
 {misconceptions}
 {_avoid_block(form, pre_questions)}
 
-CRITICAL ACCURACY GUIDELINES:
-1. Generate EXACTLY 10 QUESTIONS directly grounded in the concepts, truths, and misconceptions listed above.
-2. Every question must have EXACTLY 4 plausible, distinct options (A, B, C, D).
-3. Do NOT make the correct answer trivially obvious or much longer than wrong options.
-4. For single-choice questions ("is_multiple": false):
-   - Exactly ONE option is factually and conceptually correct.
-   - The other 3 options must be plausible distractors (one should mirror the common student misconception).
-   - "correct_index" must be an integer from 0 to 3 pointing directly to the correct option string.
-   - "correct_indices" must be a list containing exactly that single index, e.g. [1].
-5. For multiple-choice questions ("is_multiple": true):
-   - The question text MUST include the phrase '(Select all that apply)'.
-   - Exactly 2 or 3 options must be factually correct.
-   - "correct_indices" MUST be a sorted list of the correct option indices, e.g. [0, 2].
-   - "correct_index" must be set to correct_indices[0].
-6. Every question must have a precise, thorough "explanation" citing the underlying concept and why the distractor options are incorrect.
-7. Balance the distribution of question types: produce approximately 6-7 single-answer questions and 3-4 multiple-answer questions.
-8. Shuffle your correct answers naturally across indices 0, 1, 2, and 3 so Option A (0) is not always correct.
-9. Write every option strictly as a clear, factual, objective technical statement. NEVER start options with personal or conversational phrasing like "I think that", "I believe that", or "Nova thinks".
+GUIDELINES:
+1. Generate up to 5-10 rigorous questions grounded in these concepts.
+2. Exactly 4 options per question.
+3. Keep distractors plausible; one should reflect the common student misconception.
+4. "correct_index" is 0-3; "correct_indices" is a list with the correct index or indices.
+5. Provide a concise explanation.
 
-Return ONLY a valid JSON object matching this exact schema:
+Return ONLY valid JSON matching this schema:
 {{
   "questions": [
     {{
       "id": "q1",
-      "concept": "Name of the concept being tested",
-      "question": "Clear, grammatically correct question prompt text",
-      "options": [
-        "First option statement",
-        "Second option statement",
-        "Third option statement",
-        "Fourth option statement"
-      ],
+      "concept": "Core concept",
+      "question": "Question text?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
       "is_multiple": false,
-      "correct_index": 1,
-      "correct_indices": [1],
-      "explanation": "Detailed explanation validating the correct answer and refuting misconceptions."
+      "correct_index": 0,
+      "correct_indices": [0],
+      "explanation": "Why this is correct."
     }}
   ]
-}}
-"""
+}}"""
 
 
 def _looks_like_wrong_belief(option: str, wrong_belief: str) -> bool:
@@ -212,11 +192,12 @@ def generate_test(
 
     questions: List[Dict[str, Any]] = []
     try:
+        # retries=0 so we don't double wait if local model is slow or timed out
         result = generate_json(
             _build_test_prompt(state, form, pre_questions),
             GeneratedTestOutput,
             provider=provider,
-            retries=1,
+            retries=0,
         )
         for idx, q in enumerate(result.questions[:10], start=1):
             q_text = q.question.strip()

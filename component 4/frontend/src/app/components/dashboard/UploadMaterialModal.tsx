@@ -93,9 +93,9 @@ export default function UploadMaterialModal({ isOpen, onClose, onSessionCreated 
 
     // Dynamically advance steps while waiting for the backend response
     const stepTimers: NodeJS.Timeout[] = [];
-    stepTimers.push(setTimeout(() => setCurrentStepIndex(1), 3500));
-    stepTimers.push(setTimeout(() => setCurrentStepIndex(2), 14000));
-    stepTimers.push(setTimeout(() => setCurrentStepIndex(3), 32000));
+    stepTimers.push(setTimeout(() => setCurrentStepIndex(1), 1500));
+    stepTimers.push(setTimeout(() => setCurrentStepIndex(2), 3500));
+    stepTimers.push(setTimeout(() => setCurrentStepIndex(3), 6000));
 
     const clearTimers = () => stepTimers.forEach((t) => clearTimeout(t));
 

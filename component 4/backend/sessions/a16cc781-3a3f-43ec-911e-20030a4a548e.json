@@ -1,0 +1,525 @@
+{
+  "session_id": "a16cc781-3a3f-43ec-911e-20030a4a548e",
+  "topic": "Java Programming Notes",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Understand the fundamental architectural principles of Java Programming Notes.",
+    "Analyze and identify common student errors and boundary traps in Java Programming Notes.",
+    "Formulate clear pedagogical explanations to resolve misconceptions in Java Programming Notes."
+  ],
+  "misconceptions": [
+    {
+      "id": "27b69038",
+      "wrong_concept": "Overlooking Edge Cases & Assumptions in relation to Java Programming Notes",
+      "correct_concept": "All operational assumptions and boundary conditions must be explicitly validated. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...)",
+      "reason": "Students frequently assume input is always well-formed or uniform across runs. In this study context: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "27810e2f",
+      "wrong_concept": "Conflating High-Level Architecture with Implementation in relation to Java Programming Notes",
+      "correct_concept": "Architecture defines structural constraints, whereas implementation addresses low-level mechanism details. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...)",
+      "reason": "Beginners often treat abstract architectural concepts as synonymous with a single concrete syntax. In this study context: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "be55a8e4",
+      "wrong_concept": "Assuming Immediate State Convergence in relation to Java Programming Notes",
+      "correct_concept": "Asynchronous or distributed state transitions take non-zero time and may encounter race conditions. (Ref: 6. Nested Loops\nA loop inside another loop is called a nested loop. The inner loop complet...)",
+      "reason": "Students frequently expect state mutations to take effect instantaneously across components. In this study context: 6. Nested Loops\nA loop inside another loop is called a nested loop. The inner loop complet.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "36c1db22",
+      "wrong_concept": "Treating Secondary Effects as Core Drivers in relation to Java Programming Notes",
+      "correct_concept": "Primary architectural principles dictate system behavior; symptoms should not be mistaken for root causes. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...)",
+      "reason": "Learners often fix symptoms rather than addressing underlying systemic design guarantees. In this study context: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "bebe9e25",
+      "wrong_concept": "Assuming Implicit Default Security or Validation in relation to Java Programming Notes",
+      "correct_concept": "Zero-trust verification and defensive error-handling must be engineered explicitly. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...)",
+      "reason": "Novices frequently trust that default libraries or runtime environments automatically enforce security invariants. In this study context: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu.",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [
+    {
+      "time": "2026-10-21T20:50:38.052607",
+      "type": "pretest_submitted",
+      "score": 20.0,
+      "correct_count": 2,
+      "total_questions": 10
+    }
+  ],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "Overlooking Edge Cases & Assumptions",
+          "question": "When designing a loop in Java, what is the most important consideration?",
+          "options": [
+            "Assuming input is always well-formed",
+            "Focusing on the loop's logic",
+            "Ignoring potential exceptions",
+            "Validating all edge cases"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Validating all edge cases is crucial to ensure the loop behaves correctly in all scenarios."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "Conflating High-Level Architecture with Implementation",
+          "question": "What is the primary focus of a high-level architecture in Java?",
+          "options": [
+            "Specifying the programming language",
+            "Describing the system's structure",
+            "Defining the system's functionality",
+            "Defining the implementation details"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "A high-level architecture focuses on describing the system's structure, not implementation details."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "Assuming Immediate State Convergence",
+          "question": "What happens when updating a state variable in a Java program?",
+          "options": [
+            "The update is instantaneous",
+            "The update is asynchronous and may cause race conditions",
+            "The update is only valid for the next iteration",
+            "The update is only visible to the current thread"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "State updates in Java are asynchronous and may cause race conditions, not instantaneous."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "Treating Secondary Effects as Core Drivers",
+          "question": "What drives the behavior of a Java program?",
+          "options": [
+            "Runtime environment",
+            "Secondary effects and symptoms",
+            "Implementation details",
+            "Primary architectural principles"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Primary architectural principles drive the behavior of a Java program, not secondary effects and symptoms."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "Assuming Implicit Default Security or Validation",
+          "question": "What is the responsibility of a Java developer when it comes to security?",
+          "options": [
+            "The compiler handles security",
+            "The runtime environment handles security",
+            "The developer must explicitly engineer security",
+            "The library handles security"
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Java developers must explicitly engineer security, as there is no implicit default security or validation."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            " is strictly limited to low-level assembly routines.",
+            "Overlooking Edge Cases & Assumptions in relation to Java Programming Notes",
+            " can only be instantiated once globally across an entire program.",
+            "All operational assumptions and boundary conditions must be explicitly validated. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...)"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: All operational assumptions and boundary conditions must be explicitly validated. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...). Common misconception: Overlooking Edge Cases & Assumptions in relation to Java Programming Notes."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "",
+          "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+          "options": [
+            " is only an obsolete theoretical notion with no modern application.",
+            "Architecture defines structural constraints, whereas implementation addresses low-level mechanism details. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...)",
+            "Conflating High-Level Architecture with Implementation in relation to Java Programming Notes",
+            "Understanding  is essential for designing robust software architectures."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            3
+          ],
+          "explanation": "Core concept: Architecture defines structural constraints, whereas implementation addresses low-level mechanism details. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...). Common misconception: Conflating High-Level Architecture with Implementation in relation to Java Programming Notes."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            "Asynchronous or distributed state transitions take non-zero time and may encounter race conditions. (Ref: 6. Nested Loops\nA loop inside another loop is called a nested loop. The inner loop complet...)",
+            " can only be instantiated once globally across an entire program.",
+            " is strictly limited to low-level assembly routines.",
+            "Assuming Immediate State Convergence in relation to Java Programming Notes"
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: Asynchronous or distributed state transitions take non-zero time and may encounter race conditions. (Ref: 6. Nested Loops\nA loop inside another loop is called a nested loop. The inner loop complet...). Common misconception: Assuming Immediate State Convergence in relation to Java Programming Notes."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            " is strictly limited to low-level assembly routines.",
+            " can only be instantiated once globally across an entire program.",
+            "Treating Secondary Effects as Core Drivers in relation to Java Programming Notes",
+            "Primary architectural principles dictate system behavior; symptoms should not be mistaken for root causes. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...)"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: Primary architectural principles dictate system behavior; symptoms should not be mistaken for root causes. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...). Common misconception: Treating Secondary Effects as Core Drivers in relation to Java Programming Notes."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "",
+          "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+          "options": [
+            "Assuming Implicit Default Security or Validation in relation to Java Programming Notes",
+            "Zero-trust verification and defensive error-handling must be engineered explicitly. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...)",
+            "Understanding  is essential for designing robust software architectures.",
+            " is only an obsolete theoretical notion with no modern application."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            2
+          ],
+          "explanation": "Core concept: Zero-trust verification and defensive error-handling must be engineered explicitly. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...). Common misconception: Assuming Implicit Default Security or Validation in relation to Java Programming Notes."
+        }
+      ],
+      "answers": [
+        {
+          "question_id": "q_1_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_2_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_3_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_4_pre",
+          "choice": 3,
+          "choices": null
+        },
+        {
+          "question_id": "q_5_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_6_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_7_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_8_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_9_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_10_pre",
+          "choice": 0,
+          "choices": null
+        }
+      ],
+      "score": {
+        "total_questions": 10,
+        "correct_count": 2,
+        "overall_percentage": 20.0,
+        "per_question": [
+          {
+            "question_id": "q_1_pre",
+            "concept": "Overlooking Edge Cases & Assumptions",
+            "question": "When designing a loop in Java, what is the most important consideration?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Validating all edge cases is crucial to ensure the loop behaves correctly in all scenarios."
+          },
+          {
+            "question_id": "q_2_pre",
+            "concept": "Conflating High-Level Architecture with Implementation",
+            "question": "What is the primary focus of a high-level architecture in Java?",
+            "choice": 0,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": false,
+            "explanation": "A high-level architecture focuses on describing the system's structure, not implementation details."
+          },
+          {
+            "question_id": "q_3_pre",
+            "concept": "Assuming Immediate State Convergence",
+            "question": "What happens when updating a state variable in a Java program?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": true,
+            "explanation": "State updates in Java are asynchronous and may cause race conditions, not instantaneous."
+          },
+          {
+            "question_id": "q_4_pre",
+            "concept": "Treating Secondary Effects as Core Drivers",
+            "question": "What drives the behavior of a Java program?",
+            "choice": 3,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": true,
+            "explanation": "Primary architectural principles drive the behavior of a Java program, not secondary effects and symptoms."
+          },
+          {
+            "question_id": "q_5_pre",
+            "concept": "Assuming Implicit Default Security or Validation",
+            "question": "What is the responsibility of a Java developer when it comes to security?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 2,
+            "correct_indices": [
+              2
+            ],
+            "correct": false,
+            "explanation": "Java developers must explicitly engineer security, as there is no implicit default security or validation."
+          },
+          {
+            "question_id": "q_6_pre",
+            "concept": "General",
+            "question": "Which statement accurately describes ?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Core concept: All operational assumptions and boundary conditions must be explicitly validated. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...). Common misconception: Overlooking Edge Cases & Assumptions in relation to Java Programming Notes."
+          },
+          {
+            "question_id": "q_7_pre",
+            "concept": "General",
+            "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+            "choice": [
+              2
+            ],
+            "is_multiple": true,
+            "correct_index": 1,
+            "correct_indices": [
+              1,
+              3
+            ],
+            "correct": false,
+            "explanation": "Core concept: Architecture defines structural constraints, whereas implementation addresses low-level mechanism details. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...). Common misconception: Conflating High-Level Architecture with Implementation in relation to Java Programming Notes."
+          },
+          {
+            "question_id": "q_8_pre",
+            "concept": "General",
+            "question": "Which statement accurately describes ?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": false,
+            "explanation": "Core concept: Asynchronous or distributed state transitions take non-zero time and may encounter race conditions. (Ref: 6. Nested Loops\nA loop inside another loop is called a nested loop. The inner loop complet...). Common misconception: Assuming Immediate State Convergence in relation to Java Programming Notes."
+          },
+          {
+            "question_id": "q_9_pre",
+            "concept": "General",
+            "question": "Which statement accurately describes ?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Core concept: Primary architectural principles dictate system behavior; symptoms should not be mistaken for root causes. (Ref: Java Programming Notes\nTopic: Loops (for, while, do-while, enhanced for, nested loops, bre...). Common misconception: Treating Secondary Effects as Core Drivers in relation to Java Programming Notes."
+          },
+          {
+            "question_id": "q_10_pre",
+            "concept": "General",
+            "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+            "choice": [
+              0
+            ],
+            "is_multiple": true,
+            "correct_index": 1,
+            "correct_indices": [
+              1,
+              2
+            ],
+            "correct": false,
+            "explanation": "Core concept: Zero-trust verification and defensive error-handling must be engineered explicitly. (Ref: System.out.println(\"Count: \" + i);\n    i++;\n}\n4. The do-while Loop\nThe do-while loop execu...). Common misconception: Assuming Implicit Default Security or Validation in relation to Java Programming Notes."
+          }
+        ],
+        "per_concept": [
+          {
+            "concept": "Overlooking Edge Cases & Assumptions",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          },
+          {
+            "concept": "Conflating High-Level Architecture with Implementation",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          },
+          {
+            "concept": "Assuming Immediate State Convergence",
+            "correct": 1,
+            "total": 1,
+            "percentage": 100.0
+          },
+          {
+            "concept": "Treating Secondary Effects as Core Drivers",
+            "correct": 1,
+            "total": 1,
+            "percentage": 100.0
+          },
+          {
+            "concept": "Assuming Implicit Default Security or Validation",
+            "correct": 0,
+            "total": 1,
+            "percentage": 0.0
+          },
+          {
+            "concept": "General",
+            "correct": 0,
+            "total": 5,
+            "percentage": 0.0
+          }
+        ]
+      },
+      "submitted_at": "2026-10-21T20:50:38.052596"
+    }
+  },
+  "created_at": "2026-10-21T20:33:47.313713",
+  "updated_at": "2026-10-21T20:50:38.052615"
+}

@@ -1,0 +1,289 @@
+{
+  "session_id": "cd68bab1-e583-40d0-b9c8-4463c4e68594",
+  "topic": "Data Structures and Algorithms: Introduction to Recursion",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Understand the concept of recursion and its application in solving problems",
+    "Be able to write recursive functions to solve problems",
+    "Understand the relationship between recursion and recurrence equations",
+    "Be able to analyze and solve recurrence equations using various methods"
+  ],
+  "misconceptions": [
+    {
+      "id": "5419c0ba",
+      "wrong_concept": "Thinking that recursion is only about writing a function that calls itself",
+      "correct_concept": "Recursion is a problem-solving strategy that involves breaking down a problem into smaller sub-problems, solving them, and combining the results",
+      "reason": "Students may misunderstand recursion as simply writing a function that calls itself, whereas it's a broader problem-solving approach that requires understanding the underlying principles and applying them effectively",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "0baaafb4",
+      "wrong_concept": "Assuming that all recursive functions are inefficient",
+      "correct_concept": "Not all recursive functions are inefficient; some can be optimized to run efficiently by using techniques like memoization and dynamic programming",
+      "reason": "Students may assume that recursive functions are inherently inefficient, whereas some can be optimized to run efficiently with proper design and implementation",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "68554b62",
+      "wrong_concept": "Believing that recursion is only applicable to mathematical problems",
+      "correct_concept": "Recursion is applicable to a wide range of problems, including mathematical, logical, and algorithmic problems",
+      "reason": "Students may think that recursion is only applicable to mathematical problems, whereas it's a general problem-solving strategy that can be applied to various domains",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "3fc4b11e",
+      "wrong_concept": "Thinking that the time complexity of a recursive function is always O(n)",
+      "correct_concept": "The time complexity of a recursive function can vary depending on the problem, the algorithm, and the input size",
+      "reason": "Students may assume that the time complexity of a recursive function is always O(n), whereas it can vary depending on the specific problem and algorithm",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "4a3af8e2",
+      "wrong_concept": "Assuming that the Master Theorem is the only method for solving recurrence equations",
+      "correct_concept": "The Master Theorem is one of several methods for solving recurrence equations, including the substitution method, the recursion tree method, and others",
+      "reason": "Students may assume that the Master Theorem is the only method for solving recurrence equations, whereas there are multiple methods that can be used depending on the specific problem and equation",
+      "concept": "",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "",
+          "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+          "options": [
+            "Recursion is a problem-solving strategy that involves breaking down a problem into smaller sub-problems, solving them, and combining the results",
+            " is only an obsolete theoretical notion with no modern application.",
+            "Understanding  is essential for designing robust software architectures.",
+            "Thinking that recursion is only about writing a function that calls itself"
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            2
+          ],
+          "explanation": "Core concept: Recursion is a problem-solving strategy that involves breaking down a problem into smaller sub-problems, solving them, and combining the results. Common misconception: Thinking that recursion is only about writing a function that calls itself."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            "Assuming that all recursive functions are inefficient",
+            " can only be instantiated once globally across an entire program.",
+            " is strictly limited to low-level assembly routines.",
+            "Not all recursive functions are inefficient; some can be optimized to run efficiently by using techniques like memoization and dynamic programming"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: Not all recursive functions are inefficient; some can be optimized to run efficiently by using techniques like memoization and dynamic programming. Common misconception: Assuming that all recursive functions are inefficient."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            "Recursion is applicable to a wide range of problems, including mathematical, logical, and algorithmic problems",
+            " can only be instantiated once globally across an entire program.",
+            "Believing that recursion is only applicable to mathematical problems",
+            " is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: Recursion is applicable to a wide range of problems, including mathematical, logical, and algorithmic problems. Common misconception: Believing that recursion is only applicable to mathematical problems."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "",
+          "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+          "options": [
+            " is only an obsolete theoretical notion with no modern application.",
+            "Understanding  is essential for designing robust software architectures.",
+            "The time complexity of a recursive function can vary depending on the problem, the algorithm, and the input size",
+            "Thinking that the time complexity of a recursive function is always O(n)"
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            2
+          ],
+          "explanation": "Core concept: The time complexity of a recursive function can vary depending on the problem, the algorithm, and the input size. Common misconception: Thinking that the time complexity of a recursive function is always O(n)."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            "Assuming that the Master Theorem is the only method for solving recurrence equations",
+            " is strictly limited to low-level assembly routines.",
+            "The Master Theorem is one of several methods for solving recurrence equations, including the substitution method, the recursion tree method, and others",
+            " can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: The Master Theorem is one of several methods for solving recurrence equations, including the substitution method, the recursion tree method, and others. Common misconception: Assuming that the Master Theorem is the only method for solving recurrence equations."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            " is strictly limited to low-level assembly routines.",
+            "Thinking that recursion is only about writing a function that calls itself",
+            " can only be instantiated once globally across an entire program.",
+            "Recursion is a problem-solving strategy that involves breaking down a problem into smaller sub-problems, solving them, and combining the results"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Core concept: Recursion is a problem-solving strategy that involves breaking down a problem into smaller sub-problems, solving them, and combining the results. Common misconception: Thinking that recursion is only about writing a function that calls itself."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "",
+          "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+          "options": [
+            "Assuming that all recursive functions are inefficient",
+            "Not all recursive functions are inefficient; some can be optimized to run efficiently by using techniques like memoization and dynamic programming",
+            " is only an obsolete theoretical notion with no modern application.",
+            "Understanding  is essential for designing robust software architectures."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            3
+          ],
+          "explanation": "Core concept: Not all recursive functions are inefficient; some can be optimized to run efficiently by using techniques like memoization and dynamic programming. Common misconception: Assuming that all recursive functions are inefficient."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            " can only be instantiated once globally across an entire program.",
+            "Believing that recursion is only applicable to mathematical problems",
+            "Recursion is applicable to a wide range of problems, including mathematical, logical, and algorithmic problems",
+            " is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Core concept: Recursion is applicable to a wide range of problems, including mathematical, logical, and algorithmic problems. Common misconception: Believing that recursion is only applicable to mathematical problems."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "",
+          "question": "Which statement accurately describes ?",
+          "options": [
+            "Thinking that the time complexity of a recursive function is always O(n)",
+            "The time complexity of a recursive function can vary depending on the problem, the algorithm, and the input size",
+            " can only be instantiated once globally across an entire program.",
+            " is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: The time complexity of a recursive function can vary depending on the problem, the algorithm, and the input size. Common misconception: Thinking that the time complexity of a recursive function is always O(n)."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "",
+          "question": "Which of the following statements regarding  are correct? (Select all that apply)",
+          "options": [
+            "Assuming that the Master Theorem is the only method for solving recurrence equations",
+            "The Master Theorem is one of several methods for solving recurrence equations, including the substitution method, the recursion tree method, and others",
+            " is only an obsolete theoretical notion with no modern application.",
+            "Understanding  is essential for designing robust software architectures."
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            3
+          ],
+          "explanation": "Core concept: The Master Theorem is one of several methods for solving recurrence equations, including the substitution method, the recursion tree method, and others. Common misconception: Assuming that the Master Theorem is the only method for solving recurrence equations."
+        }
+      ],
+      "answers": [],
+      "score": null,
+      "submitted_at": null
+    }
+  },
+  "created_at": "2026-10-21T20:23:58.201664",
+  "updated_at": "2026-10-21T20:32:35.938964"
+}

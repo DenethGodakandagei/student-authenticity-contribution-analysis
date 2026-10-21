@@ -30,30 +30,12 @@ export default function NovaAvatarCard({
           <div className="nova-avatar-card__badge">
             LEARNING BY TEACHING
           </div>
-          <h2 className="nova-avatar-card__title">
-            Homework where learning is the point.
-          </h2>
+          <h1 className="nova-avatar-card__title">
+            Homework where <span className="nova-avatar-card__highlight">learning</span> is the point.
+          </h1>
           <p className="nova-avatar-card__desc">
-            Nova learns directly through your explanations. Notice how her misconceptions clear up as you guide her through each topic.
+            Students teach Nova, an AI student with wrong ideas about your course material. He only learns what they explain. When he sits his exam, everyone sees which ideas got through and which didn't.
           </p>
-
-          <div className="nova-avatar-card__stats">
-            <div className="nova-avatar-card__stat-item">
-              <span className="nova-avatar-card__stat-val">
-                {isAfter ? 'Ready' : 'In Progress'}
-              </span>
-              <span className="nova-avatar-card__stat-lbl">Nova Status</span>
-            </div>
-            <div className="nova-avatar-card__stat-divider" />
-            <div className="nova-avatar-card__stat-item">
-              <span className="nova-avatar-card__stat-val">
-                {count} {count === 1 ? 'Concept' : 'Misconceptions'}
-              </span>
-              <span className="nova-avatar-card__stat-lbl">
-                {isAfter ? 'Remaining after teaching' : 'Active before teaching'}
-              </span>
-            </div>
-          </div>
 
           <div className="nova-avatar-card__actions">
             {onTeachNow ? (
@@ -63,18 +45,29 @@ export default function NovaAvatarCard({
                 className="nova-avatar-card__btn-primary"
               >
                 Teach Now
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14" />
+                  <path d="m12 5 7 7-7 7" />
+                </svg>
               </button>
             ) : (
               <Link href="/sessions/new" className="nova-avatar-card__btn-primary">
                 Teach Now
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14" />
+                  <path d="m12 5 7 7-7 7" />
+                </svg>
               </Link>
             )}
-            <span className="nova-avatar-card__hint">
-              {isAfter
-                ? 'Great progress! Nova is confident in taught concepts.'
-                : 'Nova needs your help clarifying fundamental ideas.'}
-            </span>
+
+            <Link href="/profile" className="nova-avatar-card__btn-secondary">
+              Review Progress
+            </Link>
           </div>
+
+          <p className="nova-avatar-card__footnote">
+            Interactive student-as-teacher learning. <Link href="/profile" className="nova-avatar-card__footnote-link">View your sessions and quizzes &rarr;</Link>
+          </p>
         </div>
 
         {/* Right Side: The Interactive 3D Avatar Showcase */}

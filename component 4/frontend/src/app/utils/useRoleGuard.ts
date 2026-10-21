@@ -25,7 +25,7 @@ export interface RoleGuardResult {
   ready: boolean;
 }
 
-export function useRoleGuard(required: AuthRole): RoleGuardResult {
+export function useRoleGuard(required?: AuthRole): RoleGuardResult {
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
@@ -40,7 +40,7 @@ export function useRoleGuard(required: AuthRole): RoleGuardResult {
     const user = getStoredUser();
     const actualRole = (user as { role?: string } | null)?.role;
 
-    if (actualRole !== required) {
+    if (required && actualRole !== required) {
       // Redirect to the user's actual home (not /login) so they land somewhere
       // meaningful instead of seeing an error.
       const safeRole: AuthRole =
@@ -51,7 +51,7 @@ export function useRoleGuard(required: AuthRole): RoleGuardResult {
 
     setReady(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [required]);
 
   return { ready };
 }

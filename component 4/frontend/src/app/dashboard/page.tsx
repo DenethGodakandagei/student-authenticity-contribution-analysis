@@ -3,23 +3,16 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import GreetingCard from '../components/dashboard/GreetingCard';
+import WelcomeGuideCard from '../components/dashboard/WelcomeGuideCard';
 import NovaAvatarCard from '../components/dashboard/NovaAvatarCard';
-import StartTeachingCard from '../components/dashboard/StartTeachingCard';
-import SessionsList from '../components/dashboard/SessionsList';
-import MaterialsCard from '../components/dashboard/MaterialsCard';
-import HowItWorksCard from '../components/dashboard/HowItWorksCard';
-import QuizzesList from '../components/dashboard/QuizzesList';
 import UploadMaterialModal from '../components/dashboard/UploadMaterialModal';
 import {
-  apiRequest,
   getAccessToken,
   getServerAuthSnapshot,
   getStoredUserRaw,
   subscribeAuth,
 } from '../utils/api';
 import { useRoleGuard } from '../utils/useRoleGuard';
-import type { ApiError, SessionListItem } from '../utils/types';
 import '../components/dashboard/dashboard.css';
 
 export default function DashboardPage() {
@@ -28,8 +21,6 @@ export default function DashboardPage() {
   const userRaw = useSyncExternalStore(subscribeAuth, getStoredUserRaw, getServerAuthSnapshot);
   const { ready } = useRoleGuard('student');
 
-  const [sessions, setSessions] = useState<SessionListItem[] | null>(null);
-  const [sessionsError, setSessionsError] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   let userName = '';
@@ -41,25 +32,6 @@ export default function DashboardPage() {
     }
   }
 
-  const loadSessions = () => {
-    apiRequest<SessionListItem[] | ApiError>('/sessions', 'GET').then((res) => {
-      if (res.ok && Array.isArray(res.data)) {
-        setSessions(res.data);
-      } else {
-        setSessions([]);
-        setSessionsError(
-          (res.data as ApiError | undefined)?.detail ?? res.error ?? 'Could not load your sessions.'
-        );
-      }
-    });
-  };
-
-  // Fetch sessions once the guard has cleared.
-  useEffect(() => {
-    if (!ready) return;
-    loadSessions();
-  }, [ready]);
-
   if (!ready) {
     return (
       <main className="dash-loading">
@@ -70,27 +42,14 @@ export default function DashboardPage() {
 
   return (
     <div className="dash-page">
-      <main className="dash-container">
-        <GreetingCard userName={userName} />
-
+      <main className="dash-fullscreen-container">
         <NovaAvatarCard userName={userName} onTeachNow={() => setShowUploadModal(true)} />
-
-        <div className="dash-grid">
-          <StartTeachingCard onTeachNow={() => setShowUploadModal(true)} />
-          <HowItWorksCard />
-        </div>
-
-        <MaterialsCard />
-
-        <QuizzesList />
-
-        <SessionsList sessions={sessions} error={sessionsError} />
       </main>
 
       <UploadMaterialModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
-        onSessionCreated={() => loadSessions()}
+        onSessionCreated={() => {}}
       />
     </div>
   );

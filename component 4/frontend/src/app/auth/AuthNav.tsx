@@ -54,6 +54,14 @@ export default function AuthNav() {
       </div>
 
       <div className="auth-nav__links">
+        <Link
+          href={dashboardHref}
+          className="auth-nav__link"
+          aria-current={pathname === dashboardHref ? 'page' : undefined}
+        >
+          Dashboard
+        </Link>
+
         {token ? (
           <>
             <Link
@@ -74,23 +82,13 @@ export default function AuthNav() {
             </button>
           </>
         ) : (
-          <>
-            <Link
-              href={dashboardHref}
-              className="auth-nav__link auth-nav__link--home"
-              aria-current={pathname === dashboardHref ? 'page' : undefined}
-            >
-              Dashboard
-            </Link>
-
-            <Link
-              href="/register"
-              className="auth-nav__link auth-nav__link--cta"
-              aria-current={pathname === '/register' || pathname === '/login' ? 'page' : undefined}
-            >
-              Sign in
-            </Link>
-          </>
+          <Link
+            href="/register"
+            className="auth-nav__link auth-nav__link--cta"
+            aria-current={pathname === '/register' || pathname === '/login' ? 'page' : undefined}
+          >
+            Sign in
+          </Link>
         )}
       </div>
     </nav>

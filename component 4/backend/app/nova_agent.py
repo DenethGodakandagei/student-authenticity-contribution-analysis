@@ -182,8 +182,10 @@ class NovaStudentAgent:
 
         misconception_states = []
         for item in raw_misconceptions:
+            c_name = item.get("concept") or item.get("topic") or topic
             misconception_states.append(
                 MisconceptionState(
+                    concept=str(c_name),
                     wrong_concept=item.get("wrong_concept") or item.get("misconception") or "",
                     correct_concept=item.get("correct_concept") or item.get("correct_explanation") or "",
                     reason=item.get("reason") or item.get("explanation") or ""

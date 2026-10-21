@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # Ollama Local LLM Settings
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "phi3"
-    OLLAMA_TIMEOUT: int = 45  # Timeout in seconds before falling back to external API
+    OLLAMA_TIMEOUT: int = 500  # Timeout in seconds (500s) before falling back to external API
     
     # Groq Settings (Ultra-fast cloud fallback with Llama 3)
     GROQ_API_KEY: str = ""

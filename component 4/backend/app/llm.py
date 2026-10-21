@@ -33,14 +33,19 @@ class OllamaProvider(BaseLLMProvider):
             "model": self.model_name,
             "prompt": prompt,
             "stream": False,
-            "options": {"num_ctx": 4096, "temperature": 0.4},
+            "options": {
+                "num_ctx": 2048,
+                "num_predict": 750,
+                "temperature": 0.3,
+                "top_p": 0.9,
+            },
         }
         if json_mode:
             payload_dict["format"] = "json"
         payload = json.dumps(payload_dict).encode("utf-8")
 
         req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-        max_attempts = 2  # one retry when Ollama fails with HTTP 500
+        max_attempts = 1  # 500s timeout per call before falling back to external Groq API
         for attempt in range(max_attempts):
             started = time.perf_counter()
             try:
@@ -268,33 +273,51 @@ class GroqProvider(BaseLLMProvider):
             data["response_format"] = {"type": "json_object"}
 
         started = time.perf_counter()
-        try:
-            req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
-            with urllib.request.urlopen(req, timeout=45) as response:
-                res_data = json.loads(response.read().decode("utf-8"))
-                response_text = res_data["choices"][0]["message"]["content"]
-                llm_call(
-                    type(self).__name__,
-                    self.model_name,
-                    prompt,
-                    json_mode=json_mode,
-                    seconds=time.perf_counter() - started,
-                    response=response_text,
-                    attempt=1,
-                )
-                return response_text
-        except Exception as e:
-            llm_call(
-                type(self).__name__,
-                self.model_name,
-                prompt,
-                json_mode=json_mode,
-                seconds=time.perf_counter() - started,
-                attempt=1,
-                error=str(e),
-            )
-            logger.error(f"Groq API call failed: {e}")
-            raise ConnectionError(f"LLM Connection Error: Groq API request failed: {e}") from e
+        # Candidate models on Groq in order of preference
+        models_to_try = []
+        for m in [self.model_name, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768"]:
+            if m and m not in models_to_try:
+                models_to_try.append(m)
+
+        import ssl
+        ctx = ssl.create_default_context()
+
+        last_error = None
+        for candidate_model in models_to_try:
+            data["model"] = candidate_model
+            try:
+                logger.info(f"Attempting Groq API generation with model '{candidate_model}'...")
+                req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
+                with urllib.request.urlopen(req, timeout=45, context=ctx) as response:
+                    res_data = json.loads(response.read().decode("utf-8"))
+                    response_text = res_data["choices"][0]["message"]["content"]
+                    llm_call(
+                        type(self).__name__,
+                        candidate_model,
+                        prompt,
+                        json_mode=json_mode,
+                        seconds=time.perf_counter() - started,
+                        response=response_text,
+                        attempt=1,
+                    )
+                    logger.info(f"Groq API succeeded using model '{candidate_model}'")
+                    return response_text
+            except urllib.error.HTTPError as e:
+                err_body = ""
+                try:
+                    err_body = e.read().decode("utf-8")
+                except Exception:
+                    pass
+                last_error = e
+                logger.warning(f"Groq API call with model '{candidate_model}' returned HTTP {e.code} ({e.reason}): {err_body}")
+                # Try next model on 400 (e.g. invalid model / decommissioned), 404 (model not found), or 429
+                continue
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Groq API call with model '{candidate_model}' failed: {e}")
+                continue
+
+        raise ConnectionError(f"LLM Connection Error: Groq API failed for all candidate models {models_to_try}: {last_error}")
 
 class FallbackLLMProvider(BaseLLMProvider):
     """
