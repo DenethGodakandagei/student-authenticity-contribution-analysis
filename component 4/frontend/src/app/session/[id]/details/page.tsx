@@ -330,7 +330,14 @@ export default function SessionDetailsPage({
           <h2 className="dash-card__title">Recent Session Events</h2>
           <p className="dash-card__text">Audit log of student messages, checks, and test activity.</p>
           {state.events.length === 0 ? (
-            <p className="dash-empty">No events recorded yet.</p>
+            <div style={{ marginTop: '0.85rem', padding: '1rem', borderRadius: '12px', background: '#eff8f3', border: '1px dashed rgba(111,175,154,0.35)', color: '#52615b', fontSize: '0.86rem' }}>
+              <p style={{ margin: 0, fontWeight: 600, color: '#0d1110' }}>
+                No activity recorded yet
+              </p>
+              <p style={{ margin: '0.25rem 0 0', lineHeight: 1.5 }}>
+                As you chat with Nova, submit answers, or trigger understanding checks, a chronological audit log of your interactions will appear here.
+              </p>
+            </div>
           ) : (
             <ol style={{ listStyle: 'none', margin: '0.75rem 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {state.events.slice(-12).reverse().map((event, index) => (

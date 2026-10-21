@@ -179,3 +179,47 @@
   border: 1px solid rgba(111, 175, 154, 0.2);
   font-size: 0.8rem;
 }
+
+/* Override dark/legacy card styles inside details-page to match dashboard sage aesthetic */
+.details-page .card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid rgba(111, 175, 154, 0.25);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(111, 175, 154, 0.08);
+  color: #0d1110;
+}
+
+.details-page .card h1,
+.details-page .card h2 {
+  color: #0d1110;
+  font-weight: 700;
+}
+
+.details-page .card p.text-gray-400,
+.details-page .card p.text-gray-300,
+.details-page .card span.text-gray-300,
+.details-page .card span.text-gray-400 {
+  color: #52615b;
+}
+
+.details-page .card span.text-gray-100,
+.details-page .card strong.text-gray-100,
+.details-page .card p.text-gray-100 {
+  color: #0d1110;
+}
+
+.details-page .card .bg-white\/5 {
+  background: #eff8f3;
+  border-color: rgba(111, 175, 154, 0.28);
+}
+
+.details-page .card .bg-white\/10 {
+  background: rgba(111, 175, 154, 0.2);
+}
+
+.details-page .card .border-white\/10 {
+  border-color: rgba(111, 175, 154, 0.28);
+}
+

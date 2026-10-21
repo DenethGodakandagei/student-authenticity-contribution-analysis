@@ -101,8 +101,169 @@
     }
   ],
   "conversation_history": [],
-  "events": [],
-  "tests": {},
+  "events": [
+    {
+      "time": "2026-10-21T10:49:55.318607",
+      "type": "pretest_submitted",
+      "score": 100.0,
+      "correct_count": 5,
+      "total_questions": 5
+    }
+  ],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "180b8e7f",
+          "concept": "",
+          "question": "What is the primary focus of Object-Oriented Programming (OOP)?",
+          "options": [
+            "Students may think that OOP is only about creating objects",
+            "Organizing programs as a collection of objects",
+            "Writing efficient algorithms",
+            "Designing databases"
+          ],
+          "correct_index": 1,
+          "explanation": "OOP is a programming paradigm that organizes programs as a collection of objects, each representing an instance of a class, and whose classes are all members of a hierarchy of classes united via inheritance relationships."
+        },
+        {
+          "id": "0de394e4",
+          "concept": "",
+          "question": "What is the difference between a class and an object?",
+          "options": [
+            "Students may think that classes and objects are the same thing",
+            "A class is an abstract definition of a data type, including data elements and operations, while an object is a specific instance of a class",
+            "A class is a collection of objects, while an object is a single entity",
+            "A class is a method, while an object is a variable"
+          ],
+          "correct_index": 1,
+          "explanation": "A class is an abstract definition of a data type, including data elements and operations, while an object is a specific instance of a class."
+        },
+        {
+          "id": "2ce41550",
+          "concept": "",
+          "question": "What are the key concepts that OOP is built upon?",
+          "options": [
+            "Encapsulation, abstraction, and inheritance",
+            "Creating objects and methods",
+            "Polymorphism and encapsulation",
+            "Abstraction and method overriding"
+          ],
+          "correct_index": 0,
+          "explanation": "OOP is also about encapsulation, abstraction, and inheritance, which allow for more complex systems to be developed using smaller, independent subsystems."
+        },
+        {
+          "id": "fe030916",
+          "concept": "",
+          "question": "Is OOP exclusive to specific programming languages?",
+          "options": [
+            "Students may think that OOP is only for Java or C++",
+            "No, OOP can be applied to any programming language that supports object-oriented programming",
+            "Maybe, it depends on the language's syntax",
+            "Not applicable, OOP is a theoretical concept"
+          ],
+          "correct_index": 1,
+          "explanation": "OOP is a programming paradigm that can be applied to any programming language that supports object-oriented programming."
+        },
+        {
+          "id": "9f77217b",
+          "concept": "",
+          "question": "What is polymorphism in OOP?",
+          "options": [
+            "The ability of an object to take on multiple forms, including method overriding, method overloading, and operator overloading",
+            "Students may think that polymorphism only refers to method overriding",
+            "The ability of an object to overload its own methods",
+            "The ability of an object to encapsulate its data"
+          ],
+          "correct_index": 0,
+          "explanation": "Polymorphism refers to the ability of an object to take on multiple forms, including method overriding, method overloading, and operator overloading."
+        }
+      ],
+      "answers": [
+        {
+          "question_id": "180b8e7f",
+          "choice": 1
+        },
+        {
+          "question_id": "0de394e4",
+          "choice": 1
+        },
+        {
+          "question_id": "2ce41550",
+          "choice": 0
+        },
+        {
+          "question_id": "fe030916",
+          "choice": 1
+        },
+        {
+          "question_id": "9f77217b",
+          "choice": 0
+        }
+      ],
+      "score": {
+        "total_questions": 5,
+        "correct_count": 5,
+        "overall_percentage": 100.0,
+        "per_question": [
+          {
+            "question_id": "180b8e7f",
+            "concept": "General",
+            "question": "What is the primary focus of Object-Oriented Programming (OOP)?",
+            "choice": 1,
+            "correct_index": 1,
+            "correct": true,
+            "explanation": "OOP is a programming paradigm that organizes programs as a collection of objects, each representing an instance of a class, and whose classes are all members of a hierarchy of classes united via inheritance relationships."
+          },
+          {
+            "question_id": "0de394e4",
+            "concept": "General",
+            "question": "What is the difference between a class and an object?",
+            "choice": 1,
+            "correct_index": 1,
+            "correct": true,
+            "explanation": "A class is an abstract definition of a data type, including data elements and operations, while an object is a specific instance of a class."
+          },
+          {
+            "question_id": "2ce41550",
+            "concept": "General",
+            "question": "What are the key concepts that OOP is built upon?",
+            "choice": 0,
+            "correct_index": 0,
+            "correct": true,
+            "explanation": "OOP is also about encapsulation, abstraction, and inheritance, which allow for more complex systems to be developed using smaller, independent subsystems."
+          },
+          {
+            "question_id": "fe030916",
+            "concept": "General",
+            "question": "Is OOP exclusive to specific programming languages?",
+            "choice": 1,
+            "correct_index": 1,
+            "correct": true,
+            "explanation": "OOP is a programming paradigm that can be applied to any programming language that supports object-oriented programming."
+          },
+          {
+            "question_id": "9f77217b",
+            "concept": "General",
+            "question": "What is polymorphism in OOP?",
+            "choice": 0,
+            "correct_index": 0,
+            "correct": true,
+            "explanation": "Polymorphism refers to the ability of an object to take on multiple forms, including method overriding, method overloading, and operator overloading."
+          }
+        ],
+        "per_concept": [
+          {
+            "concept": "General",
+            "correct": 5,
+            "total": 5,
+            "percentage": 100.0
+          }
+        ]
+      },
+      "submitted_at": "2026-10-21T10:49:55.318594"
+    }
+  },
   "created_at": "2026-10-21T09:49:52.166725",
-  "updated_at": "2026-10-21T09:49:52.167007"
+  "updated_at": "2026-10-21T10:49:55.318612"
 }

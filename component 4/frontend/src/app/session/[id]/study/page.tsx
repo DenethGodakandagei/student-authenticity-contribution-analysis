@@ -156,31 +156,73 @@ export default function StudyGuidePage({
         {/* Error State */}
         {!loading && error && (
           <section className="dash-card">
-            <div className="dash-alert" role="alert" style={{ marginBottom: '1.2rem' }}>
-              <strong>Could not load guide:</strong> {error}
-            </div>
-            <button
-              type="button"
-              className="dash-btn"
-              onClick={() => fetchGuide()}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {error.includes('no associated knowledge base') ? (
+              <div
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: '16px',
+                  background: '#eff8f3',
+                  border: '1px solid rgba(111, 175, 154, 0.35)',
+                  marginBottom: '1rem',
+                }}
               >
-                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                <path d="M16 21h5v-5" />
-              </svg>
-              Retry
-            </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3e8b75" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0d1110' }}>
+                    Study Guide Not Available for This Session
+                  </h3>
+                </div>
+                <p style={{ margin: '0 0 0.85rem', fontSize: '0.88rem', color: '#52615b', lineHeight: 1.55 }}>
+                  This session was initialized directly without an underlying material knowledge base (e.g., via direct JSON import). Study guides require the original lecture material or slides to generate concept summaries, analogies, and page references.
+                </p>
+                <p style={{ margin: '0 0 1.15rem', fontSize: '0.88rem', color: '#52615b', lineHeight: 1.55 }}>
+                  You can still take the <strong>Pre-test</strong>, explore <strong>Session Details</strong>, or jump directly into <strong>Teaching Chat</strong> with Nova!
+                </p>
+                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <Link href={`/session/${sessionId}/chat`} className="dash-btn dash-btn--sm">
+                    Go to Teaching Chat →
+                  </Link>
+                  <Link href={`/session/${sessionId}/pretest`} className="dash-btn dash-btn--sm">
+                    Take Pre-test
+                  </Link>
+                  <Link href="/sessions/new" className="dash-btn dash-btn--sm" style={{ background: '#ffffff', color: '#0d1110' }}>
+                    Upload New Lecture PDF
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="dash-alert" role="alert" style={{ marginBottom: '1.2rem' }}>
+                  <strong>Could not load guide:</strong> {error}
+                </div>
+                <button
+                  type="button"
+                  className="dash-btn"
+                  onClick={() => fetchGuide()}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                    <path d="M16 21h5v-5" />
+                  </svg>
+                  Retry
+                </button>
+              </>
+            )}
           </section>
         )}
 
