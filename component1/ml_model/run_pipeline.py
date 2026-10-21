@@ -27,33 +27,59 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-# Add parent directory to sys.path for relative imports when executed directly
+# Add local and src directories to sys.path for robust direct execution
 current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(current_dir, "src")
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
 
-from ml_model.config import (
-    DEFAULT_DATA_PATH,
-    MODEL_SAVE_PATH,
-    METADATA_SAVE_PATH,
-    DEFAULT_N_SPLITS
-)
-from ml_model.preprocess import (
-    load_data,
-    prepare_features_and_target,
-    generate_calibrated_pilot_dataset
-)
-from ml_model.train import (
-    train_grouped_cv,
-    train_final_model,
-    display_feature_importances,
-    save_model_artifacts
-)
-from ml_model.predict import (
-    load_model_bundle,
-    demonstrate_predictions
-)
+for p in [src_dir, current_dir, parent_dir]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from src.config import (
+        DEFAULT_DATA_PATH,
+        MODEL_SAVE_PATH,
+        METADATA_SAVE_PATH,
+        DEFAULT_N_SPLITS
+    )
+    from src.preprocess import (
+        load_data,
+        prepare_features_and_target,
+        generate_calibrated_pilot_dataset
+    )
+    from src.train import (
+        train_grouped_cv,
+        train_final_model,
+        display_feature_importances,
+        save_model_artifacts
+    )
+    from src.predict import (
+        load_model_bundle,
+        demonstrate_predictions
+    )
+except ImportError:
+    from ml_model.config import (
+        DEFAULT_DATA_PATH,
+        MODEL_SAVE_PATH,
+        METADATA_SAVE_PATH,
+        DEFAULT_N_SPLITS
+    )
+    from ml_model.preprocess import (
+        load_data,
+        prepare_features_and_target,
+        generate_calibrated_pilot_dataset
+    )
+    from ml_model.train import (
+        train_grouped_cv,
+        train_final_model,
+        display_feature_importances,
+        save_model_artifacts
+    )
+    from ml_model.predict import (
+        load_model_bundle,
+        demonstrate_predictions
+    )
 
 
 def main():

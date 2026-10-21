@@ -110,21 +110,51 @@ export const api = {
     getStudentReport: (assignmentId: string) => request(`/analytics/student/${assignmentId}`, { method: 'GET' }),
     getTeamAnalytics: (teamId: string) => request(`/analytics/team/${teamId}`, { method: 'GET' }),
     recalculate: (assignmentId: string) => request('/analytics/recalculate', { method: 'POST', body: JSON.stringify({ assignmentId }) }),
-    downloadCsv: async () => {
+    downloadCsv: async (options?: {
+      type?: 'ml' | 'raw_events' | 'sessions';
+      datasetType?: 'ml' | 'raw_events' | 'sessions';
+      mode?: 'sliding' | 'session';
+      filterStudent?: boolean;
+      studentId?: string;
+      assignmentId?: string;
+      excludeMock?: boolean;
+    }) => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-      const res = await fetch(`${BASE_URL}/analytics/export/csv`, {
+      const params = new URLSearchParams();
+      const chosenType = options?.type || options?.datasetType || 'ml';
+      params.append('type', chosenType);
+      if (options?.mode) params.append('mode', options.mode);
+      if (options?.filterStudent) params.append('filterStudent', 'true');
+      if (options?.studentId) params.append('studentId', options.studentId);
+      if (options?.assignmentId) params.append('assignmentId', options.assignmentId);
+      if (options?.excludeMock !== undefined) params.append('excludeMock', String(options.excludeMock));
+
+      const res = await fetch(`${BASE_URL}/analytics/export/csv?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('CSV Download failed');
+
+      // Extract filename from Content-Disposition header
+      const disposition = res.headers.get('content-disposition');
+      let filename = chosenType === 'raw_events'
+        ? 'real_database_raw_telemetry_events.csv'
+        : 'dataset.csv';
+
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'telemetry_dataset.csv';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      return filename;
     }
   },
 

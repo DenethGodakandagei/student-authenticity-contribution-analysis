@@ -45,7 +45,11 @@ import {
   Sparkles,
   HelpCircle,
   Activity,
-  Info
+  Info,
+  Database,
+  FileSpreadsheet,
+  Layers,
+  Check
 } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -114,6 +118,7 @@ export default function StudentDashboard() {
   const [commitsList, setCommitsList] = useState<any[]>([]);
   const [sessionsList, setSessionsList] = useState<any[]>([]);
   const [showAuditModal, setShowAuditModal] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
 
   // Magic Function #5 — Machine Learning Continuous Scoring State (Separated from Manual)
   const [mlScore, setMlScore] = useState<any>(null);
@@ -339,8 +344,8 @@ export default function StudentDashboard() {
 
             const typingProvenance: 'manual' | 'copy_paste' | 'ai_assisted' | 'mixed' =
               typedRatio >= 0.7 ? 'manual' :
-              aiRatio >= 0.3 ? 'ai_assisted' :
-              pastedRatio >= 0.5 ? 'copy_paste' : 'mixed';
+                aiRatio >= 0.3 ? 'ai_assisted' :
+                  pastedRatio >= 0.5 ? 'copy_paste' : 'mixed';
 
             return {
               filePath: f.path,
@@ -370,8 +375,8 @@ export default function StudentDashboard() {
 
           const overallStyle =
             manualPct >= 65 ? 'Organic Human Coding' :
-            aiPct >= 30 ? 'AI Assisted' :
-            pastePct >= 50 ? 'Heavy Copy-Paste' : 'Mixed Authoring';
+              aiPct >= 30 ? 'AI Assisted' :
+                pastePct >= 50 ? 'Heavy Copy-Paste' : 'Mixed Authoring';
 
           const sessionPayload = {
             sessionStart: new Date(earliestModMs).toISOString(),
@@ -855,11 +860,19 @@ export default function StudentDashboard() {
 
   const handleDownloadCsv = async () => {
     try {
-      setSuccess('Generating and downloading CSV dataset from database...');
-      await api.analytics.downloadCsv();
-      setSuccess('CSV dataset downloaded successfully!');
+      setDownloadingCsv(true);
+      setError('');
+      setSuccess('Exporting Machine Learning Dataset (dataset.csv) directly from MongoDB Atlas...');
+      const filename = await api.analytics.downloadCsv({
+        type: 'sessions',
+        mode: 'session',
+        excludeMock: true
+      });
+      setSuccess(`Machine Learning Dataset downloaded successfully: ${filename}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to download CSV dataset');
+      setError(err.message || 'Failed to download real dataset from database');
+    } finally {
+      setDownloadingCsv(false);
     }
   };
 
@@ -927,17 +940,7 @@ export default function StudentDashboard() {
                   </p>
                 </div>
 
-                {/* Panel Explainer Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowMlDefenseModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition cursor-pointer shadow-2xs"
-                  title="Click to view why AI Model is needed in addition to Manual Authenticity"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Why AI Model vs Manual?</span>
-                  <HelpCircle className="w-3 h-3 text-purple-400" />
-                </button>
+
               </div>
 
               {/* DUAL ENGINE COMPARISON GRID */}
@@ -950,7 +953,7 @@ export default function StudentDashboard() {
 
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
-                    
+
                     {/* ENGINE 1: Heuristic Provenance (Manual Line Attribution) */}
                     <div className="bg-[#EFF8F3]/40 border border-[#6FAF9A]/25 rounded-2xl p-4 flex flex-col justify-between space-y-3">
                       <div>
@@ -1013,15 +1016,14 @@ export default function StudentDashboard() {
                             <BrainCircuit className="w-3 h-3 text-cyan-400" />
                             Engine 2: ML Biometrics
                           </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono ${
-                            hasActivity && mlScore?.is_authentic
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono ${hasActivity && mlScore?.is_authentic
                               ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
                               : hasActivity && mlScore?.is_anomaly
-                              ? 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
-                              : hasActivity && mlScore
-                              ? 'bg-amber-950/80 text-amber-400 border border-amber-500/40'
-                              : 'bg-slate-800 text-slate-400 border border-slate-700'
-                          }`}>
+                                ? 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
+                                : hasActivity && mlScore
+                                  ? 'bg-amber-950/80 text-amber-400 border border-amber-500/40'
+                                  : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            }`}>
                             {hasActivity && mlScore ? (mlScore.risk_tier || 'Low Risk') : 'Awaiting Telemetry ⏳'}
                           </span>
                         </div>
@@ -1110,10 +1112,15 @@ export default function StudentDashboard() {
               </button>
               <button
                 onClick={handleDownloadCsv}
-                className="w-full py-2.5 rounded-xl bg-[#EFF8F3] hover:bg-[#e2ece7] text-[#0D1110] font-semibold text-xs border border-[#6FAF9A]/20 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                disabled={downloadingCsv}
+                className="w-full py-2.5 rounded-xl bg-[#EFF8F3] hover:bg-[#e2ece7] text-[#0D1110] font-semibold text-xs border border-[#6FAF9A]/20 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                title="Download Machine Learning Dataset (dataset.csv Format) directly from MongoDB Atlas"
               >
-                <Download className="w-3.5 h-3.5 text-[#6FAF9A]" />
-                <span>Dataset CSV</span>
+                <Download className={`w-3.5 h-3.5 text-[#2d5849] ${downloadingCsv ? 'animate-spin' : ''}`} />
+                <span>{downloadingCsv ? 'Downloading...' : 'Dataset CSV'}</span>
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-[#6FAF9A]/20 text-[#2d5849]">
+                  Real DB
+                </span>
               </button>
             </div>
           </div>
@@ -1134,12 +1141,12 @@ export default function StudentDashboard() {
                   <div className="text-[10px] font-bold uppercase tracking-wider text-[#2d5849] font-mono flex items-center gap-1.5">
                     <span>WEIGHTED SCORE</span>
                     {!((report?.metrics?.codingHours && Number(report.metrics.codingHours) > 0) ||
-                       (report?.metrics?.totalCommits && Number(report.metrics.totalCommits) > 0) ||
-                       (report?.metrics?.totalKeystrokes && Number(report.metrics.totalKeystrokes) > 0)) && (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-white text-amber-800 border border-amber-200 font-sans">
-                        Initial Baseline
-                      </span>
-                    )}
+                      (report?.metrics?.totalCommits && Number(report.metrics.totalCommits) > 0) ||
+                      (report?.metrics?.totalKeystrokes && Number(report.metrics.totalKeystrokes) > 0)) && (
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-white text-amber-800 border border-amber-200 font-sans">
+                          Initial Baseline
+                        </span>
+                      )}
                   </div>
                   <div className="text-xs text-[#0D1110] font-medium mt-0.5">
                     {((report?.metrics?.codingHours && Number(report.metrics.codingHours) > 0) ||
@@ -1386,6 +1393,8 @@ export default function StudentDashboard() {
         </div>
       )}
 
+
+
       {/* Cohort & Team Modals */}
       <JoinCohortModal
         isOpen={showJoinModal}
@@ -1480,7 +1489,7 @@ export default function StudentDashboard() {
                   <span>Bypassing Manual Rules is Trivial (Auto-Typers & Retyping)</span>
                 </div>
                 <p className="text-[11px] text-slate-600 pl-7 leading-relaxed">
-                  A student can paste AI code into an auto-typer script, or retype AI code character-by-character. Manual heuristics count keystrokes and give it a <strong>100% Human Score</strong>. 
+                  A student can paste AI code into an auto-typer script, or retype AI code character-by-character. Manual heuristics count keystrokes and give it a <strong>100% Human Score</strong>.
                   However, our <strong>XGBoost Model</strong> analyzes sub-second inter-key latency distributions and cadence variance. Robotic typing has unnatural timing curves that our ML model flags instantly (<code className="text-purple-700 font-mono">P(AI) &gt; 70%</code>).
                 </p>
               </div>
@@ -1492,7 +1501,7 @@ export default function StudentDashboard() {
                   <span>Multi-Dimensional Non-Linear Interactions (13 Features)</span>
                 </div>
                 <p className="text-[11px] text-slate-600 pl-7 leading-relaxed">
-                  Manual rules use rigid single-threshold cutoffs (e.g., <code className="text-slate-800 font-mono">if paste &gt; 30%</code>). In real software engineering, pasting code is normal when importing boilerplate, <em>provided it is followed by high code churn refactoring</em>. 
+                  Manual rules use rigid single-threshold cutoffs (e.g., <code className="text-slate-800 font-mono">if paste &gt; 30%</code>). In real software engineering, pasting code is normal when importing boilerplate, <em>provided it is followed by high code churn refactoring</em>.
                   Only a trained ML model can synthesize 13 sensor metrics simultaneously (churn ratio, keystroke efficiency <code className="font-mono">Keff</code>, typing CPM, burst sizes) to discern benign helper imports from deceptive AI code injection.
                 </p>
               </div>
@@ -1504,7 +1513,7 @@ export default function StudentDashboard() {
                   <span>Continuous Probability &amp; Academic Fairness (Magic Function #5)</span>
                 </div>
                 <p className="text-[11px] text-slate-600 pl-7 leading-relaxed">
-                  Conventional detectors output a binary Pass/Fail label. If a student is scored at 50.1%, they get accused; at 49.9%, they walk free. 
+                  Conventional detectors output a binary Pass/Fail label. If a student is scored at 50.1%, they get accused; at 49.9%, they walk free.
                   Our ML model outputs calibrated continuous probabilities <code className="text-purple-700 font-mono">P(AI) &isin; [0%, 100%]</code> with a dedicated <strong>Inconclusive Review Tier (30% - 70%)</strong>, recommending human instructor triage and protecting universities against false accusation appeals.
                 </p>
               </div>
