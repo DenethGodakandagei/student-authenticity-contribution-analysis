@@ -2756,6 +2756,8 @@ function EditorComponent() {
         onToggleHeatmap={() => setReportsModalOpen(true)}
         syncStatus={syncStatus}
         onOpenSpellCheck={() => setSpellCheckModalOpen(true)}
+        onRefresh={handleManualRefresh}
+        isRefreshing={isRefreshing}
       />
 
       {/* Floating Find & Replace Bar (Ctrl+F) */}
@@ -2931,21 +2933,58 @@ function EditorComponent() {
             <h3 style={{ margin: 0, color: '#0D1110', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800 }}>
               Collaborators
             </h3>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              background: '#EFF8F3',
-              border: '1px solid rgba(111, 175, 154, 0.35)',
-              color: '#225243',
-              padding: '0.15rem 0.55rem',
-              borderRadius: '12px',
-              fontSize: '0.72rem',
-              fontWeight: 700
-            }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-              {computedAuthors.length} active
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                title="Click to refresh collaborator word counts and contributions"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  background: '#EFF8F3',
+                  border: '1px solid rgba(111, 175, 154, 0.45)',
+                  color: '#225243',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: isRefreshing ? 'wait' : 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ animation: isRefreshing ? 'spin 0.8s linear infinite' : 'none' }}
+                >
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
+                </svg>
+                <span>{isRefreshing ? 'Updating...' : 'Refresh'}</span>
+              </button>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                background: '#EFF8F3',
+                border: '1px solid rgba(111, 175, 154, 0.35)',
+                color: '#225243',
+                padding: '0.15rem 0.55rem',
+                borderRadius: '12px',
+                fontSize: '0.72rem',
+                fontWeight: 700
+              }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                {computedAuthors.length} active
+              </span>
+            </div>
           </div>
 
           <div style={{

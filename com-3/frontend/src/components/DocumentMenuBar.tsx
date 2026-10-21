@@ -36,6 +36,8 @@ interface DocumentMenuBarProps {
   isSyncingExternal?: boolean;
   onOpenVersionHistory?: () => void;
   onOpenSpellCheck?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export default function DocumentMenuBar({
@@ -71,7 +73,9 @@ export default function DocumentMenuBar({
   onSyncExternal,
   isSyncingExternal = false,
   onOpenVersionHistory,
-  onOpenSpellCheck
+  onOpenSpellCheck,
+  onRefresh,
+  isRefreshing = false
 }: DocumentMenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [wordActiveTab, setWordActiveTab] = useState<'Home' | 'Insert' | 'Layout' | 'Review' | 'View'>('Home');
@@ -565,6 +569,47 @@ export default function DocumentMenuBar({
               Inkie
             </button>
           </div>
+
+          {/* Refresh Button */}
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              title="Click to refresh document, collaborator contributions and live word count"
+              style={{
+                background: isWord ? 'rgba(255,255,255,0.18)' : '#EFF8F3',
+                color: isWord ? '#ffffff' : '#225243',
+                border: `1px solid ${isWord ? 'rgba(255,255,255,0.3)' : 'rgba(111, 175, 154, 0.45)'}`,
+                padding: '0.32rem 0.65rem',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: isRefreshing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  animation: isRefreshing ? 'spin 0.8s linear infinite' : 'none'
+                }}
+              >
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
+              </svg>
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          )}
 
           {/* All Reports */}
           <button
