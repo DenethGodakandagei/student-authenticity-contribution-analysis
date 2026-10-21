@@ -83,15 +83,12 @@ collabintel_telemetry.db
 # ------------------------------------------
 # Environment Variables & Secrets
 # ------------------------------------------
-.env
-.env.*
 !.env.example
 !.env.sample
 
 # ------------------------------------------
 # IDEs & Editors
 # ------------------------------------------
-.vscode/
 .idea/
 *.suo
 *.ntvs*
@@ -123,3 +120,4 @@ lerna-debug.log*
 ehthumbs.db
 Thumbs.db
 Desktop.ini
+config.bat

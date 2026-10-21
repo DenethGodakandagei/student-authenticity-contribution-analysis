@@ -184,7 +184,7 @@ export default function StudyGuidePage({
                 </p>
                 <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <Link href={`/session/${sessionId}/chat`} className="dash-btn dash-btn--sm">
-                    Go to Teaching Chat →
+                    Teach to Nova →
                   </Link>
                   <Link href={`/session/${sessionId}/pretest`} className="dash-btn dash-btn--sm">
                     Take Pre-test
@@ -553,29 +553,64 @@ export default function StudyGuidePage({
                 gap: '0.85rem',
               }}
             >
-              <button
-                type="button"
-                className="dash-btn"
-                style={{ padding: '0.85rem 2rem', fontSize: '1rem' }}
-                onClick={() => router.push(`/session/${sessionId}/chat`)}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                  width: '100%',
+                }}
               >
-                I&apos;m ready, start teaching Nova
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+
+                 <button
+                  type="button"
+                  className="dash-btn dash-btn--outline"
+                  style={{ padding: '0.85rem 1.6rem', fontSize: '1rem' }}
+                  onClick={() => router.push(`/session/${sessionId}/report`)}
                 >
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
-              </button>
-              <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--d-muted)' }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
+                  Back to report
+                </button>
+                <button
+                  type="button"
+                  className="dash-btn"
+                  style={{ padding: '0.85rem 2rem', fontSize: '1rem' }}
+                  onClick={() => router.push(`/session/${sessionId}/chat`)}
+                >
+                  I&apos;m ready, start teaching Nova
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </button>
+
+               
+              </div>
+              {/* <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--d-muted)' }}>
                 You can reopen this guide anytime from the teaching page.
-              </p>
+              </p> */}
             </section>
           </>
         )}

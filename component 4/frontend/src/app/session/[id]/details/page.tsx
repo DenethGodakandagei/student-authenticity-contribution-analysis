@@ -181,7 +181,7 @@ export default function SessionDetailsPage({
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
             </svg>
-            Teaching Chat
+            Teach to Nova
           </Link>
           <Link href={`/session/${state.session_id}/study`} className="details-nav-btn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -198,6 +198,9 @@ export default function SessionDetailsPage({
           </Link>
           <Link href={`/session/${state.session_id}/report`} className="details-nav-btn">
             Learning Report
+          </Link>
+          <Link href={`/session/${state.session_id}/summery`} className="details-nav-btn">
+            Summary
           </Link>
           <Link href={`/session/${state.session_id}/exam`} className="details-nav-btn">
             Run Exam

@@ -34,8 +34,8 @@ class OllamaProvider(BaseLLMProvider):
             "prompt": prompt,
             "stream": False,
             "options": {
-                "num_ctx": 2048,
-                "num_predict": 750,
+                "num_ctx": 4096,
+                "num_predict": 1500,
                 "temperature": 0.3,
                 "top_p": 0.9,
             },
@@ -449,6 +449,17 @@ def generate_json(
             logger.warning(
                 f"generate_json attempt {attempt + 1}/{retries + 1} failed for {schema.__name__}: {e}"
             )
+            # If provider is a FallbackLLMProvider and primary failed to produce valid JSON, try the fallback provider
+            fallback_inst = getattr(provider, "fallback", None)
+            if fallback_inst:
+                try:
+                    logger.info(f"Retrying generate_json directly with fallback provider {type(fallback_inst).__name__}...")
+                    fb_raw = fallback_inst.generate(current_prompt, json_mode=True)
+                    clean_fb = _strip_markdown_fences(fb_raw)
+                    parsed_fb = json.loads(clean_fb)
+                    return schema(**parsed_fb)
+                except Exception as fb_err:
+                    logger.warning(f"Fallback provider also failed generate_json: {fb_err}")
             current_prompt = (
                 prompt + "\n\nIMPORTANT: Return only valid JSON matching the required schema."
             )
