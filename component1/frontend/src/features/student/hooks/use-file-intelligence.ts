@@ -303,32 +303,29 @@ export function getFileIntelligence(
   });
 
   // Pre-pass: Compute line timestamps & detect multi-line simultaneous bursts ("same time" paste detection)
-  const lineTimestamps = rawLines.map((_, idx) => {
+  const explicitLineTimestamps = new Map<number, Date>();
+  const pasteBurstSecondBuckets = new Map<string, number>();
+
+  rawLines.forEach((_, idx) => {
     const recordedLine = fileLineRecordsMap.get(idx + 1);
     if (recordedLine && recordedLine.timestamp && !isSynthetic15sArtifact) {
       const parsed = new Date(recordedLine.timestamp);
-      return !isNaN(parsed.getTime()) ? parsed : new Date(sessionEndTime);
+      if (!isNaN(parsed.getTime())) {
+        explicitLineTimestamps.set(idx, parsed);
+        // Only bucket lines explicitly recorded as copy_paste burst telemetry
+        if (recordedLine.provenance === 'copy_paste') {
+          const secKey = parsed.toISOString().slice(0, 19);
+          pasteBurstSecondBuckets.set(secKey, (pasteBurstSecondBuckets.get(secKey) || 0) + 1);
+        }
+      }
     }
+  });
+
+  const lineTimestamps = rawLines.map((_, idx) => {
+    const explicit = explicitLineTimestamps.get(idx);
+    if (explicit) return explicit;
     return new Date(fileModTime);
   });
-
-  // Count how many lines share the exact same second
-  const secondBuckets = new Map<string, number>();
-  lineTimestamps.forEach(d => {
-    const secKey = d.toISOString().slice(0, 19);
-    secondBuckets.set(secKey, (secondBuckets.get(secKey) || 0) + 1);
-  });
-
-  // Detect repeated multi-line function blocks (e.g. repeated functions copy-pasted multiple times)
-  const blockFreq = new Map<string, number>();
-  for (let i = 0; i < rawLines.length - 1; i++) {
-    const l1 = rawLines[i].trim();
-    const l2 = rawLines[i + 1].trim();
-    if (l1.length > 5 && l2.length > 5) {
-      const key = `${l1}|||${l2}`;
-      blockFreq.set(key, (blockFreq.get(key) || 0) + 1);
-    }
-  }
 
   // Accurate line attribution
   const lineAttributions = rawLines.map((lineContent, idx) => {
@@ -345,22 +342,14 @@ export function getFileIntelligence(
 
     const lineTimestamp = lineTimestamps[idx] || new Date(fileModTime);
     const secKey = lineTimestamp.toISOString().slice(0, 19);
-    const linesInSameSecond = secondBuckets.get(secKey) || 1;
-    // A human physically CANNOT type 3 or more lines in the exact same second.
-    // If 3+ lines share the exact same timestamp, they were inserted simultaneously in a paste burst!
-    const isBurstPasted = linesInSameSecond >= 3;
-
-    const lPrev = (rawLines[idx - 1] || '').trim();
-    const lCurr = lineContent.trim();
-    const lNext = (rawLines[idx + 1] || '').trim();
-    const isDuplicateBlock = (blockFreq.get(`${lPrev}|||${lCurr}`) || 0) > 1 || (blockFreq.get(`${lCurr}|||${lNext}`) || 0) > 1;
+    // Burst paste is only flagged if telemetry recorded 3+ copy_paste lines in the exact same second
+    const isBurstPasted = explicitLineTimestamps.has(idx) && (pasteBurstSecondBuckets.get(secKey) || 0) >= 3;
 
     // ── High-Precision Provenance Classification ─────────────────────────────
     const pType = classifyLineProvenance(lineContent, recordedLine, {
       prevTrimmed,
       nextTrimmed,
-      isBurstPasted,
-      isDuplicateBlock
+      isBurstPasted
     });
 
     const shortDate = lineTimestamp.toLocaleDateString([], {
@@ -470,28 +459,30 @@ export function classifyLineProvenance(
     return 'ai_generated';
   }
 
-  // 2. Direct Telemetry AI Signals
+  // 2. Direct Extension Telemetry Ground Truth (Live keystroke tracker from VS Code)
+  // When the student physically types in the IDE, telemetry logs 'manual'. That is the ground truth!
   if (recordedLine?.provenance === 'ai_assisted') {
     return 'ai_generated';
   }
-
-  // 3. Multi-line burst or repeated identical code block detection:
-  // A human CANNOT type multiple lines in the exact same second or paste repeated identical blocks.
-  // This takes precedence over any stale/default "manual" telemetry flags!
-  if (context?.isBurstPasted || context?.isDuplicateBlock) {
+  if (recordedLine?.provenance === 'manual') {
+    return 'typed';
+  }
+  if (recordedLine?.provenance === 'copy_paste') {
     return 'pasted';
   }
 
-  // 4. Explicit Pasted / External Specification characteristics (assignment briefs, third-party imports)
+  // 3. Fallback Heuristics ONLY when no live telemetry is recorded for this line:
+  if (context?.isBurstPasted) {
+    return 'pasted';
+  }
+
+  // Check for external specifications / assignment briefs / boilerplate imports
   const isMarkdownBullet = /^[-*+]\s+/.test(trimmed);
   const isNumberedList = /^\d+\.\s+/.test(trimmed);
   const isRequirementTag = /^[A-Z]{2,}-\d+(\.\d+)?\b/.test(trimmed); // e.g. REQ-01, US-12
   const isDocHeader = /^(ub-)?problem\b/i.test(trimmed) ||
                       /^(proposed\s+solution|user\s+requirements|requirements\s+addressed|acceptance\s+criteria)/i.test(trimmed) ||
                       /^#+\s+/.test(trimmed);
-  const isExternalImport = /^(import\s+.*\s+from\s+['"]|const\s+.*\s*=\s*require\(['"]|export\s+default\s+)/.test(trimmed) ||
-                           /^<(link\s+rel=|script\s+src=)/i.test(trimmed) ||
-                           /^@import\s+url\(/i.test(trimmed);
   const isProseDocumentation = trimmed.length > 35 &&
     !/[;{}=><()[\]]/.test(trimmed) &&
     /\b(tracks?|plagiarism|problem|solution|offline|support|privacy|collects?|measures?|speed|analyzes?|analysis|requirements?|addressed|traditional|struggle|identify)\b/i.test(trimmed);
@@ -499,23 +490,15 @@ export function classifyLineProvenance(
                                /^["'](?:data:image\/|ey[A-Za-z0-9_-]{20,})/.test(trimmed) ||
                                (trimmed.length > 65 && !/[;{}=><()]/.test(trimmed));
 
-  if (isMarkdownBullet || isNumberedList || isRequirementTag || isDocHeader || isExternalImport || isProseDocumentation || isCopiedFixtureOrUrl) {
+  if (isMarkdownBullet || isNumberedList || isRequirementTag || isDocHeader || isProseDocumentation || isCopiedFixtureOrUrl) {
     return 'pasted';
   }
 
-  // 5. Direct Extension Telemetry Signals (if recorded)
-  if (recordedLine?.provenance === 'copy_paste') {
-    return 'pasted';
-  }
-  if (recordedLine?.provenance === 'manual') {
-    return 'typed';
-  }
-
-  // 6. Blank lines (preserve continuity with surrounding block)
+  // 4. Blank lines (preserve continuity with surrounding block)
   if (trimmed.length === 0) {
     const prev = context?.prevTrimmed || '';
     const next = context?.nextTrimmed || '';
-    const prevIsPasted = /^[-*+]\s+/.test(prev) || /^\d+\.\s+/.test(prev) || /^(ub-)?problem/i.test(prev) || /^(import|const\s+.*require)/.test(prev);
+    const prevIsPasted = /^[-*+]\s+/.test(prev) || /^\d+\.\s+/.test(prev) || /^(ub-)?problem/i.test(prev);
     const nextIsPasted = /^[-*+]\s+/.test(next) || /^\d+\.\s+/.test(next);
     if (prevIsPasted || nextIsPasted) {
       return 'pasted';
@@ -527,6 +510,6 @@ export function classifyLineProvenance(
     return 'typed';
   }
 
-  // 7. Default genuine human coding lines
+  // 5. Default genuine human coding lines
   return 'typed';
 }
