@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./auth/auth.css";
 import AuthNav from "./auth/AuthNav";
-import DevNavDrawer from "./components/DevNavDrawer";
+//import DevNavDrawer from "./components/DevNavDrawer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="flex-1 mt-[var(--nova-nav-h)] bg-[#f8fcfa]">
           {children}
         </div>
-        <DevNavDrawer />
+        {/* <DevNavDrawer /> */}
       </body>
     </html>
   );
