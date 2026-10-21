@@ -1386,7 +1386,7 @@ function DashboardComponent() {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '0.85rem' }}>
                 {filteredDocs.map((doc: any) => {
                   const isOwner = checkIsOwner(doc, user);
 
@@ -1395,91 +1395,72 @@ function DashboardComponent() {
                       key={doc._id}
                       style={{
                         background: '#ffffff',
-                        border: '1px solid rgba(0, 0, 0, 0.08)',
-                        borderRadius: '14px',
-                        padding: '1.5rem',
-                        boxShadow: '0 2px 6px rgba(15, 23, 42, 0.02)',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        padding: '0.85rem 1rem',
+                        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
-                        gap: '1rem',
-                        transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                        gap: '0.6rem',
+                        transition: 'border-color 0.15s ease'
                       }}
                     >
                       <div>
-                        {/* Header Badges: Source & Assignment Type prominently displayed above title */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{
-                              background: doc.source === 'google_docs' ? '#e8f0fe' : doc.source === 'microsoft_365' ? '#deecf9' : 'rgba(163, 230, 53, 0.16)',
-                              color: doc.source === 'google_docs' ? '#1a73e8' : doc.source === 'microsoft_365' ? '#0078d4' : '#275306',
-                              padding: '0.2rem 0.65rem',
-                              borderRadius: '9999px',
-                              fontSize: '0.74rem',
-                              fontWeight: 700
-                            }}>
-                              {doc.source === 'google_docs' ? 'Google Docs' : doc.source === 'microsoft_365' ? 'Microsoft 365' : 'In-Built Editor'}
-                            </span>
-
-                            <span style={{
-                              background: doc.assignmentType === 'individual' ? '#e0f2fe' : '#eef2ff',
-                              color: doc.assignmentType === 'individual' ? '#0369a1' : '#4338ca',
-                              border: `1px solid ${doc.assignmentType === 'individual' ? '#bae6fd' : '#c7d2fe'}`,
-                              padding: '0.2rem 0.65rem',
-                              borderRadius: '9999px',
-                              fontSize: '0.74rem',
-                              fontWeight: 800,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem'
-                            }}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                {doc.assignmentType === 'individual' ? (
-                                  <>
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                                  </>
-                                ) : (
-                                  <>
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                  </>
-                                )}
-                              </svg>
-                              {doc.assignmentType === 'individual' ? 'Individual Assignment' : 'Group Collaborative Project'}
-                            </span>
-                          </div>
+                        {/* Top Header: Source Badge & Role */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', gap: '0.4rem' }}>
+                          <span style={{
+                            background: '#EFF8F3',
+                            border: '1px solid rgba(111, 175, 154, 0.4)',
+                            color: '#0D1110',
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.64rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.02em',
+                            flexShrink: 0
+                          }}>
+                            {doc.source === 'google_docs' ? 'Google Docs' : doc.source === 'microsoft_365' ? 'Microsoft Word' : 'In-Built Editor'}
+                          </span>
 
                           <span style={{
-                            background: isOwner ? 'rgba(163, 230, 53, 0.16)' : '#f1f5f9',
-                            color: isOwner ? '#275306' : '#64748b',
-                            padding: '0.2rem 0.65rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.74rem',
-                            fontWeight: 700
+                            fontSize: '0.7rem',
+                            color: '#64748b',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
                           }}>
                             {doc.assignmentType === 'individual'
-                              ? (isOwner ? 'Student Author (You)' : `Author: ${doc.ownerName || doc.owner || 'Student'}`)
-                              : (isOwner ? 'Group Leader (You)' : `Leader: ${doc.ownerName || doc.owner || 'System'}`)}
+                              ? (isOwner ? <span>Author: <strong style={{ color: '#0f172a' }}>You</strong></span> : <span>Author: <strong style={{ color: '#0f172a' }}>{doc.ownerName || doc.owner || 'Student'}</strong></span>)
+                              : (isOwner ? <span>Leader: <strong style={{ color: '#0f172a' }}>You</strong></span> : <span>Leader: <strong style={{ color: '#0f172a' }}>{doc.ownerName || doc.owner || 'System'}</strong></span>)}
                           </span>
                         </div>
 
                         {/* Title */}
-                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                        <h4
+                          title={doc.title || doc._id}
+                          style={{
+                            margin: '0 0 0.25rem 0',
+                            fontSize: '0.92rem',
+                            fontWeight: 700,
+                            color: '#0f172a',
+                            lineHeight: 1.3,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {doc.title || doc._id}
                         </h4>
 
-                        {/* Assignment Metadata (Course, Type, Submission Status) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
+                        {/* Status & Course Info */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem', color: '#64748b', marginBottom: '0.35rem' }}>
                           <span style={{
-                            background: doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.14)' : 'rgba(245, 158, 11, 0.14)',
-                            color: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706',
-                            border: `1px solid ${doc.submissionStatus === 'submitted' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-                            padding: '0.15rem 0.55rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.35rem'
+                            gap: '0.25rem',
+                            fontWeight: 600,
+                            color: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
                           }}>
                             <span style={{
                               width: '5px',
@@ -1487,205 +1468,158 @@ function DashboardComponent() {
                               borderRadius: '50%',
                               background: doc.submissionStatus === 'submitted' ? '#16a34a' : '#d97706'
                             }} />
-                            {doc.submissionStatus === 'submitted' ? 'Submitted to Lecturer' : 'Draft in Progress'}
+                            {doc.submissionStatus === 'submitted' ? 'Submitted' : 'Draft'}
                           </span>
 
                           {doc.course && (
-                            <span style={{ background: '#f1f5f9', color: '#475569', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>
-                              {doc.course}
-                            </span>
+                            <span>&bull; {doc.course}</span>
                           )}
 
                           {doc.grade && (
-                            <span style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800 }}>
+                            <span style={{ background: 'rgba(111, 175, 154, 0.16)', color: '#0D1110', padding: '0.08rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
                               Grade: {doc.grade}
                             </span>
                           )}
                         </div>
 
-                        {/* Lecturer Feedback (if evaluated) */}
+                        {/* Lecturer Feedback (if present) */}
                         {doc.lecturerFeedback && (
                           <div style={{
-                            background: 'rgba(99, 102, 241, 0.06)',
-                            border: '1px solid rgba(99, 102, 241, 0.2)',
-                            borderRadius: '8px',
-                            padding: '0.6rem 0.75rem',
-                            marginBottom: '0.65rem',
-                            fontSize: '0.76rem',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.55rem',
+                            marginBottom: '0.35rem',
+                            fontSize: '0.7rem',
                             color: '#334155',
-                            lineHeight: 1.4
+                            lineHeight: 1.35
                           }}>
-                            <strong style={{ color: '#4338ca' }}>Lecturer Feedback:</strong> {doc.lecturerFeedback}
+                            <strong style={{ color: '#0f172a' }}>Feedback:</strong> {doc.lecturerFeedback}
                           </div>
                         )}
 
-                        {/* Collaborators / Individual Author Details */}
-                        {doc.assignmentType === 'individual' ? (
-                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.45rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ fontSize: '0.74rem', color: '#0369a1', fontWeight: 700 }}>
-                              👤 Individual Assignment &bull;
+                        {/* Collaborators Summary Line */}
+                        <div
+                          title={doc.assignmentType === 'individual' ? 'Individual Assignment' : `Collaborators: ${(doc.collaborators || []).join(', ')}`}
+                          style={{
+                            fontSize: '0.7rem',
+                            color: '#64748b',
+                            lineHeight: 1.3,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {doc.assignmentType === 'individual' ? (
+                            <span>Individual Assignment</span>
+                          ) : (
+                            <span>
+                              Members ({doc.collaborators?.length || 1}):{' '}
+                              <span style={{ color: '#334155', fontWeight: 500 }}>
+                                {(doc.collaborators || [doc.ownerName || 'You']).slice(0, 3).join(', ')}
+                                {(doc.collaborators?.length || 0) > 3 ? ` (+${doc.collaborators.length - 3} more)` : ''}
+                              </span>
                             </span>
-                            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                              Sole Author: <strong style={{ color: '#0f172a' }}>{doc.ownerName || doc.owner}</strong>
-                            </span>
-                          </div>
-                        ) : (
-                          <div>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>
-                              Group Members ({doc.collaborators?.length || 1}):
-                            </span>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
-                              {(doc.collaborators || [doc.ownerName || 'Author']).slice(0, 4).map((c: string, idx: number) => (
-                                <span
-                                  key={idx}
-                                  style={{
-                                    background: '#f8fafc',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '6px',
-                                    padding: '0.15rem 0.45rem',
-                                    fontSize: '0.72rem',
-                                    color: '#0f172a',
-                                    fontWeight: 500
-                                  }}
-                                >
-                                  {c}
-                                </span>
-                              ))}
-                              {(doc.collaborators?.length || 0) > 4 && (
-                                <span style={{ fontSize: '0.72rem', color: '#64748b', alignSelf: 'center' }}>
-                                  +{doc.collaborators.length - 4} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
-                      {/* Card Action Buttons - Compact & Sleek */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.4rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
-                          <button
-                            onClick={() => router.push(`/editor?docId=${doc._id}`)}
-                            style={{
-                              background: '#6FAF9A',
-                              color: '#0D1110',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '0.28rem 0.5rem',
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.3rem',
-                              boxShadow: '0 1px 3px rgba(111, 175, 154, 0.25)',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseOver={e => e.currentTarget.style.background = '#5d9d88'}
-                            onMouseOut={e => e.currentTarget.style.background = '#6FAF9A'}
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                            Open in Editor
-                          </button>
+                      {/* Card Action Buttons - Compact & Pill Styled */}
+                      <div style={{
+                        display: 'flex',
+                        gap: '0.25rem',
+                        alignItems: 'center',
+                        marginTop: '0.4rem',
+                        paddingTop: '0.45rem',
+                        borderTop: '1px solid #f1f5f9',
+                        flexWrap: 'wrap'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/editor?docId=${doc._id}`)}
+                          style={{
+                            flex: 1,
+                            minWidth: '95px',
+                            background: '#EFF8F3',
+                            border: '1px solid rgba(111, 175, 154, 0.45)',
+                            color: '#0D1110',
+                            borderRadius: '9999px',
+                            padding: '0.25rem 0.55rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          Open in Editor
+                        </button>
 
-                          <button
-                            onClick={() => {
-                              setSelectedDocId(doc._id);
-                              setActiveTab('ml_analytics');
-                            }}
-                            style={{
-                              background: '#ffffff',
-                              border: '1px solid #e2e8f0',
-                              color: '#0f172a',
-                              borderRadius: '6px',
-                              padding: '0.28rem 0.5rem',
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.3rem',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
-                            onMouseOut={e => e.currentTarget.style.background = '#ffffff'}
-                          >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <line x1="18" y1="20" x2="18" y2="10" />
-                              <line x1="12" y1="20" x2="12" y2="4" />
-                              <line x1="6" y1="20" x2="6" y2="14" />
-                            </svg>
-                            ML Analytics
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedDocId(doc._id);
+                            setActiveTab('ml_analytics');
+                          }}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            color: '#334155',
+                            borderRadius: '9999px',
+                            padding: '0.25rem 0.55rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          ML Analytics
+                        </button>
 
-                        {/* Leader Quick Share / Add Member (Only for Group Projects) */}
-                        {(isOwner || isUserLeader) && doc.assignmentType !== 'individual' && (
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
+                        {isOwner && doc.assignmentType !== 'individual' && (
+                          <>
                             <button
+                              type="button"
                               onClick={() => {
                                 setTeamTargetDocId(doc._id);
                                 setActiveTab('team');
                               }}
+                              title="Add group member"
                               style={{
-                                background: '#f1f5f9',
-                                border: '1px solid #e2e8f0',
-                                color: '#0f172a',
-                                borderRadius: '6px',
-                                padding: '0.26rem 0.45rem',
-                                fontSize: '0.7rem',
+                                background: '#f8fafc',
+                                border: '1px solid #cbd5e1',
+                                color: '#334155',
+                                borderRadius: '9999px',
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.72rem',
                                 fontWeight: 600,
                                 cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.25rem',
                                 transition: 'all 0.15s ease'
                               }}
-                              onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'}
-                              onMouseOut={e => e.currentTarget.style.background = '#f1f5f9'}
                             >
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="8.5" cy="7" r="4" />
-                                <line x1="20" y1="8" x2="20" y2="14" />
-                                <line x1="23" y1="11" x2="17" y2="11" />
-                              </svg>
                               Add Member
                             </button>
 
                             <button
+                              type="button"
                               onClick={() => setShareModalDoc(doc)}
+                              title="Manage access permissions"
                               style={{
-                                background: '#121417',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '0.26rem 0.45rem',
-                                fontSize: '0.7rem',
+                                background: '#f8fafc',
+                                border: '1px solid #cbd5e1',
+                                color: '#334155',
+                                borderRadius: '9999px',
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.72rem',
                                 fontWeight: 600,
                                 cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.25rem',
                                 transition: 'all 0.15s ease'
                               }}
-                              onMouseOver={e => e.currentTarget.style.background = '#27272a'}
-                              onMouseOut={e => e.currentTarget.style.background = '#121417'}
                             >
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                              </svg>
                               Manage Access
                             </button>
-                          </div>
+                          </>
                         )}
                       </div>
                     </div>

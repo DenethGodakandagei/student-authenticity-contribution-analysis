@@ -7,12 +7,22 @@ import NavigationLayout from './NavigationLayout'; // Client wrapper for the sid
 export const metadata = {
   title: 'Inkie',
   description: 'Intelligent Document Revision & Evolution Analytics Platform',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="shortcut icon" href="/icon.svg" type="image/svg+xml" />
         <Script
           src="https://accounts.google.com/gsi/client"
           strategy="lazyOnload"
