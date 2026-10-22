@@ -229,6 +229,10 @@ export const updateRepositoryUrl = async (req: any, res: Response): Promise<void
       return;
     }
 
+    if (!team.leader) {
+      team.leader = studentId as any;
+    }
+
     team.repositoryUrl = repositoryUrl.trim();
     await team.save();
 
@@ -411,9 +415,11 @@ export const addAssignmentToTeam = async (req: any, res: Response): Promise<void
       return;
     }
 
-    // Verify leader
-    if (team.leader?.toString() !== studentId) {
-      res.status(403).json({ error: 'Access denied: Only the Team Leader can add assignments' });
+    // Verify leader or member
+    const isLeaderOrMember = (team.leader && team.leader.toString() === studentId) ||
+      (team.members && team.members.some((m: any) => (m.student?._id || m.student)?.toString() === studentId));
+    if (!isLeaderOrMember) {
+      res.status(403).json({ error: 'Access denied: Only team members can add assignments' });
       return;
     }
 

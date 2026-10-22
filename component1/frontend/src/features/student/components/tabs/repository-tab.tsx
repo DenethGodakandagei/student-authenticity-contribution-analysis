@@ -25,7 +25,11 @@ import {
   CheckCircle,
   FileText,
   AlertCircle,
-  Download
+  Download,
+  Plus,
+  Edit2,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { GitVerificationResult } from '@/services/gitValidator';
 import { api } from '@/services/api';
@@ -54,6 +58,7 @@ interface RepositoryTabProps {
   student?: any;
   report?: any;
   team?: any;
+  onUpdateRepo?: (repositoryUrl: string) => Promise<boolean | void>;
 }
 
 export const RepositoryTab: React.FC<RepositoryTabProps> = ({
@@ -78,8 +83,38 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
   sessionsList = [],
   student,
   report,
-  team
+  team,
+  onUpdateRepo
 }) => {
+  // Repository Link / Edit State
+  const [isEditingRepo, setIsEditingRepo] = useState(false);
+  const [repoInputUrl, setRepoInputUrl] = useState('');
+  const [savingRepo, setSavingRepo] = useState(false);
+  const [repoSaveError, setRepoSaveError] = useState('');
+
+  const handleSaveRepo = async (e?: React.FormEvent, urlOverride?: string) => {
+    if (e) e.preventDefault();
+    const targetUrl = (urlOverride ?? repoInputUrl).trim();
+    if (!targetUrl) return;
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://') && !targetUrl.startsWith('git@')) {
+      setRepoSaveError('Please enter a valid Git URL (e.g. https://github.com/owner/repo)');
+      return;
+    }
+    setSavingRepo(true);
+    setRepoSaveError('');
+    try {
+      if (onUpdateRepo) {
+        await onUpdateRepo(targetUrl);
+      }
+      setIsEditingRepo(false);
+      setRepoInputUrl('');
+    } catch (err: any) {
+      setRepoSaveError(err.message || 'Failed to save repository URL');
+    } finally {
+      setSavingRepo(false);
+    }
+  };
+
   // Local File Explorer Filter & Search States
   const [offlineFilter, setOfflineFilter] = useState<'edited' | 'all' | 'folders'>('all');
   const [fileSearchQuery, setFileSearchQuery] = useState('');
@@ -277,23 +312,134 @@ export const RepositoryTab: React.FC<RepositoryTabProps> = ({
       {/* 1. Repo Meta subheader */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-xs text-slate-900 truncate font-semibold">
-              {repoUrl || 'No Repository Linked'}
-            </span>
-          </div>
-          {repoUrl && (
-            <a
-              href={repoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-[#0D1110] hover:underline flex items-center gap-1 font-mono border border-[#6FAF9A]/30 bg-[#EFF8F3] px-2.5 py-1 rounded-lg transition"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              View on GitHub
-            </a>
+          {isEditingRepo ? (
+            <form onSubmit={handleSaveRepo} className="flex flex-wrap items-center gap-2.5 w-full">
+              <div className="relative flex-grow min-w-[280px]">
+                <GitBranch className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="url"
+                  required
+                  autoFocus
+                  value={repoInputUrl}
+                  onChange={(e) => setRepoInputUrl(e.target.value)}
+                  placeholder="https://github.com/organization/repository"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 focus:bg-white transition font-mono"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingRepo}
+                className="px-3.5 py-1.5 bg-[#0D1110] hover:bg-[#1a2220] text-white font-semibold shadow-xs rounded-xl text-xs transition cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-1.5"
+              >
+                {savingRepo ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-[#6FAF9A]" />
+                    <span>Save Repository</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={savingRepo}
+                onClick={() => {
+                  setIsEditingRepo(false);
+                  setRepoSaveError('');
+                }}
+                className="px-2.5 py-1.5 bg-[#EFF8F3] hover:bg-[#e2ece7] text-[#0D1110] rounded-xl text-xs transition cursor-pointer shrink-0 border border-[#6FAF9A]/20"
+              >
+                Cancel
+              </button>
+              {repoSaveError && (
+                <div className="text-xs text-rose-500 w-full flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{repoSaveError}</span>
+                </div>
+              )}
+            </form>
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5 min-w-0">
+                {repoUrl ? (
+                  <>
+                    <GitBranch className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="font-mono text-xs text-slate-900 truncate font-semibold">
+                      {repoUrl}
+                    </span>
+                    {onUpdateRepo && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRepoInputUrl(repoUrl);
+                          setIsEditingRepo(true);
+                        }}
+                        className="text-[11px] font-medium text-slate-500 hover:text-slate-900 transition flex items-center gap-1 cursor-pointer ml-1"
+                        title="Change repository link"
+                      >
+                        <Edit2 className="w-3 h-3 text-slate-400" />
+                        <span>Change</span>
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-mono text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                      No Repository Linked
+                    </span>
+                    {onUpdateRepo && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRepoInputUrl('');
+                          setIsEditingRepo(true);
+                        }}
+                        className="px-3 py-1 rounded-lg bg-[#EFF8F3] text-[#0D1110] border border-[#6FAF9A]/30 hover:bg-[#e2ece7] text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-[#6FAF9A]" />
+                        <span>Link Repository</span>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {repoUrl && (
+                <a
+                  href={repoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-[#0D1110] hover:underline flex items-center gap-1 font-mono border border-[#6FAF9A]/30 bg-[#EFF8F3] px-2.5 py-1 rounded-lg transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View on GitHub
+                </a>
+              )}
+            </>
           )}
         </div>
+
+        {/* Local Git remote quick-link suggestion if repoUrl is empty */}
+        {!repoUrl && gitVerification?.localRemoteUrl && onUpdateRepo && (
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-[#EFF8F3] border border-[#6FAF9A]/30 text-xs text-[#2d5849]">
+            <div className="flex items-center gap-2 min-w-0">
+              <GitBranch className="w-4 h-4 text-[#6FAF9A] shrink-0" />
+              <span className="truncate">
+                Detected local Git remote: <strong className="font-mono text-[#0D1110]">{gitVerification.localRemoteUrl}</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={savingRepo}
+              onClick={(e) => handleSaveRepo(e, gitVerification.localRemoteUrl!)}
+              className="px-3 py-1.5 bg-[#0D1110] hover:bg-[#1a2220] text-white rounded-xl font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs disabled:opacity-50"
+            >
+              <Check className="w-3 h-3 text-[#6FAF9A]" />
+              <span>Link Detected Repository</span>
+            </button>
+          </div>
+        )}
 
         {/* Members Roster */}
         <div className="flex flex-wrap items-center gap-2.5">

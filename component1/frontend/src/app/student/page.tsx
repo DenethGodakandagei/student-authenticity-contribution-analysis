@@ -642,6 +642,7 @@ export default function StudentDashboard() {
         name: student?.name ? `${student.name} (Individual)` : 'Individual Submission',
         assignmentId: searchedAssignment._id,
         repositoryUrl: trimmedRepo,
+        repoUrl: trimmedRepo,
         gitUsername,
         memberIds: []
       });
@@ -747,6 +748,32 @@ export default function StudentDashboard() {
       setError(err.message || 'Failed to update repository URL');
       throw err;
     }
+  };
+
+  const handleUpdateActiveRepo = async (newRepoUrl: string) => {
+    const trimmed = (newRepoUrl || '').trim();
+    if (!trimmed) return;
+    if (team?._id) {
+      await handleUpdateTeamRepo(team._id, trimmed);
+      return;
+    }
+    if (selectedAssignment?._id) {
+      const isSolo = selectedAssignment.assignmentType === 'individual';
+      const res = await api.teams.create({
+        name: isSolo ? `${student?.name || 'Student'} (Individual)` : `${student?.name || 'Student'}'s Team`,
+        assignmentId: selectedAssignment._id,
+        repositoryUrl: trimmed,
+        repoUrl: trimmed,
+        gitUsername: student?.name ? student.name.toLowerCase().replace(/\s+/g, '-') : 'student',
+        memberIds: []
+      });
+      setTeam(res.team);
+      setRepoUrl(res.team?.repositoryUrl || trimmed);
+      setSuccess('Repository linked and workspace registered successfully!');
+      await loadStudentContext(selectedAssignment._id);
+      return;
+    }
+    setError('Please select an assignment before linking a repository.');
   };
 
   const handleLinkAssignment = async (e: React.FormEvent, teamId: string) => {
@@ -1253,6 +1280,7 @@ export default function StudentDashboard() {
             student={student}
             report={report}
             team={team}
+            onUpdateRepo={handleUpdateActiveRepo}
           />
         )}
 
