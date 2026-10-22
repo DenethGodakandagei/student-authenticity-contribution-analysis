@@ -835,8 +835,8 @@ function activate(context) {
                 idleSensor.reportActivity();
             }
             // B. User Clipboard Paste or Multi-Line / Large insertion burst
-            // (Ctrl+V from browser/external window, workspace copy, or multi-line paste)
-            else if (clipboardMatched || isMultiLine) {
+            // (Ctrl+V from browser/external window, workspace copy, multi-line paste, or multi-char burst)
+            else if (clipboardMatched || isMultiLine || (!isSingleKey && !isEnterKey && !isTabOrIndent && !isAutoClosePair)) {
                 lineProvenance = 'copy_paste';
                 pasteCount++;
                 charactersPasted += textLen;
@@ -855,10 +855,10 @@ function activate(context) {
                 });
                 idleSensor.reportActivity();
             }
-            // C. Authentic Human Manual Keystroke
+            // C. Authentic Human Manual Keystroke (Strictly 1 keypress per event)
             else {
                 lineProvenance = 'manual';
-                const strokeInc = (isSingleKey || isEnterKey) ? 1 : Math.max(1, Math.round(textLen * 0.7));
+                const strokeInc = isSingleKey ? 1 : 1;
                 keystrokeCount += strokeInc;
                 manualCharsCount += textLen;
                 fileItem.manualKeystrokes += strokeInc;

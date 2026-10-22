@@ -334,18 +334,23 @@ export default function StudentDashboard() {
             const aiCount = lineRecords.filter((r: any) => r.provenance === 'ai_assisted').length;
             const totalCount = Math.max(1, lineRecords.length);
 
-            const typedRatio = typedCount / totalCount;
-            const pastedRatio = pastedCount / totalCount;
-            const aiRatio = aiCount / totalCount;
+            // In static workspace scans, bulk code files (>= 6 lines) created/saved at once
+            // represent pasted/scaffolded code, NOT hundreds of physical human keypresses.
+            const isBulkCodeDump = rawLines.length >= 6 && pastedCount === 0 && aiCount === 0;
 
-            const manualChars = Math.round(fChars * typedRatio);
-            const pasteChars = Math.round(fChars * pastedRatio);
-            const aiChars = Math.round(fChars * aiRatio);
+            const effectiveTypedRatio = isBulkCodeDump ? 0.02 : typedRatio;
+            const effectivePastedRatio = isBulkCodeDump ? 0.98 : pastedRatio;
+            const effectiveAiRatio = isBulkCodeDump ? 0 : aiRatio;
+
+            const manualChars = Math.round(fChars * effectiveTypedRatio);
+            const pasteChars = Math.round(fChars * effectivePastedRatio);
+            const aiChars = Math.round(fChars * effectiveAiRatio);
 
             const typingProvenance: 'manual' | 'copy_paste' | 'ai_assisted' | 'mixed' =
-              typedRatio >= 0.7 ? 'manual' :
-                aiRatio >= 0.3 ? 'ai_assisted' :
-                  pastedRatio >= 0.5 ? 'copy_paste' : 'mixed';
+              isBulkCodeDump ? 'copy_paste' :
+                typedRatio >= 0.7 ? 'manual' :
+                  aiRatio >= 0.3 ? 'ai_assisted' :
+                    pastedRatio >= 0.5 ? 'copy_paste' : 'mixed';
 
             return {
               filePath: f.path,
@@ -353,13 +358,15 @@ export default function StudentDashboard() {
               manualChars,
               pasteChars,
               aiChars,
-              manualKeystrokes: typedCount * 28,
-              pasteEvents: pastedCount > 0 ? 1 : 0,
+              manualKeystrokes: isBulkCodeDump ? 3 : typedCount * 28,
+              pasteEvents: isBulkCodeDump ? 1 : (pastedCount > 0 ? 1 : 0),
               aiEvents: aiCount > 0 ? 1 : 0,
               typingProvenance,
               linesAdded: f.lineCount || 0,
               linesRemoved: 0,
-              lineRecords,
+              lineRecords: isBulkCodeDump
+                ? lineRecords.map((r, i) => i === lineRecords.length - 1 ? r : { ...r, provenance: 'copy_paste' as const })
+                : lineRecords,
               timestamp: new Date(fEndMs)
             };
           });
