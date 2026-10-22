@@ -32,8 +32,9 @@ from ml_engine import extract_features, classify_intent_and_significance
 def fetch_revisions_from_api():
     """Fetches real live revisions recorded by the Inkie editor from MongoDB via local or cloud API."""
     candidates = [
-        os.environ.get("BACKEND_URL", "https://student-authenticity-contribution-80jm.onrender.com"),
-        "http://127.0.0.1:8001"
+        os.environ.get("BACKEND_URL", "http://127.0.0.1:8001"),
+        "http://127.0.0.1:8001",
+        "https://student-authenticity-contribution-80jm.onrender.com"
     ]
     revisions = []
     
