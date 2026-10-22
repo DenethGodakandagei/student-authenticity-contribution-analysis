@@ -124,6 +124,18 @@ def fetch_live_sessions_from_db(
             cpm = round(keys / dur, 2)
             keff = round(keys / added, 2) if added > 0 else (round(float(keys), 2) if keys > 0 else 0.0)
 
+            # Deep Safeguard: Catch anomalous sessions where human typing speed exceeds biological limit (>300 CPM for >= 5 lines) or provenance denotes paste
+            prov = s.get("codingProvenance") or {}
+            prov_paste_pct = float(prov.get("pastePercent") or 0)
+            if (prov_paste_pct > 50 or (cpm > 300 and added >= 5)) and chars_pasted == 0:
+                chars_pasted = keys
+                keys = min(5, added)
+                paste_cnt = max(1, paste_cnt)
+                total_chars = max(1, keys + chars_pasted)
+                paste_ratio = round(chars_pasted / total_chars, 4)
+                cpm = round(keys / dur, 2)
+                keff = round(keys / added, 2) if added > 0 else 0.0
+
             files_edited = s.get("filesEdited") or []
             files_cnt = len(files_edited)
             primary_file = files_edited[0] if files_edited else "none"

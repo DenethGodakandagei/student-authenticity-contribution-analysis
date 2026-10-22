@@ -132,9 +132,25 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
 
     // Helper to compute / normalize coding provenance & file activities
     const resolveProvenance = (s: any) => {
-      const manualChars = s.manualChars || s.keystrokes || 0;
-      const pasteChars = s.charactersPasted || 0;
+      let manualChars = s.manualChars || s.keystrokes || 0;
+      let pasteChars = s.charactersPasted || 0;
       const aiChars = s.aiChars || 0;
+
+      // Server-Side Safeguard against burst dump misattribution:
+      // Human typing physical speed limit: ~320 CPM in programming.
+      // If keystrokes > 200 in <= 2 minutes and pasteChars == 0 while lines >= 5 or pasteCount > 0,
+      // it was physically impossible to type by hand — it's an external paste burst!
+      const dur = Math.max(0.5, Number(s.durationMinutes) || 1);
+      const cpm = Number(s.keystrokes || 0) / dur;
+      if (cpm > 320 && pasteChars === 0 && ((s.linesAdded || 0) >= 5 || (s.pasteCount || 0) > 0)) {
+        pasteChars = manualChars;
+        manualChars = Math.min(5, Number(s.linesAdded) || 1);
+        s.charactersPasted = pasteChars;
+        s.keystrokes = manualChars;
+        s.manualChars = manualChars;
+        s.pasteCount = Math.max(1, Number(s.pasteCount) || 1);
+      }
+
       const total = manualChars + pasteChars + aiChars;
 
       let manualPercent = 100;
@@ -153,7 +169,7 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
       else if (aiPercent > 15) style = 'Balanced Copilot-Assisted';
       else if (manualPercent >= 80) style = 'Authentic Manual Typing';
 
-      const codingProvenance = s.codingProvenance || {
+      const codingProvenance = {
         manualPercent,
         pastePercent,
         aiPercent,
