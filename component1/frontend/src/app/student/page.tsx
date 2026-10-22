@@ -333,6 +333,9 @@ export default function StudentDashboard() {
             const pastedCount = lineRecords.filter((r: any) => r.provenance === 'copy_paste').length;
             const aiCount = lineRecords.filter((r: any) => r.provenance === 'ai_assisted').length;
             const totalCount = Math.max(1, lineRecords.length);
+            const typedRatio = typedCount / totalCount;
+            const pastedRatio = pastedCount / totalCount;
+            const aiRatio = aiCount / totalCount;
 
             // In static workspace scans, bulk code files (>= 6 lines) created/saved at once
             // represent pasted/scaffolded code, NOT hundreds of physical human keypresses.

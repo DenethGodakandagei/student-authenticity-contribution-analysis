@@ -363,6 +363,10 @@ async function saveAndSyncSession(context) {
         await flushOfflineCache(context);
         return;
     }
+    // Guard: Never create or send empty sessions when no actual typing, paste, or file edits took place
+    if (keystrokeCount === 0 && charactersPasted === 0 && aiCharsCount === 0 && editedFiles.size === 0) {
+        return;
+    }
     const cfg = (0, settings_1.getConfig)();
     if (!cfg.authToken || !cfg.assignmentId) {
         (0, status_bar_1.updateStatusBar)('unconfigured', broadcastStateToWebviews);
@@ -471,9 +475,14 @@ async function flushOfflineCache(context) {
     const cfg = (0, settings_1.getConfig)();
     if (!cfg.authToken || !cfg.assignmentId)
         return;
-    const offline = context.globalState.get('offline_sessions') || [];
-    if (offline.length === 0)
+    const rawOffline = context.globalState.get('offline_sessions') || [];
+    // Filter out any zero-activity sessions from the queue
+    const offline = rawOffline.filter(s => (s.keystrokes || 0) > 0 || (s.charactersPasted || 0) > 0 || (s.aiChars || 0) > 0 || (s.filesEdited || []).length > 0);
+    if (offline.length === 0) {
+        if (rawOffline.length > 0)
+            context.globalState.update('offline_sessions', []);
         return;
+    }
     try {
         const url = `${cfg.serverUrl}/api/vscode/sync`;
         const result = await (0, http_client_1.postJson)(url, cfg.authToken, {
@@ -834,9 +843,14 @@ function activate(context) {
                 });
                 idleSensor.reportActivity();
             }
-            // B. User Clipboard Paste or Multi-Line / Large insertion burst
+            // B. IDE Auto-Indentation / Formatting whitespace (editor generated, NOT human keystroke)
+            else if (isTabOrIndent && textLen > 1) {
+                // Do not increment keystrokeCount or manualCharsCount - automated editor indent
+                idleSensor.reportActivity();
+            }
+            // C. User Clipboard Paste or Multi-Line / Large insertion burst
             // (Ctrl+V from browser/external window, workspace copy, multi-line paste, or multi-char burst)
-            else if (clipboardMatched || isMultiLine || (!isSingleKey && !isEnterKey && !isTabOrIndent && !isAutoClosePair)) {
+            else if (clipboardMatched || isMultiLine || textLen > 1) {
                 lineProvenance = 'copy_paste';
                 pasteCount++;
                 charactersPasted += textLen;
@@ -855,10 +869,10 @@ function activate(context) {
                 });
                 idleSensor.reportActivity();
             }
-            // C. Authentic Human Manual Keystroke (Strictly 1 keypress per event)
+            // D. Authentic Human Manual Keystroke (Strictly 1 physical keypress per event)
             else {
                 lineProvenance = 'manual';
-                const strokeInc = isSingleKey ? 1 : 1;
+                const strokeInc = 1;
                 keystrokeCount += strokeInc;
                 manualCharsCount += textLen;
                 fileItem.manualKeystrokes += strokeInc;
@@ -1224,6 +1238,10 @@ function activate(context) {
             await (0, batch_sync_1.triggerBatchSync)({ onStatusUpdate: broadcastStateToWebviews });
         }
         vscode.window.showInformationMessage('CollabIntel: Telemetry synced.');
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('collabintel.clearCache', async () => {
+        await context.globalState.update('offline_sessions', []);
+        vscode.window.showInformationMessage('CollabIntel: Local offline queue cleared.');
     }));
     context.subscriptions.push(vscode.commands.registerCommand('collabintel.reconcile', async () => {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';

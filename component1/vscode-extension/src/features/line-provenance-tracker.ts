@@ -199,9 +199,9 @@ export class LineProvenanceTracker implements vscode.Disposable {
       let insertionOrigin: LineOrigin = 'manual';
       if (hasAi) {
         insertionOrigin = 'ai';
-      } else if (isMultiLinePaste) {
+      } else if (isMultiLinePaste || (!isEnterKey && !isSingleKey && !isTabOrIndent && !isAutoClosePair)) {
         insertionOrigin = 'pasted';
-      } else if (isEnterKey || isSingleKey || isTabOrIndent || isAutoClosePair) {
+      } else if (isEnterKey || isSingleKey || isAutoClosePair) {
         insertionOrigin = 'manual';
       }
 

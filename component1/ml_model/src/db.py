@@ -157,7 +157,19 @@ def fetch_live_sessions_from_db(
                 "files_edited_count": int(files_cnt)
             }
 
-            pred = predict_authenticity(feat, model_bundle=bundle)
+            # Idle / Inactive Session Guard:
+            # If the student wrote 0 keystrokes, pasted 0 chars, and added 0 lines, they were simply idle.
+            # Do NOT flag idle sessions as Cheating/AI!
+            is_idle = (keys == 0 and chars_pasted == 0 and added == 0 and files_cnt == 0)
+            if is_idle:
+                pred = {
+                    "authenticity_score_percent": 100.0,
+                    "suspicion_score_percent": 0.0,
+                    "risk_tier": "Low Risk (Idle / No Changes)",
+                    "status": "Verified Authentic (Idle)"
+                }
+            else:
+                pred = predict_authenticity(feat, model_bundle=bundle)
 
             s_start = s.get("sessionStart")
             start_str = format_local_time(s_start)

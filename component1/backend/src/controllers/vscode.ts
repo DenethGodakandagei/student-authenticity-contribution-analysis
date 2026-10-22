@@ -214,6 +214,14 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
     if (!mockDb.isDbConnected()) {
       // Mock Database Mode
       for (const s of sessionList) {
+        const hasActivity = (s.keystrokes || 0) > 0 ||
+          (s.charactersPasted || 0) > 0 ||
+          (s.linesAdded || 0) > 0 ||
+          (s.linesRemoved || 0) > 0 ||
+          (s.filesEdited || []).length > 0 ||
+          (s.filesCreated || []).length > 0;
+        if (!hasActivity) continue;
+
         const duration = Math.round(
           (new Date(s.sessionEnd).getTime() - new Date(s.sessionStart).getTime()) / 60000
         );
@@ -290,6 +298,14 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
     } else {
       // MongoDB Mode
       for (const s of sessionList) {
+        const hasActivity = (s.keystrokes || 0) > 0 ||
+          (s.charactersPasted || 0) > 0 ||
+          (s.linesAdded || 0) > 0 ||
+          (s.linesRemoved || 0) > 0 ||
+          (s.filesEdited || []).length > 0 ||
+          (s.filesCreated || []).length > 0;
+        if (!hasActivity) continue;
+
         const duration = Math.round(
           (new Date(s.sessionEnd).getTime() - new Date(s.sessionStart).getTime()) / 60000
         );
