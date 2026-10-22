@@ -108,6 +108,16 @@
         "icon": "$(clippy)"
       },
       {
+        "command": "collabintel.markFileAi",
+        "title": "INCODE: Mark Entire Current File as AI-Generated [AI]",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "collabintel.markFilePasted",
+        "title": "INCODE: Mark Entire Current File as Pasted [PASTED]",
+        "icon": "$(clippy)"
+      },
+      {
         "command": "collabintel.chooseLineProvenance",
         "title": "INCODE: Change Provenance for Current Line...",
         "icon": "$(list-selection)"
@@ -128,8 +138,16 @@
           "group": "incode_provenance@3"
         },
         {
-          "command": "collabintel.chooseLineProvenance",
+          "command": "collabintel.markFileAi",
           "group": "incode_provenance@4"
+        },
+        {
+          "command": "collabintel.markFilePasted",
+          "group": "incode_provenance@5"
+        },
+        {
+          "command": "collabintel.chooseLineProvenance",
+          "group": "incode_provenance@6"
         }
       ]
     },

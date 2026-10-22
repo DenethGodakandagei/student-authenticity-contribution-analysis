@@ -216,6 +216,8 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
       for (const s of sessionList) {
         const hasActivity = (s.keystrokes || 0) > 0 ||
           (s.charactersPasted || 0) > 0 ||
+          (s.aiChars || 0) > 0 ||
+          (s.aiEvents || 0) > 0 ||
           (s.linesAdded || 0) > 0 ||
           (s.linesRemoved || 0) > 0 ||
           (s.filesEdited || []).length > 0 ||
@@ -300,6 +302,8 @@ export const syncVSCodeTelemetry = async (req: any, res: Response): Promise<void
       for (const s of sessionList) {
         const hasActivity = (s.keystrokes || 0) > 0 ||
           (s.charactersPasted || 0) > 0 ||
+          (s.aiChars || 0) > 0 ||
+          (s.aiEvents || 0) > 0 ||
           (s.linesAdded || 0) > 0 ||
           (s.linesRemoved || 0) > 0 ||
           (s.filesEdited || []).length > 0 ||
