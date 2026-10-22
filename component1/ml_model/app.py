@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 import streamlit as st
+import altair as alt
 
 # Setup paths
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +41,7 @@ except ImportError:
     from db import fetch_live_sessions_from_db
 
 st.set_page_config(
-    page_title="Student Telemetry Authenticity Classifier (XGBoost)",
+    page_title="INCODE — Trust & Equity Analytics for Student Contributions",
     layout="wide"
 )
 
@@ -68,7 +69,7 @@ def get_live_db_data():
     return fetch_live_sessions_from_db(exclude_mock=False)
 
 # Title Header
-st.title("Student Telemetry Authenticity Classifier (XGBoost)")
+st.title("INCODE — Trust & Equity Analytics for Student Contributions")
 st.write("Live evaluation engine connected directly to MongoDB Atlas. View real-time database student telemetry sessions or test behavioral scenarios.")
 
 # Tabs: Real Database vs. Scenario Testing
@@ -116,31 +117,52 @@ with tab_db:
 
         st.markdown("---")
 
-        # Table Filters
-        f1, f2, f3, f4 = st.columns([2, 2, 2, 1])
+        # Initialize filter session states
+        if "filter_student" not in st.session_state:
+            st.session_state["filter_student"] = "All Students"
+        if "filter_tier" not in st.session_state:
+            st.session_state["filter_tier"] = "All Risk Tiers"
+        if "filter_assign" not in st.session_state:
+            st.session_state["filter_assign"] = "All Assignments"
+
+        # Unique options from live data
         all_students = ["All Students"] + sorted(list(df_live["Student Name"].dropna().unique()))
-        with f1:
-            selected_student = st.selectbox("Filter by Student", all_students)
-
         all_tiers = ["All Risk Tiers", "Low Risk", "Medium Risk", "High Risk"]
-        with f2:
-            selected_tier = st.selectbox("Filter by Risk Tier", all_tiers)
-
         all_assignments = ["All Assignments"] + sorted(list(df_live["Assignment"].dropna().unique()))
-        with f3:
-            selected_assign = st.selectbox("Filter by Assignment", all_assignments)
 
+        # Determine indices safely
+        student_top_idx = all_students.index(st.session_state["filter_student"]) if st.session_state["filter_student"] in all_students else 0
+        tier_top_idx = all_tiers.index(st.session_state["filter_tier"]) if st.session_state["filter_tier"] in all_tiers else 0
+        assign_top_idx = all_assignments.index(st.session_state["filter_assign"]) if st.session_state["filter_assign"] in all_assignments else 0
+
+        # Table Filters (Top)
+        f1, f2, f3, f4 = st.columns([2, 2, 2, 1])
+        with f1:
+            selected_student = st.selectbox("Filter by Student", all_students, index=student_top_idx, key="top_sel_student")
+        with f2:
+            selected_tier = st.selectbox("Filter by Risk Tier", all_tiers, index=tier_top_idx, key="top_sel_tier")
+        with f3:
+            selected_assign = st.selectbox("Filter by Assignment", all_assignments, index=assign_top_idx, key="top_sel_assign")
         with f4:
             show_time_col = st.checkbox("Show Time", value=True, help="Toggle Session Start (Local Time) column in table")
 
-        # Apply Filters
+        # Synchronize if top filters changed
+        if (selected_student != st.session_state["filter_student"] or 
+            selected_tier != st.session_state["filter_tier"] or 
+            selected_assign != st.session_state["filter_assign"]):
+            st.session_state["filter_student"] = selected_student
+            st.session_state["filter_tier"] = selected_tier
+            st.session_state["filter_assign"] = selected_assign
+            st.rerun()
+
+        # Apply Filters using synchronized state
         filtered_df = df_live.copy()
-        if selected_student != "All Students":
-            filtered_df = filtered_df[filtered_df["Student Name"] == selected_student]
-        if selected_tier != "All Risk Tiers":
-            filtered_df = filtered_df[filtered_df["Risk Tier"].str.contains(selected_tier, case=False, na=False)]
-        if selected_assign != "All Assignments":
-            filtered_df = filtered_df[filtered_df["Assignment"] == selected_assign]
+        if st.session_state["filter_student"] != "All Students":
+            filtered_df = filtered_df[filtered_df["Student Name"] == st.session_state["filter_student"]]
+        if st.session_state["filter_tier"] != "All Risk Tiers":
+            filtered_df = filtered_df[filtered_df["Risk Tier"].str.contains(st.session_state["filter_tier"], case=False, na=False)]
+        if st.session_state["filter_assign"] != "All Assignments":
+            filtered_df = filtered_df[filtered_df["Assignment"] == st.session_state["filter_assign"]]
 
         # Display Data Table with Accurate Local Time
         time_col_name = "Session Start (Local Time)" if "Session Start (Local Time)" in filtered_df.columns else "Session Start"
@@ -159,6 +181,337 @@ with tab_db:
             use_container_width=True,
             hide_index=True
         )
+
+        st.markdown("---")
+
+        # ======================================================================
+        # COMPREHENSIVE VISUAL TELEMETRY ANALYTICS (ALL DIAGRAMS)
+        # ======================================================================
+        st.subheader("Visual Telemetry Analytics Suite (All Diagrams)")
+        st.caption("Complete diagnostic visual diagrams synthesized from live database telemetry records. Adjust the bottom filters below to slice, isolate, and evaluate cohort trends.")
+
+        # Bottom Filters Bar
+        b_col1, b_col2, b_col3, b_col4 = st.columns([3, 3, 3, 2])
+
+        student_bot_idx = all_students.index(st.session_state["filter_student"]) if st.session_state["filter_student"] in all_students else 0
+        tier_bot_idx = all_tiers.index(st.session_state["filter_tier"]) if st.session_state["filter_tier"] in all_tiers else 0
+        assign_bot_idx = all_assignments.index(st.session_state["filter_assign"]) if st.session_state["filter_assign"] in all_assignments else 0
+
+        with b_col1:
+            bot_student = st.selectbox("Filter by Student (Bottom)", all_students, index=student_bot_idx, key="bot_sel_student")
+        with b_col2:
+            bot_tier = st.selectbox("Filter by Risk Tier (Bottom)", all_tiers, index=tier_bot_idx, key="bot_sel_tier")
+        with b_col3:
+            bot_assign = st.selectbox("Filter by Assignment (Bottom)", all_assignments, index=assign_bot_idx, key="bot_sel_assign")
+        with b_col4:
+            st.write("")
+            st.write("")
+            if st.button("Reset Filters", key="btn_reset_filters", use_container_width=True):
+                st.session_state["filter_student"] = "All Students"
+                st.session_state["filter_tier"] = "All Risk Tiers"
+                st.session_state["filter_assign"] = "All Assignments"
+                st.rerun()
+
+        # Synchronize bottom filter selection if changed
+        if (bot_student != st.session_state["filter_student"] or 
+            bot_tier != st.session_state["filter_tier"] or 
+            bot_assign != st.session_state["filter_assign"]):
+            st.session_state["filter_student"] = bot_student
+            st.session_state["filter_tier"] = bot_tier
+            st.session_state["filter_assign"] = bot_assign
+            st.rerun()
+
+        if filtered_df.empty:
+            st.info("No telemetry sessions match the selected filters. Use the filters above or click Reset Filters.")
+        else:
+            plot_df = filtered_df.copy()
+            time_col = "Session Start (Local Time)" if "Session Start (Local Time)" in plot_df.columns else "Session Start"
+
+            # Compute overall authenticity progress
+            avg_auth = float(plot_df["_auth_pct"].mean()) if "_auth_pct" in plot_df.columns else 0.0
+            total_keys = int(plot_df["Keystrokes"].sum()) if "Keystrokes" in plot_df.columns else 0
+            total_dur = float(plot_df["Duration (min)"].sum()) if "Duration (min)" in plot_df.columns else 0.0
+
+            # Overall progress bar & milestone KPI cards
+            norm_progress = min(1.0, max(0.0, avg_auth / 100.0))
+            st.progress(norm_progress, text=f"Overall Authenticity Progress: {avg_auth:.1f}% across {len(plot_df)} session(s)")
+
+            p1, p2, p3, p4 = st.columns(4)
+            p1.metric("Total Sessions", f"{len(plot_df)}")
+            p2.metric("Mean Authenticity", f"{avg_auth:.1f}%")
+            p3.metric("Total Keystrokes", f"{total_keys:,}")
+            p4.metric("Logged Coding Time", f"{total_dur:.0f} mins")
+
+            # Sequential session labels for clean visualization
+            plot_df["Session"] = [
+                f"S{i+1}: {row['Student Name']} ({str(row.get(time_col, ''))[-8:] if row.get(time_col) else f'#{i+1}'}) | {row.get('Duration (min)', 0):.0f}m"
+                for i, (_, row) in enumerate(plot_df.iterrows())
+            ]
+
+            plot_df["Progress_Label"] = [
+                f"{row['_auth_pct']:.1f}% | {row['Keystrokes']:,} keys | {row['Review Status']}"
+                for _, row in plot_df.iterrows()
+            ]
+
+            # Common Risk Tier Color Mapping
+            risk_domain = [
+                "Low Risk (Authentic Human)",
+                "Medium Risk (Inconclusive / Mixed Hybrid)",
+                "High Risk (AI-Generated / Pasted)"
+            ]
+            risk_colors = ["#10b981", "#f59e0b", "#ef4444"]
+            risk_color_scale = alt.Scale(domain=risk_domain, range=risk_colors)
+
+            # View Mode: Tabbed vs All on One Page (Zero emojis)
+            diag_tabs = st.tabs([
+                "All Diagrams (Full View)",
+                "Progress Tracker",
+                "Behavioral Matrix (CPM vs Paste)",
+                "Risk and Score Breakdown",
+                "Cohort Comparison",
+                "Custom Metric Explorer"
+            ])
+
+            # Helper functions to build charts cleanly
+            def build_progress_chart():
+                bars = (
+                    alt.Chart(plot_df)
+                    .mark_bar(cornerRadiusTopRight=8, cornerRadiusBottomRight=8, height=24)
+                    .encode(
+                        y=alt.Y("Session:N", title="Session Progression (Time Order)", sort=None),
+                        x=alt.X("_auth_pct:Q", title="Authenticity Progress (%)", scale=alt.Scale(domain=[0, 115])),
+                        color=alt.Color("Risk Tier:N", scale=risk_color_scale, title="Risk Classification"),
+                        tooltip=[
+                            alt.Tooltip("Student Name:N", title="Student"),
+                            alt.Tooltip("Assignment:N", title="Assignment"),
+                            alt.Tooltip(f"{time_col}:N", title="Session Start"),
+                            alt.Tooltip("Authenticity Score:N", title="Authenticity"),
+                            alt.Tooltip("Suspicion Score:N", title="Suspicion (AI)"),
+                            alt.Tooltip("Risk Tier:N", title="Risk Tier"),
+                            alt.Tooltip("Review Status:N", title="Review Status"),
+                            alt.Tooltip("Typing CPM:Q", title="Typing CPM", format=".1f"),
+                            alt.Tooltip("Paste Ratio:Q", title="Paste Ratio", format=".1%"),
+                            alt.Tooltip("Keystrokes:Q", title="Keystrokes", format=","),
+                            alt.Tooltip("Duration (min):Q", title="Duration (min)", format=".1f")
+                        ]
+                    )
+                )
+                text = (
+                    alt.Chart(plot_df)
+                    .mark_text(align="left", baseline="middle", dx=8, fontSize=11, fontWeight="bold")
+                    .encode(
+                        y=alt.Y("Session:N", sort=None),
+                        x=alt.X("_auth_pct:Q"),
+                        text=alt.Text("Progress_Label:N"),
+                        color=alt.value("#0f172a")
+                    )
+                )
+                return (bars + text).properties(height=max(200, len(plot_df) * 44))
+
+            def build_behavioral_matrix():
+                return (
+                    alt.Chart(plot_df)
+                    .mark_circle(size=140, opacity=0.85, stroke="#1e293b", strokeWidth=0.8)
+                    .encode(
+                        x=alt.X("Typing CPM:Q", title="Typing Speed (Characters Per Minute, CPM)", scale=alt.Scale(zero=False, padding=10)),
+                        y=alt.Y("Paste Ratio:Q", title="Paste Ratio (Fraction of Content Pasted)", axis=alt.Axis(format="%"), scale=alt.Scale(domain=[0, 1.05])),
+                        color=alt.Color("Risk Tier:N", scale=risk_color_scale, title="Risk Classification"),
+                        size=alt.Size("Keystrokes:Q", title="Keystroke Volume", scale=alt.Scale(range=[90, 550])),
+                        tooltip=[
+                            alt.Tooltip("Student Name:N", title="Student"),
+                            alt.Tooltip("Assignment:N", title="Assignment"),
+                            alt.Tooltip("Authenticity Score:N", title="Authenticity"),
+                            alt.Tooltip("Suspicion Score:N", title="Suspicion (AI)"),
+                            alt.Tooltip("Risk Tier:N", title="Risk Tier"),
+                            alt.Tooltip("Typing CPM:Q", title="Typing CPM", format=".1f"),
+                            alt.Tooltip("Paste Ratio:Q", title="Paste Ratio", format=".1%"),
+                            alt.Tooltip("Keystrokes:Q", title="Keystrokes", format=","),
+                            alt.Tooltip("Duration (min):Q", title="Duration (min)", format=".1f"),
+                            alt.Tooltip("Churn Ratio:Q", title="Churn Ratio", format=".2f"),
+                        ]
+                    )
+                    .properties(height=360)
+                    .interactive()
+                )
+
+            def build_risk_distribution():
+                tier_bar = (
+                    alt.Chart(plot_df)
+                    .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6)
+                    .encode(
+                        x=alt.X("Risk Tier:N", sort=risk_domain, title="Risk Tier", axis=alt.Axis(labelAngle=-15)),
+                        y=alt.Y("count():Q", title="Session Count"),
+                        color=alt.Color("Risk Tier:N", scale=risk_color_scale, legend=None),
+                        tooltip=[
+                            alt.Tooltip("Risk Tier:N", title="Tier"),
+                            alt.Tooltip("count():Q", title="Sessions")
+                        ]
+                    )
+                    .properties(height=300)
+                )
+                score_hist = (
+                    alt.Chart(plot_df)
+                    .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+                    .encode(
+                        x=alt.X("_auth_pct:Q", bin=alt.Bin(maxbins=15), title="Authenticity Score (%)", scale=alt.Scale(domain=[0, 100])),
+                        y=alt.Y("count():Q", title="Session Frequency"),
+                        color=alt.Color("_auth_pct:Q", scale=alt.Scale(domain=[0, 30, 70, 100], range=["#ef4444", "#f59e0b", "#3b82f6", "#10b981"]), title="Score Band"),
+                        tooltip=[
+                            alt.Tooltip("count():Q", title="Frequency"),
+                            alt.Tooltip("_auth_pct:Q", bin=alt.Bin(maxbins=15), title="Score Range")
+                        ]
+                    )
+                    .properties(height=300)
+                )
+                return tier_bar, score_hist
+
+            def build_cohort_comparison(group_col="Student Name", metric_choice=("Mean Authenticity Score (%)", "_auth_pct", "mean")):
+                m_label, m_col, m_agg = metric_choice
+                if m_col == "Paste Ratio":
+                    agg = plot_df.groupby(group_col)[m_col].mean().reset_index()
+                    agg["MetricValue"] = (agg[m_col] * 100).round(1)
+                elif m_agg == "mean":
+                    agg = plot_df.groupby(group_col)[m_col].mean().reset_index()
+                    agg.rename(columns={m_col: "MetricValue"}, inplace=True)
+                else:
+                    agg = plot_df.groupby(group_col)[m_col].sum().reset_index()
+                    agg.rename(columns={m_col: "MetricValue"}, inplace=True)
+
+                agg["MetricValue"] = agg["MetricValue"].round(2)
+                agg = agg.sort_values(by="MetricValue", ascending=False).head(15)
+
+                return (
+                    alt.Chart(agg)
+                    .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6)
+                    .encode(
+                        x=alt.X(f"{group_col}:N", sort="-y", title=group_col, axis=alt.Axis(labelAngle=-20)),
+                        y=alt.Y("MetricValue:Q", title=m_label),
+                        color=alt.Color("MetricValue:Q", scale=alt.Scale(scheme="blues"), legend=None),
+                        tooltip=[
+                            alt.Tooltip(f"{group_col}:N", title=group_col),
+                            alt.Tooltip("MetricValue:Q", title=m_label, format=".2f")
+                        ]
+                    )
+                    .properties(height=320)
+                )
+
+            # TAB 1: ALL DIAGRAMS TOGETHER (Full View)
+            with diag_tabs[0]:
+                st.markdown("#### 1. Student Telemetry Progress Diagram")
+                st.caption("Chronological progression of development sessions with authenticity verification.")
+                st.altair_chart(build_progress_chart(), use_container_width=True)
+
+                st.markdown("---")
+                st.markdown("#### 2. Forensic Behavioral Matrix (Typing Speed vs. Paste Ratio)")
+                st.caption("Clusters authentic developers vs. bulk AI text paste anomalies.")
+                st.altair_chart(build_behavioral_matrix(), use_container_width=True)
+
+                st.markdown("---")
+                st.markdown("#### 3. Risk Tier & Authenticity Score Distribution")
+                c_left, c_right = st.columns(2)
+                t_bar, s_hist = build_risk_distribution()
+                with c_left:
+                    st.caption("Risk Tier Classification Breakdown")
+                    st.altair_chart(t_bar, use_container_width=True)
+                with c_right:
+                    st.caption("Score Spread Histogram (0% - 100%)")
+                    st.altair_chart(s_hist, use_container_width=True)
+
+                st.markdown("---")
+                st.markdown("#### 4. Cohort Comparison")
+                st.altair_chart(build_cohort_comparison("Student Name"), use_container_width=True)
+
+            # TAB 2: PROGRESS TRACKER
+            with diag_tabs[1]:
+                st.markdown("#### Student Telemetry Progress Diagram")
+                st.altair_chart(build_progress_chart(), use_container_width=True)
+
+            # TAB 3: BEHAVIORAL MATRIX
+            with diag_tabs[2]:
+                st.markdown("#### Forensic Behavioral Matrix: Typing Speed (CPM) vs. Paste Ratio")
+                st.altair_chart(build_behavioral_matrix(), use_container_width=True)
+
+            # TAB 4: RISK & SCORE BREAKDOWN
+            with diag_tabs[3]:
+                st.markdown("#### Risk Classification & Score Breakdown")
+                c1, c2 = st.columns(2)
+                t_bar2, s_hist2 = build_risk_distribution()
+                with c1:
+                    st.caption("Risk Tier Classification Counts")
+                    st.altair_chart(t_bar2, use_container_width=True)
+                with c2:
+                    st.caption("Authenticity Score Spectrum")
+                    st.altair_chart(s_hist2, use_container_width=True)
+
+            # TAB 5: COHORT COMPARISON
+            with diag_tabs[4]:
+                st.markdown("#### Student & Assignment Cohort Comparison")
+                cmp_c1, cmp_c2 = st.columns([1, 3])
+                with cmp_c1:
+                    sel_group = st.radio("Group By:", ["Student Name", "Assignment"], key="tab_cmp_group")
+                    metric_opts = [
+                        ("Mean Authenticity Score (%)", "_auth_pct", "mean"),
+                        ("Total Keystrokes", "Keystrokes", "sum"),
+                        ("Mean Typing Speed (CPM)", "Typing CPM", "mean"),
+                        ("Mean Paste Ratio (%)", "Paste Ratio", "mean"),
+                        ("Total Duration (min)", "Duration (min)", "sum")
+                    ]
+                    sel_metric = st.selectbox("Metric:", metric_opts, format_func=lambda x: x[0], key="tab_cmp_metric")
+                with cmp_c2:
+                    st.altair_chart(build_cohort_comparison(sel_group, sel_metric), use_container_width=True)
+
+            # TAB 6: CUSTOM METRIC EXPLORER
+            with diag_tabs[5]:
+                st.markdown("#### Custom Multi-Metric Telemetry Explorer")
+                st.caption("Plot any two metrics against each other to discover patterns or inspect outlier sessions.")
+                e1, e2, e3 = st.columns(3)
+                num_options = [
+                    ("Typing Speed (CPM)", "Typing CPM"),
+                    ("Paste Ratio", "Paste Ratio"),
+                    ("Keystroke Count", "Keystrokes"),
+                    ("Duration (min)", "Duration (min)"),
+                    ("Code Churn Ratio", "Churn Ratio"),
+                    ("Net Lines", "Net Lines"),
+                    ("Authenticity Score (%)", "_auth_pct"),
+                    ("Suspicion Score (%)", "_susp_pct"),
+                    ("Keystroke Efficiency", "K-Eff (keys/line)"),
+                    ("Paste Count", "Paste Count")
+                ]
+                avail_nums = [o for o in num_options if o[1] in plot_df.columns]
+                with e1:
+                    x_choice = st.selectbox("X-Axis Metric", avail_nums, index=0, format_func=lambda x: x[0], key="exp_all_x")
+                with e2:
+                    y_idx = 1 if len(avail_nums) > 1 else 0
+                    y_choice = st.selectbox("Y-Axis Metric", avail_nums, index=y_idx, format_func=lambda x: x[0], key="exp_all_y")
+                with e3:
+                    cat_options = [c for c in ["Risk Tier", "Student Name", "Assignment", "Review Status"] if c in plot_df.columns]
+                    color_choice = st.selectbox("Color Dimension", cat_options, index=0, key="exp_all_c")
+
+                custom_scatter = (
+                    alt.Chart(plot_df)
+                    .mark_circle(size=120, opacity=0.8, stroke="#334155", strokeWidth=0.8)
+                    .encode(
+                        x=alt.X(f"{x_choice[1]}:Q", title=x_choice[0]),
+                        y=alt.Y(f"{y_choice[1]}:Q", title=y_choice[0]),
+                        color=(
+                            alt.Color("Risk Tier:N", scale=risk_color_scale, title="Risk Classification")
+                            if color_choice == "Risk Tier"
+                            else alt.Color(f"{color_choice}:N", title=color_choice)
+                        ),
+                        size=alt.Size("Duration (min):Q", title="Duration (min)", scale=alt.Scale(range=[60, 400])),
+                        tooltip=[
+                            alt.Tooltip("Student Name:N", title="Student"),
+                            alt.Tooltip("Assignment:N", title="Assignment"),
+                            alt.Tooltip("Authenticity Score:N", title="Authenticity"),
+                            alt.Tooltip("Risk Tier:N", title="Risk Tier"),
+                            alt.Tooltip(f"{x_choice[1]}:Q", title=x_choice[0]),
+                            alt.Tooltip(f"{y_choice[1]}:Q", title=y_choice[0]),
+                        ]
+                    )
+                    .properties(height=360)
+                    .interactive()
+                )
+                st.altair_chart(custom_scatter, use_container_width=True)
 
         st.markdown("---")
 
