@@ -1,0 +1,252 @@
+{
+  "session_id": "5fa1bcc2-fb1f-4b57-8e6e-eff4af2726aa",
+  "topic": "Introduction to Recursion",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Understand the concept of recursion and how it is used to solve problems",
+    "Be able to apply recursive definitions to calculate factorial values",
+    "Understand the concept of recurrence equations and how to solve them"
+  ],
+  "misconceptions": [
+    {
+      "id": "2f16c19a",
+      "wrong_concept": "Recursion is only used for calculating factorial values",
+      "correct_concept": "Recursion is a general problem-solving technique that can be applied to a wide range of problems",
+      "reason": "Students may form this misconception because they are introduced to recursion through the example of calculating factorial values, and may not realize that recursion has broader applications.",
+      "concept": "Introduction to Recursion",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "155d7c47",
+      "wrong_concept": "Recursion is always more efficient than iteration",
+      "correct_concept": "Recursion and iteration can both be efficient, depending on the specific problem and implementation",
+      "reason": "Students may form this misconception because they are taught that recursion is a powerful technique, and may assume that it is always the best approach without considering the trade-offs.",
+      "concept": "Introduction to Recursion",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "387161f8",
+      "wrong_concept": "Recurrence equations are only used to solve recursive problems",
+      "correct_concept": "Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones",
+      "reason": "Students may form this misconception because they are introduced to recurrence equations in the context of recursive problems, and may not realize that they have broader applications.",
+      "concept": "Introduction to Recursion",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "Recursion is a general problem-solving technique that can be applied to a wide range of problems",
+          "question": "What is the primary purpose of recursion in programming?",
+          "options": [
+            "Recursion is always more efficient than iteration",
+            "Recursion is only used for calculating factorial values",
+            "Recursion is a general problem-solving technique that can be applied to a wide range of problems",
+            "Recursion is only used for solving linear equations"
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Recursion is a general problem-solving technique that can be applied to a wide range of problems, not just calculating factorial values."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "Recursion and iteration can both be efficient, depending on the specific problem and implementation",
+          "question": "Which of the following is a common misconception about recursion?",
+          "options": [
+            "Recursion is only used for solving linear equations",
+            "Recursion is only used for calculating factorial values",
+            "Recursion is never more efficient than iteration",
+            "Recursion is always more efficient than iteration"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "One common misconception about recursion is that it is always more efficient than iteration, which is not necessarily true."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones",
+          "question": "What is the primary use of recurrence equations in programming?",
+          "options": [
+            "Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones",
+            "Recurrence equations are only used to solve recursive problems",
+            "Recurrence equations are only used for calculating factorial values",
+            "Recurrence equations are only used for solving linear equations"
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "Recursion is a general problem-solving technique that can be applied to a wide range of problems",
+          "question": "What is an example of a problem that can be solved using recursion?",
+          "options": [
+            "Calculating the sum of an array",
+            "Solving a linear equation",
+            "Finding the maximum value in an array",
+            "Calculating the factorial of a number"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Recursion is a general problem-solving technique that can be applied to a wide range of problems, including calculating the factorial of a number."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "Recursion and iteration can both be efficient, depending on the specific problem and implementation",
+          "question": "Which of the following is a common scenario where recursion might be more efficient?",
+          "options": [
+            "When the problem is a simple linear equation",
+            "When the problem size is very large",
+            "When the problem is a complex recursive equation",
+            "When the problem size is very small"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Recursion might be more efficient when the problem size is very large, as it can take advantage of the recursive function calls."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "Introduction to Recursion",
+          "question": "Which statement accurately describes Introduction to Recursion?",
+          "options": [
+            "Recurrence equations are only used to solve recursive problems",
+            "Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones",
+            "Introduction to Recursion is strictly limited to low-level assembly routines.",
+            "Introduction to Recursion can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones. Common misconception: Recurrence equations are only used to solve recursive problems."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "Introduction to Recursion",
+          "question": "Which of the following statements regarding Introduction to Recursion are correct? (Select all that apply)",
+          "options": [
+            "Recursion is only used for calculating factorial values",
+            "Understanding Introduction to Recursion is essential for designing robust software architectures.",
+            "Introduction to Recursion is only an obsolete theoretical notion with no modern application.",
+            "Recursion is a general problem-solving technique that can be applied to a wide range of problems"
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            3
+          ],
+          "explanation": "Core concept: Recursion is a general problem-solving technique that can be applied to a wide range of problems. Common misconception: Recursion is only used for calculating factorial values."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "Introduction to Recursion",
+          "question": "Which statement accurately describes Introduction to Recursion?",
+          "options": [
+            "Recursion and iteration can both be efficient, depending on the specific problem and implementation",
+            "Recursion is always more efficient than iteration",
+            "Introduction to Recursion is strictly limited to low-level assembly routines.",
+            "Introduction to Recursion can only be instantiated once globally across an entire program."
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: Recursion and iteration can both be efficient, depending on the specific problem and implementation. Common misconception: Recursion is always more efficient than iteration."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "Introduction to Recursion",
+          "question": "Which statement accurately describes Introduction to Recursion?",
+          "options": [
+            "Introduction to Recursion can only be instantiated once globally across an entire program.",
+            "Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones",
+            "Recurrence equations are only used to solve recursive problems",
+            "Introduction to Recursion is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: Recurrence equations can be used to analyze the time complexity of any algorithm, not just recursive ones. Common misconception: Recurrence equations are only used to solve recursive problems."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "Introduction to Recursion",
+          "question": "Which of the following statements regarding Introduction to Recursion are correct? (Select all that apply)",
+          "options": [
+            "Introduction to Recursion is only an obsolete theoretical notion with no modern application.",
+            "Recursion is only used for calculating factorial values",
+            "Recursion is a general problem-solving technique that can be applied to a wide range of problems",
+            "Understanding Introduction to Recursion is essential for designing robust software architectures."
+          ],
+          "is_multiple": true,
+          "correct_index": 2,
+          "correct_indices": [
+            2,
+            3
+          ],
+          "explanation": "Core concept: Recursion is a general problem-solving technique that can be applied to a wide range of problems. Common misconception: Recursion is only used for calculating factorial values."
+        }
+      ],
+      "answers": [],
+      "score": null,
+      "submitted_at": null
+    }
+  },
+  "created_at": "2026-10-22T17:40:01.614462",
+  "updated_at": "2026-10-22T17:43:10.697479"
+}
