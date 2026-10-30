@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "dev:next": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node init && node scripts/dev.js",
+    "dev:next": "node init && next dev",
+    "build": "node init && next build",
+    "start": "node init && next start",
     "lint": "eslint"
   },
   "dependencies": {
