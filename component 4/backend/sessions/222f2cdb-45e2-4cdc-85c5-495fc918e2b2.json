@@ -1,0 +1,628 @@
+{
+  "session_id": "222f2cdb-45e2-4cdc-85c5-495fc918e2b2",
+  "topic": "Object Oriented Programming",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Get a revision on OOC you learnt in Year 1",
+    "Understand Classes and Objects",
+    "Learn about Abstraction, Encapsulation, Inheritance, Polymorphism, Interfaces"
+  ],
+  "misconceptions": [
+    {
+      "id": "0244c0c0",
+      "wrong_concept": "Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects",
+      "correct_concept": "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.",
+      "reason": "Students may think that OOP is just a simple way to organize objects, but it's actually a complex method that involves cooperation and hierarchy.",
+      "concept": "Object Oriented Programming",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.0,
+      "status": "learned",
+      "is_corrected": true,
+      "corrected_at": "2026-10-22T15:48:10.166723",
+      "user_explanation": "Marked as verified and correct by teacher.",
+      "questions": [
+        {
+          "question": "What would happen if a new class, 'Vehicle', was added to a program that already had classes 'Car' and 'Motorcycle'?",
+          "expected_answer": "The Vehicle class would be a member of a hierarchy of classes united via inheritance relationships."
+        },
+        {
+          "question": "What would happen if a new object, 'ElectricCar', was created in a program that already had objects 'Car' and 'Motorcycle'?",
+          "expected_answer": "The ElectricCar object would be an instance of some class, and whose class would be a member of a hierarchy of classes united via inheritance relationships."
+        },
+        {
+          "question": "Which of the following statements is true about Object Oriented Programming?",
+          "expected_answer": "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships."
+        }
+      ],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "e053b6bf",
+      "wrong_concept": "Object Oriented Programming is only used in Java",
+      "correct_concept": "Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java.",
+      "reason": "Students may think that OOP is specific to Java, but it's actually a programming paradigm that can be applied to any language that supports OOP.",
+      "concept": "Object Oriented Programming",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.0,
+      "status": "learned",
+      "is_corrected": true,
+      "corrected_at": "2026-10-22T15:50:01.202688",
+      "user_explanation": "Marked as verified and correct by teacher.",
+      "questions": [
+        {
+          "question": "What would happen if you were building a game in C++ and wanted to use the concept of inheritance to create a hierarchy of characters? Would the game still be playable?",
+          "expected_answer": "Yes, the game would still be playable."
+        },
+        {
+          "question": "What would happen if you were building a mobile app in Python and wanted to use encapsulation to hide the implementation details of a class? Would the app still function correctly?",
+          "expected_answer": "Yes, the app would still function correctly."
+        },
+        {
+          "question": "Which of the following statements is true? Object-Oriented Programming is only used in Java, or Object-Oriented Programming is a programming paradigm supported by many programming languages?",
+          "expected_answer": "Object-Oriented Programming is a programming paradigm supported by many programming languages."
+        }
+      ],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "4fc263c2",
+      "wrong_concept": "A class is just a collection of data",
+      "correct_concept": "A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type.",
+      "reason": "Students may think that a class is just a collection of data, but it's actually a blueprint for creating objects that have both data and behavior.",
+      "concept": "Object Oriented Programming",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.0,
+      "status": "learned",
+      "is_corrected": true,
+      "corrected_at": "2026-10-22T15:50:05.700631",
+      "user_explanation": "Marked as verified and correct by teacher.",
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [
+    {
+      "role": "teacher",
+      "content": "OOP is not simply a collection of objects. Objects represent real-world or logical entities, and they combine data and behavior. OOP also supports four main principles: Encapsulation, Inheritance, Polymorphism, and Abstraction"
+    },
+    {
+      "role": "nova",
+      "content": "Thank you for explaining that OOP is not just a collection of objects, but rather objects that represent real-world or logical entities and combine data and behavior. I'm starting to understand that it's not just about grouping things together. What would happen if a new class, 'Vehicle', was added to a program that already had classes 'Car' and 'Motorcycle'?"
+    },
+    {
+      "role": "teacher",
+      "content": "that is incorrect. Object-Oriented Programming (OOP) is not only used in Java. It is a programming paradigm supported by many programming languages."
+    },
+    {
+      "role": "nova",
+      "content": "Thank you for correcting me that OOP is not exclusive to Java, it's a programming paradigm supported by many languages. You're saying that OOP is not limited to one specific language. What would happen if you were building a game in C++ and wanted to use the concept of inheritance to create a hierarchy of characters? Would the game still be playable?"
+    }
+  ],
+  "events": [
+    {
+      "time": "2026-10-22T15:36:59.134518",
+      "type": "pretest_submitted",
+      "score": 10.0,
+      "correct_count": 1,
+      "total_questions": 10
+    },
+    {
+      "time": "2026-10-22T15:39:40.127477",
+      "type": "study_guide_viewed",
+      "timestamp": "2026-10-22T15:39:40.127463"
+    },
+    {
+      "time": "2026-10-22T15:47:08.327247",
+      "type": "teacher_message",
+      "text": "OOP is not simply a collection of objects. Objects represent real-world or logical entities, and they combine data and behavior. OOP also supports four main principles: Encapsulation, Inheritance, Polymorphism, and Abstraction"
+    },
+    {
+      "time": "2026-10-22T15:47:28.780984",
+      "type": "check_result",
+      "results": [
+        {
+          "id": "0244c0c0",
+          "addressed": true,
+          "quality": "clear"
+        },
+        {
+          "id": "e053b6bf",
+          "addressed": true,
+          "quality": "clear"
+        },
+        {
+          "id": "4fc263c2",
+          "addressed": true,
+          "quality": "clear"
+        }
+      ],
+      "message": "OOP is not simply a collection of objects. Objects represent real-world or logical entities, and they combine data and behavior. OOP also supports four main principles: Encapsulation, Inheritance, Polymorphism, and Abstraction"
+    },
+    {
+      "time": "2026-10-22T15:47:53.280309",
+      "type": "status_change",
+      "id": "0244c0c0",
+      "from": "active",
+      "to": "testing"
+    },
+    {
+      "time": "2026-10-22T15:47:53.280321",
+      "type": "question_asked",
+      "id": "0244c0c0",
+      "index": 0,
+      "question": "What would happen if a new class, 'Vehicle', was added to a program that already had classes 'Car' and 'Motorcycle'?",
+      "questions": [
+        "What would happen if a new class, 'Vehicle', was added to a program that already had classes 'Car' and 'Motorcycle'?",
+        "What would happen if a new object, 'ElectricCar', was created in a program that already had objects 'Car' and 'Motorcycle'?",
+        "Which of the following statements is true about Object Oriented Programming?"
+      ]
+    },
+    {
+      "time": "2026-10-22T15:48:03.037891",
+      "type": "nova_reply",
+      "text": "Thank you for explaining that OOP is not just a collection of objects, but rather objects that represent real-world or logical entities and combine data and behavior. I'm starting to understand that it's not just about grouping things together. What would happen if a new class, 'Vehicle', was added to a program that already had classes 'Car' and 'Motorcycle'?"
+    },
+    {
+      "time": "2026-10-22T15:48:10.166753",
+      "type": "misconception_marked_correct",
+      "misconception_id": "0244c0c0",
+      "concept": "Object Oriented Programming"
+    },
+    {
+      "time": "2026-10-22T15:49:01.853276",
+      "type": "teacher_message",
+      "text": "that is incorrect. Object-Oriented Programming (OOP) is not only used in Java. It is a programming paradigm supported by many programming languages."
+    },
+    {
+      "time": "2026-10-22T15:49:10.351768",
+      "type": "check_result",
+      "results": [
+        {
+          "id": "e053b6bf",
+          "addressed": true,
+          "quality": "clear"
+        },
+        {
+          "id": "4fc263c2",
+          "addressed": false,
+          "quality": "vague"
+        }
+      ],
+      "message": "that is incorrect. Object-Oriented Programming (OOP) is not only used in Java. It is a programming paradigm supported by many programming languages."
+    },
+    {
+      "time": "2026-10-22T15:49:31.521244",
+      "type": "status_change",
+      "id": "e053b6bf",
+      "from": "active",
+      "to": "testing"
+    },
+    {
+      "time": "2026-10-22T15:49:31.521256",
+      "type": "question_asked",
+      "id": "e053b6bf",
+      "index": 0,
+      "question": "What would happen if you were building a game in C++ and wanted to use the concept of inheritance to create a hierarchy of characters? Would the game still be playable?",
+      "questions": [
+        "What would happen if you were building a game in C++ and wanted to use the concept of inheritance to create a hierarchy of characters? Would the game still be playable?",
+        "What would happen if you were building a mobile app in Python and wanted to use encapsulation to hide the implementation details of a class? Would the app still function correctly?",
+        "Which of the following statements is true? Object-Oriented Programming is only used in Java, or Object-Oriented Programming is a programming paradigm supported by many programming languages?"
+      ]
+    },
+    {
+      "time": "2026-10-22T15:49:41.662236",
+      "type": "nova_reply",
+      "text": "Thank you for correcting me that OOP is not exclusive to Java, it's a programming paradigm supported by many languages. You're saying that OOP is not limited to one specific language. What would happen if you were building a game in C++ and wanted to use the concept of inheritance to create a hierarchy of characters? Would the game still be playable?"
+    },
+    {
+      "time": "2026-10-22T15:50:01.202704",
+      "type": "misconception_marked_correct",
+      "misconception_id": "e053b6bf",
+      "concept": "Object Oriented Programming"
+    },
+    {
+      "time": "2026-10-22T15:50:05.700643",
+      "type": "misconception_marked_correct",
+      "misconception_id": "4fc263c2",
+      "concept": "Object Oriented Programming"
+    }
+  ],
+  "tests": {
+    "pre": {
+      "questions": [
+        {
+          "id": "q_1_pre",
+          "concept": "Object Oriented Programming",
+          "question": "What is the primary purpose of Object Oriented Programming?",
+          "options": [
+            "To organize code into simple collections of objects",
+            "To implement a method of implementation in which programs are organized as a simple collection of objects",
+            "To define a programming paradigm that can be used in various languages",
+            "To create a hierarchy of classes united via inheritance relationships"
+          ],
+          "is_multiple": false,
+          "correct_index": 3,
+          "correct_indices": [
+            3
+          ],
+          "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships."
+        },
+        {
+          "id": "q_2_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which programming language is NOT specifically tied to Object Oriented Programming?",
+          "options": [
+            "Python",
+            "Java",
+            "C++",
+            "Ruby"
+          ],
+          "is_multiple": false,
+          "correct_index": 2,
+          "correct_indices": [
+            2
+          ],
+          "explanation": "Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java."
+        },
+        {
+          "id": "q_3_pre",
+          "concept": "Object Oriented Programming",
+          "question": "What is a class in Object Oriented Programming?",
+          "options": [
+            "A collection of data",
+            "A blueprint for creating objects that have both data and behavior",
+            "A type of inheritance relationship",
+            "A method of implementation in which programs are organized as a simple collection of objects"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type."
+        },
+        {
+          "id": "q_4_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+          "options": [
+            "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.",
+            "Object Oriented Programming is only an obsolete theoretical notion with no modern application.",
+            "Understanding Object Oriented Programming is essential for designing robust software architectures.",
+            "Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects"
+          ],
+          "is_multiple": true,
+          "correct_index": 0,
+          "correct_indices": [
+            0,
+            2
+          ],
+          "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects."
+        },
+        {
+          "id": "q_5_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which statement accurately describes Object Oriented Programming?",
+          "options": [
+            "Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java.",
+            "Object Oriented Programming is only used in Java",
+            "Object Oriented Programming can only be instantiated once globally across an entire program.",
+            "Object Oriented Programming is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java.. Common misconception: Object Oriented Programming is only used in Java."
+        },
+        {
+          "id": "q_6_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which statement accurately describes Object Oriented Programming?",
+          "options": [
+            "A class is just a collection of data",
+            "A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type.",
+            "Object Oriented Programming can only be instantiated once globally across an entire program.",
+            "Object Oriented Programming is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type.. Common misconception: A class is just a collection of data."
+        },
+        {
+          "id": "q_7_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+          "options": [
+            "Object Oriented Programming is only an obsolete theoretical notion with no modern application.",
+            "Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects",
+            "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.",
+            "Understanding Object Oriented Programming is essential for designing robust software architectures."
+          ],
+          "is_multiple": true,
+          "correct_index": 2,
+          "correct_indices": [
+            2,
+            3
+          ],
+          "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects."
+        },
+        {
+          "id": "q_8_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which statement accurately describes Object Oriented Programming?",
+          "options": [
+            "Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java.",
+            "Object Oriented Programming can only be instantiated once globally across an entire program.",
+            "Object Oriented Programming is only used in Java",
+            "Object Oriented Programming is strictly limited to low-level assembly routines."
+          ],
+          "is_multiple": false,
+          "correct_index": 0,
+          "correct_indices": [
+            0
+          ],
+          "explanation": "Core concept: Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java.. Common misconception: Object Oriented Programming is only used in Java."
+        },
+        {
+          "id": "q_9_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which statement accurately describes Object Oriented Programming?",
+          "options": [
+            "Object Oriented Programming can only be instantiated once globally across an entire program.",
+            "A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type.",
+            "Object Oriented Programming is strictly limited to low-level assembly routines.",
+            "A class is just a collection of data"
+          ],
+          "is_multiple": false,
+          "correct_index": 1,
+          "correct_indices": [
+            1
+          ],
+          "explanation": "Core concept: A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type.. Common misconception: A class is just a collection of data."
+        },
+        {
+          "id": "q_10_pre",
+          "concept": "Object Oriented Programming",
+          "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+          "options": [
+            "Object Oriented Programming is only an obsolete theoretical notion with no modern application.",
+            "Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.",
+            "Understanding Object Oriented Programming is essential for designing robust software architectures.",
+            "Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects"
+          ],
+          "is_multiple": true,
+          "correct_index": 1,
+          "correct_indices": [
+            1,
+            2
+          ],
+          "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects."
+        }
+      ],
+      "answers": [
+        {
+          "question_id": "q_1_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_2_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_3_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_4_pre",
+          "choice": 1,
+          "choices": null
+        },
+        {
+          "question_id": "q_5_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_6_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_7_pre",
+          "choice": 0,
+          "choices": null
+        },
+        {
+          "question_id": "q_8_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_9_pre",
+          "choice": 2,
+          "choices": null
+        },
+        {
+          "question_id": "q_10_pre",
+          "choice": 2,
+          "choices": null
+        }
+      ],
+      "score": {
+        "total_questions": 10,
+        "correct_count": 1,
+        "overall_percentage": 10.0,
+        "per_question": [
+          {
+            "question_id": "q_1_pre",
+            "concept": "Object Oriented Programming",
+            "question": "What is the primary purpose of Object Oriented Programming?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 3,
+            "correct_indices": [
+              3
+            ],
+            "correct": false,
+            "explanation": "Object Oriented Programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships."
+          },
+          {
+            "question_id": "q_2_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which programming language is NOT specifically tied to Object Oriented Programming?",
+            "choice": 0,
+            "is_multiple": false,
+            "correct_index": 2,
+            "correct_indices": [
+              2
+            ],
+            "correct": false,
+            "explanation": "Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java."
+          },
+          {
+            "question_id": "q_3_pre",
+            "concept": "Object Oriented Programming",
+            "question": "What is a class in Object Oriented Programming?",
+            "choice": 1,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": true,
+            "explanation": "A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type."
+          },
+          {
+            "question_id": "q_4_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+            "choice": [
+              1
+            ],
+            "is_multiple": true,
+            "correct_index": 0,
+            "correct_indices": [
+              0,
+              2
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects."
+          },
+          {
+            "question_id": "q_5_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which statement accurately describes Object Oriented Programming?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java.. Common misconception: Object Oriented Programming is only used in Java."
+          },
+          {
+            "question_id": "q_6_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which statement accurately describes Object Oriented Programming?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": false,
+            "explanation": "Core concept: A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type.. Common misconception: A class is just a collection of data."
+          },
+          {
+            "question_id": "q_7_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+            "choice": [
+              0
+            ],
+            "is_multiple": true,
+            "correct_index": 2,
+            "correct_indices": [
+              2,
+              3
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects."
+          },
+          {
+            "question_id": "q_8_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which statement accurately describes Object Oriented Programming?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 0,
+            "correct_indices": [
+              0
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented Programming is a programming paradigm that can be used in various programming languages, including C++ and Java.. Common misconception: Object Oriented Programming is only used in Java."
+          },
+          {
+            "question_id": "q_9_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which statement accurately describes Object Oriented Programming?",
+            "choice": 2,
+            "is_multiple": false,
+            "correct_index": 1,
+            "correct_indices": [
+              1
+            ],
+            "correct": false,
+            "explanation": "Core concept: A class is the abstract definition of the data type, including the data elements that are part of the data type, and the operations which are defined on the data type.. Common misconception: A class is just a collection of data."
+          },
+          {
+            "question_id": "q_10_pre",
+            "concept": "Object Oriented Programming",
+            "question": "Which of the following statements regarding Object Oriented Programming are correct? (Select all that apply)",
+            "choice": [
+              2
+            ],
+            "is_multiple": true,
+            "correct_index": 1,
+            "correct_indices": [
+              1,
+              2
+            ],
+            "correct": false,
+            "explanation": "Core concept: Object Oriented programming is a method of implementation in which programs are organized as cooperative collections of objects, each of which represents an instance of some class, and whose classes are all members of a hierarchy of classes united via inheritance relationships.. Common misconception: Object Oriented programming is a method of implementation in which programs are organized as a simple collection of objects."
+          }
+        ],
+        "per_concept": [
+          {
+            "concept": "Object Oriented Programming",
+            "correct": 1,
+            "total": 10,
+            "percentage": 10.0
+          }
+        ]
+      },
+      "submitted_at": "2026-10-22T15:36:59.134506"
+    }
+  },
+  "created_at": "2026-10-22T15:31:54.748916",
+  "updated_at": "2026-10-22T15:50:05.700647"
+}

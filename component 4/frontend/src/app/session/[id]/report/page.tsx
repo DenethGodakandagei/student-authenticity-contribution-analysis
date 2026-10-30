@@ -167,7 +167,7 @@ export default function ReportPage({
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
                 </svg>
-                Continue Chat
+                Teach to Nova
               </Link>
               <Link href={`/session/${sessionId}/details`} className="dash-btn dash-btn--sm">
                 Overview
@@ -185,7 +185,7 @@ export default function ReportPage({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
             </svg>
-            Teaching Chat
+            Teach to Nova
           </Link>
           <Link href={`/session/${sessionId}/study`} className="details-nav-btn">
             Study Guide
@@ -201,6 +201,9 @@ export default function ReportPage({
           </Link>
           <Link href={`/session/${sessionId}/details`} className="details-nav-btn">
             Session Details
+          </Link>
+          <Link href={`/session/${sessionId}/summery`} className="details-nav-btn">
+            Summary
           </Link>
         </nav>
 

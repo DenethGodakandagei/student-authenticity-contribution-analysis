@@ -1,0 +1,72 @@
+{
+  "session_id": "06d8094a-ed07-4d92-84fb-71ab869b8b33",
+  "topic": "Introduction to Recursion",
+  "name": "Nova",
+  "level": "beginner",
+  "behaviour": "Asks a short follow-up question and pushes back once before accepting an explanation",
+  "kb_id": "",
+  "owner_id": "6ad77538060e557f05fc8cf9",
+  "learning_objectives": [
+    "Understand the concept of recursion and its application in data structures and algorithms",
+    "Be able to analyze and solve recursive problems",
+    "Recognize the importance of recurrence equations in understanding the running time of recursive functions"
+  ],
+  "misconceptions": [
+    {
+      "id": "4d4e8364",
+      "wrong_concept": "Believing that recursion is only used for calculating factorials",
+      "correct_concept": "Recursion is a general technique used to solve problems by breaking them down into smaller instances of the same problem",
+      "reason": "Students may form this misconception because they are introduced to recursion through the example of calculating factorials, and may not realize that recursion has broader applications",
+      "concept": "Introduction to Recursion",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "1498bc1e",
+      "wrong_concept": "Thinking that recursive functions always have a base case",
+      "correct_concept": "Not all recursive functions have a base case; some may have a termination condition that is not necessarily a base case",
+      "reason": "Students may form this misconception because they are taught to identify a base case in recursive functions, and may not consider the possibility of a termination condition that is not a base case",
+      "concept": "Introduction to Recursion",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    },
+    {
+      "id": "6b033ddf",
+      "wrong_concept": "Assuming that the running time of a recursive function is always O(n)",
+      "correct_concept": "The running time of a recursive function can be O(n), O(log n), O(n log n), or any other time complexity depending on the specific problem and the recurrence equation",
+      "reason": "Students may form this misconception because they are introduced to recursive functions through examples that have a time complexity of O(n), and may not realize that the time complexity can vary depending on the specific problem and the recurrence equation",
+      "concept": "Introduction to Recursion",
+      "source_pages": [],
+      "source_quote": "",
+      "confidence": 0.8,
+      "status": "active",
+      "is_corrected": false,
+      "corrected_at": null,
+      "user_explanation": null,
+      "questions": [],
+      "question_index": 0,
+      "attempts": []
+    }
+  ],
+  "conversation_history": [],
+  "events": [],
+  "tests": {},
+  "created_at": "2026-10-22T16:00:37.650924",
+  "updated_at": "2026-10-22T16:00:37.651289"
+}
